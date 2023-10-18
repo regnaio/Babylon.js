@@ -7,6 +7,7 @@ RUN apt-get install -y curl net-tools tree
 
 RUN npm i --location=global npm@latest
 RUN npm i --location=global npm-check-updates
+RUN npm i --location=global typescript
 
 RUN userdel -r node
 RUN groupadd --gid 1000 nonroot && useradd --uid 1000 --gid nonroot --shell /bin/bash --create-home nonroot
