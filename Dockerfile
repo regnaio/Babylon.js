@@ -14,4 +14,4 @@ RUN groupadd --gid 1000 nonroot && useradd --uid 1000 --gid nonroot --shell /bin
 USER nonroot
 WORKDIR /home/nonroot/app
 
-EXPOSE 9001
+EXPOSE 1337-1339 1341
