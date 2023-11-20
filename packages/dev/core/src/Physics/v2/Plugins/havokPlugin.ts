@@ -301,7 +301,10 @@ export class HavokPlugin implements IPhysicsEnginePluginV2 {
      */
     public onTriggerCollisionObservable = new Observable<IBasePhysicsCollisionEvent>();
 
-    public constructor(private _useDeltaForWorldStep: boolean = true, hpInjection: any = HK) {
+    public constructor(
+        private _useDeltaForWorldStep: boolean = true,
+        hpInjection: any = HK
+    ) {
         if (typeof hpInjection === "function") {
             Logger.Error("Havok is not ready. Please make sure you await HK() before using the plugin.");
             return;
@@ -1837,7 +1840,9 @@ export class HavokPlugin implements IPhysicsEnginePluginV2 {
 
         result.reset(from, to);
 
-        const hkQuery = [this._bVecToV3(from), this._bVecToV3(to), [queryMembership, queryCollideWith]];
+        const shouldHitTriggers = false;
+        const bodyToIgnore = [BigInt(0)];
+        const hkQuery = [this._bVecToV3(from), this._bVecToV3(to), [queryMembership, queryCollideWith], shouldHitTriggers, bodyToIgnore];
         this._hknp.HP_World_CastRayWithCollector(this.world, this._queryCollector, hkQuery);
 
         if (this._hknp.HP_QueryCollector_GetNumHits(this._queryCollector)[1] > 0) {

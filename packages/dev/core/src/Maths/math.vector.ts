@@ -102,7 +102,7 @@ export class Vector2 {
      * @returns a new array with 2 elements: the Vector2 coordinates.
      */
     public asArray(): number[] {
-        const result = new Array<number>();
+        const result: number[] = [];
         this.toArray(result, 0);
         return result;
     }
@@ -464,8 +464,45 @@ export class Vector2 {
      * @returns the current updated Vector2
      */
     public normalize(): this {
-        Vector2.NormalizeToRef(this, this);
-        return this;
+        return this.normalizeFromLength(this.length());
+    }
+
+    /**
+     * Normalize the current Vector2 with the given input length.
+     * Please note that this is an in place operation.
+     * @param len the length of the vector
+     * @returns the current updated Vector2
+     */
+    public normalizeFromLength(len: number): this {
+        if (len === 0 || len === 1.0) {
+            return this;
+        }
+
+        return this.scaleInPlace(1.0 / len);
+    }
+
+    /**
+     * Normalize the current Vector2 to a new vector
+     * @returns the new Vector2
+     */
+    public normalizeToNew(): this {
+        const normalized = new (this.constructor as Vector2Constructor<this>)(0, 0);
+        this.normalizeToRef(normalized);
+        return normalized;
+    }
+
+    /**
+     * Normalize the current Vector2 to the reference
+     * @param reference define the Vector2 to update
+     * @returns the updated Vector2
+     */
+    public normalizeToRef<T extends Vector2>(reference: T): T {
+        const len = this.length();
+        if (len === 0 || len === 1.0) {
+            return reference.copyFromFloats(this.x, this.y);
+        }
+
+        return this.scaleToRef(1.0 / len, reference);
     }
 
     /**
@@ -475,6 +512,15 @@ export class Vector2 {
      */
     public clone(): this {
         return new (this.constructor as Vector2Constructor<this>)(this.x, this.y);
+    }
+
+    /**
+     * Gets the dot product of the current vector and the vector "otherVector"
+     * @param otherVector defines second vector
+     * @returns the dot product (float)
+     */
+    public dot(otherVector: DeepImmutable<this>): number {
+        return this.x * otherVector.x + this.y * otherVector.y;
     }
 
     // Statics
@@ -709,9 +755,9 @@ export class Vector2 {
      * @returns a new Vector2
      */
     public static Normalize<T extends Vector2>(vector: DeepImmutable<T>): T {
-        const newVector = new (vector.constructor as Vector2Constructor<T>)();
-        this.NormalizeToRef(vector, newVector);
-        return newVector;
+        const result = new (vector.constructor as Vector2Constructor<T>)();
+        Vector2.NormalizeToRef(vector, result);
+        return result;
     }
 
     /**
@@ -722,14 +768,7 @@ export class Vector2 {
      * @returns result input
      */
     public static NormalizeToRef<T extends Vector2>(vector: DeepImmutable<Vector2>, result: T): T {
-        const len = vector.length();
-
-        if (len === 0) {
-            return result;
-        }
-
-        result.x = vector.x / len;
-        result.y = vector.y / len;
+        vector.normalizeToRef(result);
         return result;
     }
 
@@ -1335,7 +1374,7 @@ export class Vector3 {
         const denom = Vector3.Dot(V, n);
 
         //When the ray is close to parallel to the plane return infinity vector
-        if (Math.abs(denom) < Math.pow(10, -10)) {
+        if (Math.abs(denom) < 0.0000000001) {
             result.setAll(Infinity);
         } else {
             const t = -(Vector3.Dot(origin, n) + d) / denom;
@@ -1635,10 +1674,10 @@ export class Vector3 {
         if (order === "xyz") {
             return this;
         }
-        MathTmp.Vector3[0].copyFrom(this);
-        ["x", "y", "z"].forEach((val, i) => {
-            (<any>this)[val] = (<any>MathTmp.Vector3[0])[order[i]];
-        });
+        const tem = MathTmp.Vector3[0].copyFrom(this);
+        this.x = (<any>tem)[order[0]];
+        this.y = (<any>tem)[order[1]];
+        this.z = (<any>tem)[order[2]];
         return this;
     }
 
@@ -1794,12 +1833,10 @@ export class Vector3 {
      * @returns the clip factor
      */
     public static GetClipFactor(vector0: DeepImmutable<Vector3>, vector1: DeepImmutable<Vector3>, axis: DeepImmutable<Vector3>, size: number): number {
-        const d0 = Vector3.Dot(vector0, axis) - size;
-        const d1 = Vector3.Dot(vector1, axis) - size;
+        const d0 = Vector3.Dot(vector0, axis);
+        const d1 = Vector3.Dot(vector1, axis);
 
-        const s = d0 / (d0 - d1);
-
-        return s;
+        return (d0 - size) / (d0 - d1);
     }
 
     /**
@@ -2481,6 +2518,15 @@ export class Vector3 {
     }
 
     /**
+     * Returns the dot product (float) between the current vectors and "otherVector"
+     * @param otherVector defines the right operand
+     * @returns the dot product
+     */
+    public dot(otherVector: DeepImmutable<this>): number {
+        return this._x * otherVector._x + this._y * otherVector._y + this._z * otherVector._z;
+    }
+
+    /**
      * Returns a new Vector3 as the cross product of the vectors "left" and "right"
      * The cross product is then orthogonal to both "left" and "right"
      * Example Playground https://playground.babylonjs.com/#R1F8YU#15
@@ -3067,7 +3113,7 @@ export class Vector4 {
      * @returns the resulting array
      */
     public asArray(): number[] {
-        const result = new Array<number>();
+        const result: number[] = [];
 
         this.toArray(result, 0);
 
@@ -3482,13 +3528,45 @@ export class Vector4 {
      * @returns the updated Vector4.
      */
     public normalize(): this {
-        const len = this.length();
+        return this.normalizeFromLength(this.length());
+    }
 
-        if (len === 0) {
+    /**
+     * Normalize the current Vector4 with the given input length.
+     * Please note that this is an in place operation.
+     * @param len the length of the vector
+     * @returns the current updated Vector4
+     */
+    public normalizeFromLength(len: number): this {
+        if (len === 0 || len === 1.0) {
             return this;
         }
 
         return this.scaleInPlace(1.0 / len);
+    }
+
+    /**
+     * Normalize the current Vector4 to a new vector
+     * @returns the new Vector4
+     */
+    public normalizeToNew(): this {
+        const normalized = new (this.constructor as Vector4Constructor<this>)(0, 0, 0, 0);
+        this.normalizeToRef(normalized);
+        return normalized;
+    }
+
+    /**
+     * Normalize the current Vector4 to the reference
+     * @param reference define the Vector4 to update
+     * @returns the updated Vector4
+     */
+    public normalizeToRef<T extends Vector4>(reference: T): T {
+        const len = this.length();
+        if (len === 0 || len === 1.0) {
+            return reference.copyFromFloats(this.x, this.y, this.z, this.w);
+        }
+
+        return this.scaleToRef(1.0 / len, reference);
     }
 
     /**
@@ -3553,6 +3631,15 @@ export class Vector4 {
     public setAll(v: number): this {
         this.x = this.y = this.z = this.w = v;
         return this;
+    }
+
+    /**
+     * Returns the dot product (float) between the current vectors and "otherVector"
+     * @param otherVector defines the right operand
+     * @returns the dot product
+     */
+    public dot(otherVector: DeepImmutable<this>): number {
+        return this.x * otherVector.x + this.y * otherVector.y + this.z * otherVector.z + this.w * otherVector.w;
     }
 
     // Statics
@@ -3657,8 +3744,7 @@ export class Vector4 {
      * @returns result input
      */
     public static NormalizeToRef<T extends Vector4>(vector: DeepImmutable<Vector4>, result: T): T {
-        result.copyFrom(vector);
-        result.normalize();
+        vector.normalizeToRef(result);
         return result;
     }
 
@@ -3845,6 +3931,16 @@ export class Vector4 {
      */
     public static FromVector3(source: Vector3, w: number = 0) {
         return new Vector4(source._x, source._y, source._z, w);
+    }
+
+    /**
+     * Returns the dot product (float) between the vectors "left" and "right"
+     * @param left defines the left operand
+     * @param right defines the right operand
+     * @returns the dot product
+     */
+    public static Dot(left: DeepImmutable<Vector4>, right: DeepImmutable<Vector4>): number {
+        return left.dot(right);
     }
 }
 
@@ -4296,14 +4392,21 @@ export class Quaternion {
      * @returns the current updated quaternion
      */
     public normalize(): this {
-        const len = this.length();
-        if (len === 0) {
+        return this.normalizeFromLength(this.length());
+    }
+
+    /**
+     * Normalize the current quaternion with the given input length.
+     * Please note that this is an in place operation.
+     * @param len the length of the quaternion
+     * @returns the current updated Quaternion
+     */
+    public normalizeFromLength(len: number): this {
+        if (len === 0 || len === 1.0) {
             return this;
         }
 
-        const inv = 1.0 / len;
-        this.scaleInPlace(inv);
-        return this;
+        return this.scaleInPlace(1.0 / len);
     }
 
     /**
@@ -4312,13 +4415,23 @@ export class Quaternion {
      * @returns the normalized quaternion
      */
     public normalizeToNew(): this {
+        const normalized = new (this.constructor as QuaternionConstructor<this>)(0, 0, 0, 1);
+        this.normalizeToRef(normalized);
+        return normalized;
+    }
+
+    /**
+     * Normalize the current Quaternion to the reference
+     * @param reference define the Quaternion to update
+     * @returns the updated Quaternion
+     */
+    public normalizeToRef<T extends Quaternion>(reference: T): T {
         const len = this.length();
-        if (len === 0) {
-            return this.clone();
+        if (len === 0 || len === 1.0) {
+            return reference.copyFromFloats(this._x, this._y, this._z, this._w);
         }
 
-        const inv = 1.0 / len;
-        return this.scale(inv);
+        return this.scaleToRef(1.0 / len, reference);
     }
 
     /**
@@ -4393,6 +4506,15 @@ export class Quaternion {
     public fromRotationMatrix(matrix: DeepImmutable<Matrix>): this {
         Quaternion.FromRotationMatrixToRef(matrix, this);
         return this;
+    }
+
+    /**
+     * Returns the dot product (float) between the current quaternions and "other"
+     * @param other defines the right operand
+     * @returns the dot product
+     */
+    public dot(other: DeepImmutable<this>): number {
+        return this._x * other._x + this._y * other._y + this._z * other._z + this._w * other._w;
     }
 
     // Statics
@@ -5000,6 +5122,28 @@ export class Quaternion {
         result._z = (t2 - time) * 6 * value1._z + (3 * t2 - 4 * time + 1) * tangent1._z + (-t2 + time) * 6 * value2._z + (3 * t2 - 2 * time) * tangent2._z;
         result._w = (t2 - time) * 6 * value1._w + (3 * t2 - 4 * time + 1) * tangent1._w + (-t2 + time) * 6 * value2._w + (3 * t2 - 2 * time) * tangent2._w;
         result._isDirty = true;
+        return result;
+    }
+
+    /**
+     * Returns a new Quaternion as the normalization of the given Quaternion
+     * @param quat defines the Quaternion to normalize
+     * @returns the new Quaternion
+     */
+    public static Normalize(quat: DeepImmutable<Quaternion>): Quaternion {
+        const result = Quaternion.Zero();
+        Quaternion.NormalizeToRef(quat, result);
+        return result;
+    }
+
+    /**
+     * Sets the given Quaternion "result" with the normalization of the given first Quaternion
+     * @param quat defines the Quaternion to normalize
+     * @param result defines the Quaternion where to store the result
+     * @returns result input
+     */
+    public static NormalizeToRef<T extends Quaternion>(quat: DeepImmutable<Quaternion>, result: T): T {
+        quat.normalizeToRef(result);
         return result;
     }
 }
@@ -6953,6 +7097,49 @@ export class Matrix {
     }
 
     /**
+     * Stores a left-handed oblique projection into a given matrix
+     * @param left defines the viewport left coordinate
+     * @param right defines the viewport right coordinate
+     * @param bottom defines the viewport bottom coordinate
+     * @param top defines the viewport top coordinate
+     * @param znear defines the near clip plane
+     * @param zfar defines the far clip plane
+     * @param angle Angle (along X/Y Plane) to apply shear
+     * @param length Length of the shear
+     * @param distance Distance from shear point
+     * @param result defines the target matrix
+     * @param halfZRange true to generate NDC coordinates between 0 and 1 instead of -1 and 1 (default: false)
+     * @returns result input
+     */
+    public static ObliqueOffCenterLHToRef<T extends Matrix>(
+        left: number,
+        right: number,
+        bottom: number,
+        top: number,
+        znear: number,
+        zfar: number,
+        length: number,
+        angle: number,
+        distance: number,
+        result: T,
+        halfZRange?: boolean
+    ): T {
+        const a = -length * Math.cos(angle);
+        const b = -length * Math.sin(angle);
+
+        Matrix.TranslationToRef(0, 0, -distance, MathTmp.Matrix[1]);
+        Matrix.FromValuesToRef(1, 0, 0, 0, 0, 1, 0, 0, a, b, 1, 0, 0, 0, 0, 1, MathTmp.Matrix[0]);
+        MathTmp.Matrix[1].multiplyToRef(MathTmp.Matrix[0], MathTmp.Matrix[0]);
+        Matrix.TranslationToRef(0, 0, distance, MathTmp.Matrix[1]);
+        MathTmp.Matrix[0].multiplyToRef(MathTmp.Matrix[1], MathTmp.Matrix[0]);
+
+        Matrix.OrthoOffCenterLHToRef(left, right, bottom, top, znear, zfar, result, halfZRange);
+        MathTmp.Matrix[0].multiplyToRef(result, result);
+
+        return result;
+    }
+
+    /**
      * Creates a right-handed orthographic projection matrix
      * Example Playground - https://playground.babylonjs.com/#AV9X17#76
      * @param left defines the viewport left coordinate
@@ -6995,6 +7182,49 @@ export class Matrix {
     ): T {
         Matrix.OrthoOffCenterLHToRef(left, right, bottom, top, znear, zfar, result, halfZRange);
         result._m[10] *= -1; // No need to call markAsUpdated as previous function already called it and let _isIdentityDirty to true
+        return result;
+    }
+
+    /**
+     * Stores a right-handed oblique projection into a given matrix
+     * @param left defines the viewport left coordinate
+     * @param right defines the viewport right coordinate
+     * @param bottom defines the viewport bottom coordinate
+     * @param top defines the viewport top coordinate
+     * @param znear defines the near clip plane
+     * @param zfar defines the far clip plane
+     * @param angle Angle (along X/Y Plane) to apply shear
+     * @param length Length of the shear
+     * @param distance Distance from shear point
+     * @param result defines the target matrix
+     * @param halfZRange true to generate NDC coordinates between 0 and 1 instead of -1 and 1 (default: false)
+     * @returns result input
+     */
+    public static ObliqueOffCenterRHToRef<T extends Matrix>(
+        left: number,
+        right: number,
+        bottom: number,
+        top: number,
+        znear: number,
+        zfar: number,
+        length: number,
+        angle: number,
+        distance: number,
+        result: T,
+        halfZRange?: boolean
+    ): T {
+        const a = length * Math.cos(angle);
+        const b = length * Math.sin(angle);
+
+        Matrix.TranslationToRef(0, 0, distance, MathTmp.Matrix[1]);
+        Matrix.FromValuesToRef(1, 0, 0, 0, 0, 1, 0, 0, a, b, 1, 0, 0, 0, 0, 1, MathTmp.Matrix[0]);
+        MathTmp.Matrix[1].multiplyToRef(MathTmp.Matrix[0], MathTmp.Matrix[0]);
+        Matrix.TranslationToRef(0, 0, -distance, MathTmp.Matrix[1]);
+        MathTmp.Matrix[0].multiplyToRef(MathTmp.Matrix[1], MathTmp.Matrix[0]);
+
+        Matrix.OrthoOffCenterRHToRef(left, right, bottom, top, znear, zfar, result, halfZRange);
+        MathTmp.Matrix[0].multiplyToRef(result, result);
+
         return result;
     }
 
@@ -7253,62 +7483,6 @@ export class Matrix {
     }
 
     /**
-     * Stores a perspective projection for WebVR info a given matrix
-     * Example Playground - https://playground.babylonjs.com/#AV9X17#92
-     * @param fov defines the field of view
-     * @param fov.upDegrees
-     * @param fov.downDegrees
-     * @param fov.leftDegrees
-     * @param fov.rightDegrees
-     * @param znear defines the near clip plane
-     * @param zfar defines the far clip plane
-     * @param result defines the target matrix
-     * @param rightHanded defines if the matrix must be in right-handed mode (false by default)
-     * @param halfZRange true to generate NDC coordinates between 0 and 1 instead of -1 and 1 (default: false)
-     * @param projectionPlaneTilt optional tilt angle of the projection plane around the X axis (horizontal)
-     * @returns result input
-     */
-    public static PerspectiveFovWebVRToRef<T extends Matrix>(
-        fov: { upDegrees: number; downDegrees: number; leftDegrees: number; rightDegrees: number },
-        znear: number,
-        zfar: number,
-        result: T,
-        rightHanded = false,
-        halfZRange?: boolean,
-        projectionPlaneTilt: number = 0
-    ): T {
-        const rightHandedFactor = rightHanded ? -1 : 1;
-
-        const upTan = Math.tan((fov.upDegrees * Math.PI) / 180.0);
-        const downTan = Math.tan((fov.downDegrees * Math.PI) / 180.0);
-        const leftTan = Math.tan((fov.leftDegrees * Math.PI) / 180.0);
-        const rightTan = Math.tan((fov.rightDegrees * Math.PI) / 180.0);
-        const xScale = 2.0 / (leftTan + rightTan);
-        const yScale = 2.0 / (upTan + downTan);
-        const rot = Math.tan(projectionPlaneTilt);
-
-        const m = result._m;
-        m[0] = xScale;
-        m[1] = m[2] = m[3] = m[4] = 0.0;
-        m[5] = yScale;
-        m[6] = 0.0;
-        m[7] = rot;
-        m[8] = (leftTan - rightTan) * xScale * 0.5;
-        m[9] = -((upTan - downTan) * yScale * 0.5);
-        m[10] = -zfar / (znear - zfar);
-        m[11] = 1.0 * rightHandedFactor;
-        m[12] = m[13] = m[15] = 0.0;
-        m[14] = -(2.0 * zfar * znear) / (zfar - znear);
-
-        if (halfZRange) {
-            result.multiplyToRef(mtxConvertNDCToHalfZRange, result);
-        }
-
-        result.markAsUpdated();
-        return result;
-    }
-
-    /**
      * Computes a complete transformation matrix
      * Example Playground - https://playground.babylonjs.com/#AV9X17#113
      * @param viewport defines the viewport to use
@@ -7381,28 +7555,44 @@ export class Matrix {
      * @returns result input
      */
     public static TransposeToRef<T extends Matrix>(matrix: DeepImmutable<Matrix>, result: T): T {
-        const rm = result._m;
         const mm = matrix.m;
-        rm[0] = mm[0];
-        rm[1] = mm[4];
-        rm[2] = mm[8];
-        rm[3] = mm[12];
+        const rm0 = mm[0];
+        const rm1 = mm[4];
+        const rm2 = mm[8];
+        const rm3 = mm[12];
 
-        rm[4] = mm[1];
-        rm[5] = mm[5];
-        rm[6] = mm[9];
-        rm[7] = mm[13];
+        const rm4 = mm[1];
+        const rm5 = mm[5];
+        const rm6 = mm[9];
+        const rm7 = mm[13];
 
-        rm[8] = mm[2];
-        rm[9] = mm[6];
-        rm[10] = mm[10];
-        rm[11] = mm[14];
+        const rm8 = mm[2];
+        const rm9 = mm[6];
+        const rm10 = mm[10];
+        const rm11 = mm[14];
 
-        rm[12] = mm[3];
-        rm[13] = mm[7];
-        rm[14] = mm[11];
-        rm[15] = mm[15];
+        const rm12 = mm[3];
+        const rm13 = mm[7];
+        const rm14 = mm[11];
+        const rm15 = mm[15];
 
+        const rm = result._m;
+        rm[0] = rm0;
+        rm[1] = rm1;
+        rm[2] = rm2;
+        rm[3] = rm3;
+        rm[4] = rm4;
+        rm[5] = rm5;
+        rm[6] = rm6;
+        rm[7] = rm7;
+        rm[8] = rm8;
+        rm[9] = rm9;
+        rm[10] = rm10;
+        rm[11] = rm11;
+        rm[12] = rm12;
+        rm[13] = rm13;
+        rm[14] = rm14;
+        rm[15] = rm15;
         result.markAsUpdated();
 
         // identity-ness does not change when transposing

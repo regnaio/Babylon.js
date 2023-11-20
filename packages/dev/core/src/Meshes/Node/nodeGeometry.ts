@@ -49,7 +49,7 @@ export class NodeGeometry {
     private _buildExecutionTime: number = 0;
 
     /** Define the Url to load node editor script */
-    public static EditorURL = `https://unpkg.com/babylonjs-node-geometry-editor@${Engine.Version}/babylon.nodeGeometryEditor.js`;
+    public static EditorURL = `${Tools._DefaultCdnUrl}/v${Engine.Version}/nodeGeometryEditor/babylon.nodeGeometryEditor.js`;
 
     /** Define the Url to load snippets */
     public static SnippetUrl = Constants.SnippetUrl;
@@ -88,7 +88,7 @@ export class NodeGeometry {
     /**
      * Gets an array of blocks that needs to be serialized even if they are not yet connected
      */
-    public attachedBlocks = new Array<NodeGeometryBlock>();
+    public attachedBlocks: NodeGeometryBlock[] = [];
 
     /**
      * Observable raised when the geometry is built
@@ -194,7 +194,7 @@ export class NodeGeometry {
                 const editorUrl = config && config.editorURL ? config.editorURL : NodeGeometry.EditorURL;
 
                 // Load editor and add it to the DOM
-                Tools.LoadScript(editorUrl, () => {
+                Tools.LoadBabylonScript(editorUrl, () => {
                     this.BJSNODEGEOMETRYEDITOR = this.BJSNODEGEOMETRYEDITOR || this._getGlobalNodeGeometryEditor();
                     this._createNodeEditor(config?.nodeGeometryEditorConfig);
                     resolve();
@@ -376,7 +376,9 @@ export class NodeGeometry {
                 const id = teleportOut._tempEntryPointUniqueId;
                 if (id) {
                     const source = map[id] as TeleportInBlock;
-                    source.attachToEndpoint(teleportOut);
+                    if (source) {
+                        source.attachToEndpoint(teleportOut);
+                    }
                 }
             }
         }
