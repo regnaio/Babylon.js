@@ -27,7 +27,7 @@ export class FlowGraphBranchBlock extends FlowGraphExecutionBlock {
     constructor(config?: IFlowGraphBlockConfiguration) {
         super(config);
 
-        this.condition = this._registerDataInput("condition", RichTypeBoolean);
+        this.condition = this.registerDataInput("condition", RichTypeBoolean);
 
         this.onTrue = this._registerSignalOutput("onTrue");
         this.onFalse = this._registerSignalOutput("onFalse");
@@ -41,6 +41,9 @@ export class FlowGraphBranchBlock extends FlowGraphExecutionBlock {
         }
     }
 
+    /**
+     * @returns class name of the block.
+     */
     public getClassName(): string {
         return "FGBranchBlock";
     }

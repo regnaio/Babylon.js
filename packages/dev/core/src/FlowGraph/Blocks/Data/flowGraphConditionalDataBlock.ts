@@ -30,11 +30,11 @@ export class FlowGraphConditionalDataBlock<T> extends FlowGraphBlock {
     constructor(config?: IFlowGraphBlockConfiguration) {
         super(config);
 
-        this.condition = this._registerDataInput("condition", RichTypeBoolean);
-        this.trueValue = this._registerDataInput("trueValue", RichTypeAny);
-        this.falseValue = this._registerDataInput("falseValue", RichTypeAny);
+        this.condition = this.registerDataInput("condition", RichTypeBoolean);
+        this.trueValue = this.registerDataInput("trueValue", RichTypeAny);
+        this.falseValue = this.registerDataInput("falseValue", RichTypeAny);
 
-        this.output = this._registerDataOutput("output", RichTypeAny);
+        this.output = this.registerDataOutput("output", RichTypeAny);
     }
 
     /**
@@ -44,6 +44,10 @@ export class FlowGraphConditionalDataBlock<T> extends FlowGraphBlock {
         this.output.setValue(this.condition.getValue(context) ? this.trueValue.getValue(context) : this.falseValue.getValue(context), context);
     }
 
+    /**
+     * Gets the class name of this block
+     * @returns the class name
+     */
     public getClassName(): string {
         return "FGConditionalDataBlock";
     }

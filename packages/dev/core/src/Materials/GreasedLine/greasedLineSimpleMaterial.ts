@@ -107,8 +107,8 @@ export class GreasedLineSimpleMaterial extends ShaderMaterial implements IGrease
         this.width = options.width
             ? options.width
             : options.sizeAttenuation && options.cameraFacing
-            ? GreasedLineMaterialDefaults.DEFAULT_WIDTH_ATTENUATED
-            : GreasedLineMaterialDefaults.DEFAULT_WIDTH;
+              ? GreasedLineMaterialDefaults.DEFAULT_WIDTH_ATTENUATED
+              : GreasedLineMaterialDefaults.DEFAULT_WIDTH;
         this.sizeAttenuation = options.sizeAttenuation ?? false;
         this.color = options.color ?? Color3.White();
         this.useColors = options.useColors ?? false;
@@ -174,7 +174,6 @@ export class GreasedLineSimpleMaterial extends ShaderMaterial implements IGrease
      * @param colors color table RGBA
      * @param lazy if lazy, the colors are not updated
      * @param forceNewTexture force creation of a new texture
-     * @returns
      */
     public setColors(colors: Nullable<Color3[]>, lazy = false, forceNewTexture = false): void {
         const origColorsCount = this._colors?.length ?? 0;

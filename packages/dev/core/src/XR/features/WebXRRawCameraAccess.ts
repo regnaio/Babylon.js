@@ -19,7 +19,7 @@ export interface IWebXRRawCameraAccessOptions {
 
 /**
  * WebXR Feature for WebXR raw camera access
- * @since
+ * @since 6.31.0
  * @see https://immersive-web.github.io/raw-camera-access/
  */
 export class WebXRRawCameraAccess extends WebXRAbstractFeature {
@@ -120,6 +120,8 @@ export class WebXRRawCameraAccess extends WebXRAbstractFeature {
 
     /**
      * @see https://github.com/immersive-web/raw-camera-access/blob/main/explainer.md
+     * @param view the XRView to update
+     * @param index the index of the view in the views array
      */
     private _updateCameraIntrinsics(view: XRView, index: number): void {
         const cameraViewport = {

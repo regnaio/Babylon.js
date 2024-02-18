@@ -67,6 +67,7 @@ interface ITransmissionHelperOptions {
 class TransmissionHelper {
     /**
      * Creates the default options for the helper.
+     * @returns the default options
      */
     private static _GetDefaultOptions(): ITransmissionHelperOptions {
         return {
@@ -154,7 +155,7 @@ class TransmissionHelper {
     }
 
     /**
-     * Gets the opaque render target texture or null if not available.
+     * @returns the opaque render target texture or null if not available.
      */
     public getOpaqueTarget(): Nullable<Texture> {
         return this._opaqueRenderTarget;
@@ -270,6 +271,8 @@ class TransmissionHelper {
         this._opaqueRenderTarget.lodGenerationScale = this._options.lodGenerationScale;
         this._opaqueRenderTarget.lodGenerationOffset = this._options.lodGenerationOffset;
         this._opaqueRenderTarget.samples = this._options.samples;
+        this._opaqueRenderTarget.renderSprites = true;
+        this._opaqueRenderTarget.renderParticles = true;
 
         let sceneImageProcessingapplyByPostProcess: boolean;
 

@@ -5,6 +5,7 @@ import type { FlowGraphAsyncExecutionBlock } from "./flowGraphAsyncExecutionBloc
 import type { FlowGraphBlock } from "./flowGraphBlock";
 import type { FlowGraphDataConnection } from "./flowGraphDataConnection";
 import type { FlowGraph } from "./flowGraph";
+import type { ISerializedFlowGraphContext } from "./typeDefinitions";
 import { defaultValueParseFunction, defaultValueSerializationFunction } from "./serialization";
 import type { FlowGraphCoordinator } from "./flowGraphCoordinator";
 import { Observable } from "../Misc/observable";
@@ -23,6 +24,25 @@ export interface IFlowGraphContextConfiguration {
      */
     readonly coordinator: FlowGraphCoordinator;
 }
+
+/**
+ * @experimental
+ * Options for parsing a context.
+ */
+export interface IFlowGraphContextParseOptions {
+    /**
+     * A function that parses a value from a serialization object.
+     * @param key the key of the value
+     * @param serializationObject the object containing the value
+     * @param scene the current scene
+     * @returns
+     */
+    readonly valueParseFunction?: (key: string, serializationObject: any, scene: Scene) => any;
+    /**
+     * The graph that the context is being parsed in.
+     */
+    readonly graph: FlowGraph;
+}
 /**
  * @experimental
  * The context represents the current state and execution of the flow graph.
@@ -39,15 +59,15 @@ export class FlowGraphContext {
     /**
      * These are the variables defined by a user.
      */
-    private _userVariables: Map<string, any> = new Map();
+    private _userVariables: { [key: string]: any } = {};
     /**
      * These are the variables set by the blocks.
      */
-    private _executionVariables: Map<string, any> = new Map();
+    private _executionVariables: { [key: string]: any } = {};
     /**
      * These are the values for the data connection points
      */
-    private _connectionValues: Map<string, any> = new Map();
+    private _connectionValues: { [key: string]: any } = {};
     /**
      * These are the variables set by the graph.
      */
@@ -72,29 +92,36 @@ export class FlowGraphContext {
 
     /**
      * Check if a user-defined variable is defined.
-     * @param name
-     * @returns
+     * @param name the name of the variable
+     * @returns true if the variable is defined
      */
     public hasVariable(name: string) {
-        return this._userVariables.has(name);
+        return name in this._userVariables;
     }
 
     /**
      * Set a user-defined variable.
-     * @param name
-     * @param value
+     * @param name the name of the variable
+     * @param value the value of the variable
      */
     public setVariable(name: string, value: any) {
-        this._userVariables.set(name, value);
+        this._userVariables[name] = value;
     }
 
     /**
      * Get a user-defined variable.
-     * @param name
-     * @returns
+     * @param name the name of the variable
+     * @returns the value of the variable
      */
     public getVariable(name: string): any {
-        return this._userVariables.get(name);
+        return this._userVariables[name];
+    }
+
+    /**
+     * Gets all user variables map
+     */
+    public get userVariables() {
+        return this._userVariables;
     }
 
     private _getUniqueIdPrefixedName(obj: FlowGraphBlock, name: string): string {
@@ -108,7 +135,7 @@ export class FlowGraphContext {
      * @param value
      */
     public _setExecutionVariable(block: FlowGraphBlock, name: string, value: any) {
-        this._executionVariables.set(this._getUniqueIdPrefixedName(block, name), value);
+        this._executionVariables[this._getUniqueIdPrefixedName(block, name)] = value;
     }
 
     /**
@@ -119,7 +146,7 @@ export class FlowGraphContext {
      */
     public _getExecutionVariable(block: FlowGraphBlock, name: string, defaultValue?: any): any {
         if (this._hasExecutionVariable(block, name)) {
-            return this._executionVariables.get(this._getUniqueIdPrefixedName(block, name));
+            return this._executionVariables[this._getUniqueIdPrefixedName(block, name)];
         } else {
             return defaultValue;
         }
@@ -132,7 +159,7 @@ export class FlowGraphContext {
      * @param name
      */
     public _deleteExecutionVariable(block: FlowGraphBlock, name: string) {
-        this._executionVariables.delete(this._getUniqueIdPrefixedName(block, name));
+        delete this._executionVariables[this._getUniqueIdPrefixedName(block, name)];
     }
 
     /**
@@ -143,7 +170,7 @@ export class FlowGraphContext {
      * @returns
      */
     public _hasExecutionVariable(block: FlowGraphBlock, name: string) {
-        return this._executionVariables.has(this._getUniqueIdPrefixedName(block, name));
+        return this._getUniqueIdPrefixedName(block, name) in this._executionVariables;
     }
 
     /**
@@ -153,7 +180,7 @@ export class FlowGraphContext {
      * @returns
      */
     public _hasConnectionValue(connectionPoint: FlowGraphDataConnection<any>) {
-        return this._connectionValues.has(connectionPoint.uniqueId);
+        return connectionPoint.uniqueId in this._connectionValues;
     }
 
     /**
@@ -163,7 +190,7 @@ export class FlowGraphContext {
      * @param value
      */
     public _setConnectionValue<T>(connectionPoint: FlowGraphDataConnection<T>, value: T) {
-        this._connectionValues.set(connectionPoint.uniqueId, value);
+        this._connectionValues[connectionPoint.uniqueId] = value;
     }
 
     /**
@@ -173,7 +200,7 @@ export class FlowGraphContext {
      * @returns
      */
     public _getConnectionValue<T>(connectionPoint: FlowGraphDataConnection<T>): T {
-        return this._connectionValues.get(connectionPoint.uniqueId);
+        return this._connectionValues[connectionPoint.uniqueId];
     }
 
     /**
@@ -241,27 +268,6 @@ export class FlowGraphContext {
         return this._executionId;
     }
 
-    private _getEnclosedSubstring(subString: string): string {
-        return `{${subString}}`;
-    }
-
-    /** @internal */
-    public _getTargetFromPath(path: string, subString: string, block: FlowGraphBlock) {
-        let finalPath = path;
-        if (subString && path.indexOf(this._getEnclosedSubstring(subString)) !== -1) {
-            const nodeToSub = block.getDataInput(subString);
-            if (!nodeToSub) {
-                throw new Error(`Invalid substitution input for substitution string ${subString}`);
-            }
-            const index = Math.floor(nodeToSub.getValue(this));
-            if (isNaN(index)) {
-                throw new Error(`Invalid substitution value for substitution string ${subString}`);
-            }
-            finalPath = path.replace(this._getEnclosedSubstring(subString), index.toString());
-        }
-        return this.getVariable(finalPath);
-    }
-
     /**
      * Serializes a context
      * @param serializationObject the object to write the values in
@@ -270,15 +276,18 @@ export class FlowGraphContext {
     public serialize(serializationObject: any = {}, valueSerializationFunction: (key: string, value: any, serializationObject: any) => void = defaultValueSerializationFunction) {
         serializationObject.uniqueId = this.uniqueId;
         serializationObject._userVariables = {};
-        this._userVariables.forEach((value, key) => {
-            valueSerializationFunction(key, value, serializationObject._userVariables);
-        });
+        for (const key in this._userVariables) {
+            valueSerializationFunction(key, this._userVariables[key], serializationObject._userVariables);
+        }
         serializationObject._connectionValues = {};
-        this._connectionValues.forEach((value, key) => {
-            valueSerializationFunction(key, value, serializationObject._connectionValues);
-        });
+        for (const key in this._connectionValues) {
+            valueSerializationFunction(key, this._connectionValues[key], serializationObject._connectionValues);
+        }
     }
 
+    /**
+     * @returns the class name of the object.
+     */
     public getClassName() {
         return "FGContext";
     }
@@ -286,24 +295,20 @@ export class FlowGraphContext {
     /**
      * Parses a context
      * @param serializationObject the object containing the context serialization values
-     * @param graph the graph to which the context should belong
-     * @param valueParseFunction a function to parse complex values
+     * @param options the options for parsing the context
      * @returns
      */
-    public static Parse(
-        serializationObject: any = {},
-        graph: FlowGraph,
-        valueParseFunction: (key: string, serializationObject: any, scene: Scene) => any = defaultValueParseFunction
-    ): FlowGraphContext {
-        const result = graph.createContext();
+    public static Parse(serializationObject: ISerializedFlowGraphContext, options: IFlowGraphContextParseOptions): FlowGraphContext {
+        const result = options.graph.createContext();
+        const valueParseFunction = options.valueParseFunction ?? defaultValueParseFunction;
         result.uniqueId = serializationObject.uniqueId;
         for (const key in serializationObject._userVariables) {
             const value = valueParseFunction(key, serializationObject._userVariables, result._configuration.scene);
-            result._userVariables.set(key, value);
+            result._userVariables[key] = value;
         }
         for (const key in serializationObject._connectionValues) {
             const value = valueParseFunction(key, serializationObject._connectionValues, result._configuration.scene);
-            result._connectionValues.set(key, value);
+            result._connectionValues[key] = value;
         }
 
         return result;

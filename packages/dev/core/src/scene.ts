@@ -162,6 +162,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
      */
     public static MaxDeltaTime = 1000.0;
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Factory used to create the default material.
      * @param scene The scene to create the material for
@@ -171,6 +172,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         throw _WarnImport("StandardMaterial");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Factory used to create the a collision coordinator.
      * @returns The collision coordinator
@@ -2010,6 +2012,11 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         // Ensures that the pre-pass renderer is enabled if it is to be enabled.
         this.prePassRenderer?.update();
 
+        // OIT
+        if (this.useOrderIndependentTransparency && this.depthPeelingRenderer) {
+            isReady &&= this.depthPeelingRenderer.isReady();
+        }
+
         // Meshes
         if (checkRenderTargets) {
             this._processedMaterials.reset();
@@ -3160,7 +3167,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
 
     /**
      * Gets a light node using its name
-     * @param name defines the the light's name
+     * @param name defines the light's name
      * @returns the light or null if none found.
      */
     public getLightByName(name: string): Nullable<Light> {
@@ -4295,6 +4302,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         // Restore framebuffer after rendering to targets
         if (needRebind && !this.prePass) {
             this._bindFrameBuffer(this._activeCamera, false);
+            this.updateTransformMatrix();
         }
 
         this.onAfterRenderTargetsRenderObservable.notifyObservers(this);
@@ -4425,13 +4433,14 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
 
     /**
      * User updatable function that will return a deterministic frame time when engine is in deterministic lock step mode
+     * @returns the frame time
      */
     public getDeterministicFrameTime: () => number = () => {
         return this._engine.getTimeStep();
     };
 
     /** @internal */
-    public _animate(): void {
+    public _animate(customDeltaTime?: number): void {
         // Nothing to do as long as Animatable have not been imported.
     }
 
@@ -4801,7 +4810,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         try {
             this.onDisposeObservable.notifyObservers(this);
         } catch (e) {
-            console.error("An error occurred while calling onDisposeObservable!", e);
+            Logger.Error("An error occurred while calling onDisposeObservable!", e);
         }
 
         this.detachControl();
@@ -5012,6 +5021,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
 
     // Picking
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a ray that can be used to pick in the scene
      * @param x defines the x coordinate of the origin (on-screen)
@@ -5025,6 +5035,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         throw _WarnImport("Ray");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a ray that can be used to pick in the scene
      * @param x defines the x coordinate of the origin (on-screen)
@@ -5048,6 +5059,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         throw _WarnImport("Ray");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a ray that can be used to pick in the scene
      * @param x defines the x coordinate of the origin (on-screen)
@@ -5059,6 +5071,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         throw _WarnImport("Ray");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a ray that can be used to pick in the scene
      * @param x defines the x coordinate of the origin (on-screen)
@@ -5121,6 +5134,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         return new PickingInfo();
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Use the given ray to pick a mesh in the scene. A mesh triangle can be picked both from its front and back sides,
      * irrespective of orientation.
@@ -5134,6 +5148,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         throw _WarnImport("Ray");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Launch a ray to try to pick a mesh in the scene. A mesh triangle can be picked both from its front and back sides,
      * irrespective of orientation.
@@ -5148,6 +5163,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         throw _WarnImport("Ray");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Launch a ray to try to pick a mesh in the scene
      * @param ray Ray to use
@@ -5210,7 +5226,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
     /** @internal */
     public _rebuildTextures(): void {
         for (const texture of this.textures) {
-            texture._rebuild();
+            texture._rebuild(true);
         }
 
         this.markAllMaterialsAsDirty(Constants.MATERIAL_TextureDirtyFlag);
@@ -5247,7 +5263,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
      * @param filter defines a predicate used to filter results
      * @returns an array of Mesh
      */
-    public getMeshesByTags(tagsQuery: string, filter?: (mesh: AbstractMesh) => boolean): Mesh[] {
+    public getMeshesByTags(tagsQuery: string, filter?: (mesh: AbstractMesh) => boolean): AbstractMesh[] {
         return this._getByTags(this.meshes, tagsQuery, filter);
     }
 
@@ -5394,6 +5410,22 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
         return request;
     }
 
+    public _loadFileAsync(
+        fileOrUrl: File | string,
+        onProgress?: (data: any) => void,
+        useOfflineSupport?: boolean,
+        useArrayBuffer?: false,
+        onOpened?: (request: WebRequest) => void
+    ): Promise<string>;
+
+    public _loadFileAsync(
+        fileOrUrl: File | string,
+        onProgress?: (data: any) => void,
+        useOfflineSupport?: boolean,
+        useArrayBuffer?: true,
+        onOpened?: (request: WebRequest) => void
+    ): Promise<ArrayBuffer>;
+
     /**
      * @internal
      */
@@ -5511,6 +5543,7 @@ export class Scene extends AbstractScene implements IAnimatable, IClipPlanesHold
      */
     protected _perfCollector: Nullable<PerformanceViewerCollector> = null;
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * This method gets the performance collector belonging to the scene, which is generally shared with the inspector.
      * @returns the perf collector belonging to the scene.

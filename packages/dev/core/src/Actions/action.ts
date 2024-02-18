@@ -233,7 +233,9 @@ export class Action implements IAction {
      * @returns the serialized object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public serialize(parent: any): any {}
+    public serialize(parent: any): any {
+        return null;
+    }
 
     /**
      * Internal only called by serialize
@@ -309,12 +311,12 @@ export class Action implements IAction {
             targetType: (<Mesh>target)._isMesh
                 ? "MeshProperties"
                 : (<Light>target)._isLight
-                ? "LightProperties"
-                : (<Camera>target)._isCamera
-                ? "CameraProperties"
-                : (<Material>target)._isMaterial
-                ? "MaterialProperties"
-                : "SceneProperties",
+                  ? "LightProperties"
+                  : (<Camera>target)._isCamera
+                    ? "CameraProperties"
+                    : (<Material>target)._isMaterial
+                      ? "MaterialProperties"
+                      : "SceneProperties",
             value: (<Scene>target)._isScene ? "Scene" : (<Node>target).name,
         };
     };

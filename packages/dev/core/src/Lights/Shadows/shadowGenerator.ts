@@ -1547,9 +1547,9 @@ export class ShadowGenerator implements IShadowGenerator {
             const manager = (<Mesh>mesh).morphTargetManager;
             let morphInfluencers = 0;
             if (manager) {
-                if (manager.numInfluencers > 0) {
+                morphInfluencers = manager.numMaxInfluencers || manager.numInfluencers;
+                if (morphInfluencers > 0) {
                     defines.push("#define MORPHTARGETS");
-                    morphInfluencers = manager.numInfluencers;
                     defines.push("#define NUM_MORPH_INFLUENCERS " + morphInfluencers);
                     if (manager.isUsingTextureForTargets) {
                         defines.push("#define MORPHTARGETS_TEXTURE");
@@ -1595,6 +1595,7 @@ export class ShadowGenerator implements IShadowGenerator {
                     "depthValuesSM",
                     "biasAndScaleSM",
                     "morphTargetInfluences",
+                    "morphTargetCount",
                     "boneTextureWidth",
                     "softTransparentShadowSM",
                     "morphTargetTextureInfo",
@@ -1778,6 +1779,20 @@ export class ShadowGenerator implements IShadowGenerator {
             this.getLight().getDepthMinZ(camera) + this.getLight().getDepthMaxZ(camera),
             lightIndex
         );
+    }
+
+    /**
+     * Gets the view matrix used to render the shadow map.
+     */
+    public get viewMatrix() {
+        return this._viewMatrix;
+    }
+
+    /**
+     * Gets the projection matrix used to render the shadow map.
+     */
+    public get projectionMatrix() {
+        return this._projectionMatrix;
     }
 
     /**
