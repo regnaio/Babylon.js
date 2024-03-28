@@ -46,6 +46,7 @@ type ControllerData = {
     nearInteraction: boolean;
     hoverInteraction: boolean;
     grabInteraction: boolean;
+    downTriggered: boolean;
     // event support
     eventListeners?: { [event in XREventType]?: (event: XRInputSourceEvent) => void };
     pickedPointVisualCue: AbstractMesh;
@@ -164,6 +165,7 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
             hoverInteraction: false,
             nearInteraction: false,
             grabInteraction: false,
+            downTriggered: false,
             id: WebXRNearInteraction._IdCounter++,
             pickedPointVisualCue: selectionMesh,
         };
@@ -667,9 +669,11 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
                 if (!controllerData.nearInteractionTargetMesh) {
                     this._scene.simulatePointerDown(controllerData.pick, pointerEventInit);
                     controllerData.nearInteractionTargetMesh = controllerData.meshUnderPointer;
+                    controllerData.downTriggered = true;
                 }
             } else if (controllerData.nearInteractionTargetMesh && controllerData.stalePick) {
                 this._scene.simulatePointerUp(controllerData.stalePick, pointerEventInit);
+                controllerData.downTriggered = false;
                 controllerData.nearInteractionTargetMesh = null;
             }
         });
@@ -686,8 +690,10 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
                     controllerData.grabInteraction = true;
                     controllerData.pickedPointVisualCue.isVisible = false;
                     this._scene.simulatePointerDown(controllerData.pick, pointerEventInit);
+                    controllerData.downTriggered = true;
                 } else if (!pressed && controllerData.pick && controllerData.grabInteraction) {
                     this._scene.simulatePointerUp(controllerData.pick, pointerEventInit);
+                    controllerData.downTriggered = false;
                     controllerData.grabInteraction = false;
                     controllerData.pickedPointVisualCue.isVisible = true;
                 }
@@ -737,6 +743,7 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
                     controllerData.grabInteraction = true;
                     controllerData.pickedPointVisualCue.isVisible = false;
                     this._scene.simulatePointerDown(controllerData.pick, pointerEventInit);
+                    controllerData.downTriggered = true;
                 }
             };
 
@@ -750,6 +757,7 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
                     this._scene.simulatePointerUp(controllerData.pick, pointerEventInit);
                     controllerData.grabInteraction = false;
                     controllerData.pickedPointVisualCue.isVisible = true;
+                    controllerData.downTriggered = false;
                 }
             };
 
@@ -793,7 +801,10 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
         controllerData.pickedPointVisualCue.dispose();
 
         this._xrSessionManager.runInXRFrame(() => {
-            // Fire a pointerup
+            if (!controllerData.downTriggered) {
+                return;
+            }
+            // Fire a pointerup in case controller was detached before a pointerup event was fired
             const pointerEventInit: PointerEventInit = {
                 pointerId: controllerData.id,
                 pointerType: "xr-near",
@@ -931,6 +942,10 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
                     pickingInfo.gripTransform = controllerData.xrController.grip || null;
                     pickingInfo.originMesh = controllerData.touchCollisionMesh;
                     pickingInfo.distance = result.distance;
+                    pickingInfo.bu = result.bu;
+                    pickingInfo.bv = result.bv;
+                    pickingInfo.faceId = result.faceId;
+                    pickingInfo.subMeshId = result.subMeshId;
                 }
             }
         }
@@ -963,9 +978,10 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
 
         const result = TmpVectors.Vector3[0];
         const tmpVec = TmpVectors.Vector3[1];
+        const tmpRay = new Ray(Vector3.Zero(), Vector3.Zero(), 1);
 
         let distance = +Infinity;
-        let tmp, tmpDistanceSphereToCenter, tmpDistanceSurfaceToCenter;
+        let tmp, tmpDistanceSphereToCenter, tmpDistanceSurfaceToCenter, intersectionInfo;
         const center = TmpVectors.Vector3[2];
         const worldToMesh = TmpVectors.Matrix[0];
         worldToMesh.copyFrom(mesh.getWorldMatrix());
@@ -990,6 +1006,12 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
 
             if (tmp !== -1 && tmp < distance) {
                 distance = tmp;
+
+                // ray between the sphere center and the point on the mesh
+                Ray.CreateFromToToRef(sphere.center, tmpVec, tmpRay);
+                tmpRay.length = distance * 2;
+                intersectionInfo = tmpRay.intersectsMesh(mesh);
+
                 result.copyFrom(tmpVec);
             }
         }
@@ -999,6 +1021,12 @@ export class WebXRNearInteraction extends WebXRAbstractFeature {
             pi.distance = distance;
             pi.pickedMesh = mesh;
             pi.pickedPoint = result.clone();
+            if (intersectionInfo && intersectionInfo.bu !== null && intersectionInfo.bv !== null) {
+                pi.faceId = intersectionInfo.faceId;
+                pi.subMeshId = intersectionInfo.subMeshId;
+                pi.bu = intersectionInfo.bu;
+                pi.bv = intersectionInfo.bv;
+            }
         }
 
         return pi;
