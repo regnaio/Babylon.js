@@ -9,7 +9,7 @@ import type { Nullable } from "../types";
 import type { Engine } from "../Engines/engine";
 
 /** Defines operator used for tonemapping */
-export enum TonemappingOperator {
+export const enum TonemappingOperator {
     /** Hable */
     Hable = 0,
     /** Reinhard */
@@ -28,7 +28,7 @@ export class TonemapPostProcess extends PostProcess {
      * Gets a string identifying the name of the class
      * @returns "TonemapPostProcess" string
      */
-    public getClassName(): string {
+    public override getClassName(): string {
         return "TonemapPostProcess";
     }
 

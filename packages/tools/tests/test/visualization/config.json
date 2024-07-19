@@ -2,6 +2,43 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "BoundingInfo Helper",
+            "playgroundId": "#BCNJD4#42",
+            "referenceImage": "bbhelper.png",
+            "excludedEngines": ["webgl1"]
+        },
+        {
+            "title": "NME Shadow Map",
+            "playgroundId": "#M3QR7E#83",
+            "referenceImage": "nmeshadowmap.png",
+            "excludedEngines": ["webgl1"]
+        },
+        {
+            "title": "NMEGLTF",
+            "playgroundId": "#WGZLGJ#10320",
+            "referenceImage": "nmegltf.png"
+        },
+        {
+            "title": "GPUPicker",
+            "playgroundId": "#1RWFMT#2",
+            "renderCount": 20,
+            "referenceImage": "gpuPicker.png"
+        },
+        {
+            "title": "Trailmesh - tapered and untapered",
+            "playgroundId": "#XGGSWJ#1",
+            "renderCount": 100,
+            "referenceImage": "trailMesh.png"
+        },
+        {
+            "title": "3D Procedural Textures",
+            "playgroundId": "#AYZY4Q#7",
+            "renderCount": 5,
+            "referenceImage": "procedural-textures-3d.png",
+            "excludedEngines": ["webgl1", "webgpu"],
+            "excludeFromAutomaticTesting": true
+        },
+        {
             "title": "GUI Input Text Area with Placeholder",
             "playgroundId": "#NVAEWD#364",
             "referenceImage": "gui-inputtextarea-withplaceholder.png"
@@ -206,7 +243,7 @@
         },
         {
             "title": "Dynamic Texture context clip",
-            "playgroundId": "#FU0ES5#37",
+            "playgroundId": "#FU0ES5#47",
             "referenceImage": "dynamicTextureClip.png"
         },
         {
@@ -519,17 +556,23 @@
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
-            "playgroundId": "#22MFU2#4",
+            "playgroundId": "#22MFU2#77",
             "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 0)",
-            "playgroundId": "#22MFU2#65",
+            "playgroundId": "#22MFU2#78",
             "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 1)",
-            "playgroundId": "#22MFU2#65",
+            "playgroundId": "#22MFU2#78",
+            "replace": "numWorkers = 0, numWorkers = 1",
+            "referenceImage": "draco.png"
+        },
+        {
+            "title": "Draco Mesh Compression (fallback)",
+            "playgroundId": "#22MFU2#75",
             "replace": "numWorkers = 0, numWorkers = 1",
             "referenceImage": "draco.png"
         },
@@ -726,10 +769,8 @@
         },
         {
             "title": "GLTF ClearCoat",
-            "playgroundId": "#YG3BBF#4",
-            "referenceImage": "glTFClearCoat.png",
-            "renderCount": 50,
-            "excludeFromAutomaticTesting": true
+            "playgroundId": "#YG3BBF#33",
+            "referenceImage": "glTFClearCoat.png"
         },
         {
             "title": "GLTF Alpha Blend",
@@ -783,12 +824,14 @@
         {
             "title": "GLTF Serializer Morph Target Animation Group",
             "playgroundId": "#T087A8#29",
-            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
+            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png",
+            "excludedEngines": ["webgl1"]
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
             "playgroundId": "#9N6CLU#23",
-            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png"
+            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png",
+            "excludedEngines": ["webgl1"]
         },
         {
             "title": "GLTF Serializer KHR gpu instancing",
@@ -933,17 +976,17 @@
         },
         {
             "title": "PBR shader code coverage 1",
-            "playgroundId": "#QI7TL3#16",
+            "playgroundId": "#QI7TL3#55",
             "referenceImage": "pbr-codecoverage1.png"
         },
         {
             "title": "PBR shader code coverage 2",
-            "playgroundId": "#QI7TL3#17",
+            "playgroundId": "#QI7TL3#57",
             "referenceImage": "pbr-codecoverage2.png"
         },
         {
             "title": "PBR shader code coverage 3",
-            "playgroundId": "#QI7TL3#18",
+            "playgroundId": "#QI7TL3#56",
             "referenceImage": "pbr-codecoverage3.png"
         },
         {
@@ -978,6 +1021,12 @@
             "title": "Up Vector",
             "playgroundId": "#2FNBTG#27",
             "referenceImage": "upVector.png"
+        },
+        {
+            "title": "Procedural textures playground",
+            "playgroundId": "#24C4KC#67",
+            "referenceImage": "proceduralTexturePlayground.png",
+            "excludedEngines": ["webgl1", "webgpu"]
         },
         {
             "title": "Procedural textures",
@@ -1127,6 +1176,17 @@
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true; useRightHandedSystem = true;",
             "referenceImage": "objStanfordBunnyNormalsRoundTripRH.png"
+        },
+        {
+            "title": "glTF to OBJ (LH)",
+            "playgroundId": "#HYZWGK#3",
+            "referenceImage": "gltfToObjLH.png"
+        },
+        {
+            "title": "glTF to OBJ (RH)",
+            "playgroundId": "#HYZWGK#3",
+            "replace": "//options//, useRightHandedSystem = true;",
+            "referenceImage": "gltfToObjRH.png"
         },
         {
             "title": "GLTF Extension KHR_materials_variants",
@@ -1377,24 +1437,23 @@
         },
         {
             "title": "Scissor test",
-            "renderCount": 10,
-            "playgroundId": "#W7E7CF#12",
+            "playgroundId": "#W7E7CF#34",
             "excludedEngines": ["webgl1"],
             "referenceImage": "scissor-test.png"
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
-            "renderCount": 10,
-            "playgroundId": "#W7E7CF#27",
+            "playgroundId": "#W7E7CF#34",
+            "replace": "//options//, hardwareScalingLevel = 0.9;",
             "excludedEngines": ["webgl1"],
-            "referenceImage": "scissor-test.png"
+            "referenceImage": "scissor-test-2.png"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
-            "renderCount": 10,
-            "playgroundId": "#W7E7CF#28",
+            "playgroundId": "#W7E7CF#34",
+            "replace": "//options//, hardwareScalingLevel = 1.5;",
             "excludedEngines": ["webgl1"],
-            "referenceImage": "scissor-test.png"
+            "referenceImage": "scissor-test-3.png"
         },
         {
             "title": "Scissor test with negative x and y",
@@ -2014,6 +2073,12 @@
             "excludeFromAutomaticTesting": true
         },
         {
+            "title": "Render to 3D RT",
+            "renderCount": 5,
+            "playgroundId": "#XSNYAU#83",
+            "excludedEngines": ["webgl1"]
+        },
+        {
             "title": "Interleaved buffers test",
             "playgroundId": "#AVFNTW#5",
             "referenceImage": "interleaved-buffers-1.png"
@@ -2041,6 +2106,45 @@
             "title": "CesiumMan from Khronos Sample Assets",
             "playgroundId": "#4GWX8M",
             "referenceImage": "CesiumMan.png"
+        },
+        {
+            "title": "Two vertex buffers pointing to one buffer",
+            "playgroundId": "#RZNHXT#7",
+            "referenceImage": "two-vertex-buffers.png"
+        },
+        {
+            "title": "Shadows in RHS mode",
+            "playgroundId": "#RO51RT#14",
+            "referenceImage": "shadows-rhs.png"
+        },
+        {
+            "title": "Load environment from data buffer",
+            "playgroundId": "#YLI4J1",
+            "referenceImage": "environment-from-data-buffer.png"
+        },
+        {
+            "title": "computeMaxExtents (BrainStem)",
+            "playgroundId": "#M2H33B",
+            "replace": "//options//, modelIndex = 2;",
+            "referenceImage": "computeMaxExtents-BoxAnimated.png"
+        },
+        {
+            "title": "computeMaxExtents (Fox 0)",
+            "playgroundId": "#M2H33B",
+            "replace": "//options//, modelIndex = 4; animationIndex = 0;",
+            "referenceImage": "computeMaxExtents-Fox0.png"
+        },
+        {
+            "title": "computeMaxExtents (Fox 1)",
+            "playgroundId": "#M2H33B",
+            "replace": "//options//, modelIndex = 4; animationIndex = 1;",
+            "referenceImage": "computeMaxExtents-Fox1.png"
+        },
+        {
+            "title": "computeMaxExtents (MorphStressTest)",
+            "playgroundId": "#M2H33B",
+            "replace": "//options//, modelIndex = 5;",
+            "referenceImage": "computeMaxExtents-MorphStressTest.png"
         }
     ]
 }

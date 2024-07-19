@@ -7,7 +7,7 @@ import type { Scene } from "core/scene";
 import { EngineStore } from "core/Engines/engineStore";
 
 import { TreeItemComponent } from "./treeItemComponent";
-import Resizable from "re-resizable";
+import { Resizable } from "re-resizable";
 import { HeaderComponent } from "../headerComponent";
 import { SceneTreeItemComponent } from "./entities/sceneTreeItemComponent";
 import { Tools } from "../../tools";
@@ -42,12 +42,14 @@ interface ISceneExplorerFilterComponentProps {
     onFilter: (filter: string) => void;
 }
 
+const ResizableCasted = Resizable as any as React.ComponentClass<any>;
+
 export class SceneExplorerFilterComponent extends React.Component<ISceneExplorerFilterComponentProps> {
     constructor(props: ISceneExplorerFilterComponentProps) {
         super(props);
     }
 
-    render() {
+    override render() {
         return (
             <div className="filter">
                 <input type="text" placeholder="Filter" onChange={(evt) => this.props.onFilter(evt.target.value)} />
@@ -117,7 +119,7 @@ export class SceneExplorerComponent extends React.Component<ISceneExplorerCompon
         }, 32);
     }
 
-    componentDidMount() {
+    override componentDidMount() {
         this._onSelectionChangeObserver = this.props.globalState.onSelectionChangedObservable.add((entity) => {
             if (this.state.selectedEntity !== entity) {
                 this.setState({ selectedEntity: entity });
@@ -129,7 +131,7 @@ export class SceneExplorerComponent extends React.Component<ISceneExplorerCompon
         });
     }
 
-    componentWillUnmount() {
+    override componentWillUnmount() {
         if (this._onSelectionChangeObserver) {
             this.props.globalState.onSelectionChangedObservable.remove(this._onSelectionChangeObserver);
         }
@@ -698,7 +700,7 @@ export class SceneExplorerComponent extends React.Component<ISceneExplorerCompon
         this.props.onPopup();
     }
 
-    render() {
+    override render() {
         const allNodes: any[] = [];
 
         if (this.props.popupMode) {
@@ -732,16 +734,16 @@ export class SceneExplorerComponent extends React.Component<ISceneExplorerCompon
         }
 
         return (
-            <Resizable
+            <ResizableCasted
                 tabIndex={-1}
                 id="sceneExplorer"
-                ref={this._sceneExplorerRef}
                 size={{ height: "100%" }}
+                ref={this._sceneExplorerRef}
                 minWidth={300}
                 maxWidth={600}
                 minHeight="100%"
                 enable={{ top: false, right: true, bottom: false, left: false, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
-                onKeyDown={(keyEvent) => this.processKeys(keyEvent, allNodes)}
+                onKeyDown={(keyEvent: React.KeyboardEvent<HTMLDivElement>) => this.processKeys(keyEvent, allNodes)}
             >
                 {!this.props.noHeader && (
                     <HeaderComponent
@@ -754,7 +756,7 @@ export class SceneExplorerComponent extends React.Component<ISceneExplorerCompon
                     />
                 )}
                 {this.renderContent(allNodes)}
-            </Resizable>
+            </ResizableCasted>
         );
     }
 }

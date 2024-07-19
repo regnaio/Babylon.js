@@ -39,7 +39,7 @@ export class InputTextArea extends InputText {
     public onLinesReadyObservable = new Observable<InputTextArea>();
 
     /** @internal */
-    public _connectedVirtualKeyboard: Nullable<VirtualKeyboard>;
+    public override _connectedVirtualKeyboard: Nullable<VirtualKeyboard>;
     private _contextForBreakLines: ICanvasRenderingContext;
     private _clickedCoordinateX: Nullable<number>;
     private _clickedCoordinateY: Nullable<number>;
@@ -66,7 +66,7 @@ export class InputTextArea extends InputText {
         this._markAsDirty();
     }
 
-    public set height(value: string | number) {
+    public override set height(value: string | number) {
         this.fixedRatioMasterIsWidth = false;
 
         if (this._height.toString(this._host) === value) {
@@ -106,7 +106,7 @@ export class InputTextArea extends InputText {
      * @param text defines the text of the control
      */
     constructor(
-        public name?: string,
+        public override name?: string,
         text: string = ""
     ) {
         super(name);
@@ -132,7 +132,7 @@ export class InputTextArea extends InputText {
         };
     }
 
-    protected _getTypeName(): string {
+    protected override _getTypeName(): string {
         return "InputTextArea";
     }
 
@@ -140,7 +140,7 @@ export class InputTextArea extends InputText {
      * Handles the keyboard event
      * @param evt Defines the KeyboardEvent
      */
-    public processKeyboard(evt: IKeyboardEvent): void {
+    public override processKeyboard(evt: IKeyboardEvent): void {
         if (this.isReadOnly) {
             return;
         }
@@ -161,19 +161,12 @@ export class InputTextArea extends InputText {
      */
     public alternativeProcessKey(code: string, key?: string, evt?: IKeyboardEvent) {
         //return if clipboard event keys (i.e -ctr/cmd + c,v,x)
-        if (evt && (evt.ctrlKey || evt.metaKey) && (code === "KeyC" || code === "KeyV" || code === "KeyX")) {
+        if (evt && (evt.ctrlKey || evt.metaKey) && (key === "c" || key === "v" || key === "x")) {
             return;
         }
 
         // Specific cases
         switch (code) {
-            case "KeyA": // A - select all
-                if (evt && (evt.ctrlKey || evt.metaKey)) {
-                    this._selectAllText();
-                    evt.preventDefault();
-                    return;
-                }
-                break;
             case "Period": //SLASH
                 if (evt && evt.shiftKey) {
                     evt.preventDefault();
@@ -216,6 +209,7 @@ export class InputTextArea extends InputText {
 
                 this._textHasChanged();
                 break;
+            case "NumpadEnter": // NUMPAD ENTER
             case "Enter": // RETURN
                 this._prevText = this._textWrapper.text;
                 this._textWrapper.removePart(this._cursorInfo.globalStartIndex, this._cursorInfo.globalEndIndex, "\n");
@@ -476,6 +470,13 @@ export class InputTextArea extends InputText {
                 return;
         }
 
+        // special case - select all. Use key instead of code to support all keyboard layouts
+        if (key === "a" && evt && (evt.ctrlKey || evt.metaKey)) {
+            this._selectAllText();
+            evt.preventDefault();
+            return;
+        }
+
         // Printable characters
         if (key?.length === 1) {
             evt?.preventDefault();
@@ -566,9 +567,9 @@ export class InputTextArea extends InputText {
      * @param context The rendering canvas
      * @internal
      */
-    protected _preMeasure(parentMeasure: Measure, context: ICanvasRenderingContext): void {
+    protected override _preMeasure(parentMeasure: Measure, context: ICanvasRenderingContext): void {
         if (!this._fontOffset || this._wasDirty) {
-            this._fontOffset = Control._GetFontOffset(context.font);
+            this._fontOffset = Control._GetFontOffset(context.font, this._host.getScene()?.getEngine());
         }
 
         let text = this._beforeRenderText(this._textWrapper).text;
@@ -631,7 +632,7 @@ export class InputTextArea extends InputText {
         }
     }
 
-    protected _textHasChanged() {
+    protected override _textHasChanged() {
         if (!this._prevText && this._textWrapper.text && this.placeholderText) {
             this._cursorInfo.currentLineIndex = 0;
             this._cursorInfo.globalStartIndex = 1;
@@ -656,7 +657,7 @@ export class InputTextArea extends InputText {
             this._scrollLeft = this._clipTextLeft;
         }
 
-        if (this._isFocused && !this._autoStretchHeight) {
+        if (this._isFocused) {
             const selectedHeight = (this._cursorInfo.currentLineIndex + 1) * this._fontOffset.height;
             const textTop = this._clipTextTop - selectedHeight;
 
@@ -673,7 +674,7 @@ export class InputTextArea extends InputText {
      *
      * @internal
      */
-    protected _additionalProcessing(): void {
+    protected override _additionalProcessing(): void {
         // Flush the highlighted text each frame
         this.highlightedText = "";
 
@@ -714,7 +715,7 @@ export class InputTextArea extends InputText {
      * @param ev The clipboard event
      * @internal
      */
-    protected _onCopyText(ev: ClipboardEvent): void {
+    protected override _onCopyText(ev: ClipboardEvent): void {
         this._isTextHighlightOn = false;
         //when write permission to clipbaord data is denied
         try {
@@ -729,7 +730,7 @@ export class InputTextArea extends InputText {
      * @param ev The clipboard event
      * @internal
      */
-    protected _onCutText(ev: ClipboardEvent): void {
+    protected override _onCutText(ev: ClipboardEvent): void {
         if (!this._highlightedText) {
             return;
         }
@@ -751,7 +752,7 @@ export class InputTextArea extends InputText {
      * @param ev The clipboard event
      * @internal
      */
-    protected _onPasteText(ev: ClipboardEvent): void {
+    protected override _onPasteText(ev: ClipboardEvent): void {
         let data: string = "";
         if (ev.clipboardData && ev.clipboardData.types.indexOf("text/plain") !== -1) {
             data = ev.clipboardData.getData("text/plain");
@@ -772,7 +773,7 @@ export class InputTextArea extends InputText {
         this._textHasChanged();
     }
 
-    public _draw(context: ICanvasRenderingContext): void {
+    public override _draw(context: ICanvasRenderingContext): void {
         this._computeScroll();
 
         this._scrollLeft = this._scrollLeft ?? 0;
@@ -974,7 +975,7 @@ export class InputTextArea extends InputText {
         }, 500);
     }
 
-    public _onPointerDown(target: Control, coordinates: Vector2, pointerId: number, buttonIndex: number, pi: PointerInfoBase): boolean {
+    public override _onPointerDown(target: Control, coordinates: Vector2, pointerId: number, buttonIndex: number, pi: PointerInfoBase): boolean {
         if (!super._onPointerDown(target, coordinates, pointerId, buttonIndex, pi)) {
             return false;
         }
@@ -1005,7 +1006,7 @@ export class InputTextArea extends InputText {
     }
 
     // for textselection
-    public _onPointerMove(target: Control, coordinates: Vector2, pointerId: number, pi: PointerInfoBase): void {
+    public override _onPointerMove(target: Control, coordinates: Vector2, pointerId: number, pi: PointerInfoBase): void {
         // Avoid Chromium-like beahavior when this event is fired right after onPointerDown
         if (pi.event.movementX === 0 && pi.event.movementY === 0) {
             return;
@@ -1155,7 +1156,7 @@ export class InputTextArea extends InputText {
      * @internal
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected _updateValueFromCursorIndex(offset: number) {
+    protected override _updateValueFromCursorIndex(offset: number) {
         // Override to avoid parent behavior during _onPointerMove
     }
 
@@ -1165,7 +1166,7 @@ export class InputTextArea extends InputText {
      * @param _evt Pointer informations of double click
      * @internal
      */
-    protected _processDblClick(_evt: PointerInfo) {
+    protected override _processDblClick(_evt: PointerInfo) {
         //pre-find the start and end index of the word under cursor, speeds up the rendering
         let moveLeft, moveRight;
         do {
@@ -1185,7 +1186,7 @@ export class InputTextArea extends InputText {
     }
 
     /** @internal */
-    protected _selectAllText() {
+    protected override _selectAllText() {
         this._isTextHighlightOn = true;
         this._blinkIsEven = true;
 
@@ -1206,7 +1207,7 @@ export class InputTextArea extends InputText {
         this._markAsDirty();
     }
 
-    public dispose() {
+    public override dispose() {
         super.dispose();
 
         this.onLinesReadyObservable.clear();

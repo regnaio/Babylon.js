@@ -4,12 +4,11 @@ import type { Observer } from "../Misc/observable";
 import { Observable } from "../Misc/observable";
 import { Vector2 } from "../Maths/math.vector";
 import type { Camera } from "../Cameras/camera";
-import type { Effect } from "../Materials/effect";
+import { Effect } from "../Materials/effect";
 import { Constants } from "../Engines/constants";
 import type { RenderTargetCreationOptions } from "../Materials/Textures/textureCreationOptions";
 import "../Shaders/postprocess.vertex";
 import type { IInspectable } from "../Misc/iInspectable";
-import { Engine } from "../Engines/engine";
 import type { Color4 } from "../Maths/math.color";
 
 import "../Engines/Extensions/engine.renderTarget";
@@ -27,6 +26,83 @@ import type { InternalTexture } from "../Materials/Textures/internalTexture";
 import type { Animation } from "../Animations/animation";
 import type { PrePassRenderer } from "../Rendering/prePassRenderer";
 import type { PrePassEffectConfiguration } from "../Rendering/prePassEffectConfiguration";
+import { AbstractEngine } from "../Engines/abstractEngine";
+import { GetExponentOfTwo } from "../Misc/tools.functions";
+
+declare module "../Engines/abstractEngine" {
+    export interface AbstractEngine {
+        /**
+         * Sets a texture to the context from a postprocess
+         * @param channel defines the channel to use
+         * @param postProcess defines the source postprocess
+         * @param name name of the channel
+         */
+        setTextureFromPostProcess(channel: number, postProcess: Nullable<PostProcess>, name: string): void;
+
+        /**
+         * Binds the output of the passed in post process to the texture channel specified
+         * @param channel The channel the texture should be bound to
+         * @param postProcess The post process which's output should be bound
+         * @param name name of the channel
+         */
+        setTextureFromPostProcessOutput(channel: number, postProcess: Nullable<PostProcess>, name: string): void;
+    }
+}
+
+AbstractEngine.prototype.setTextureFromPostProcess = function (channel: number, postProcess: Nullable<PostProcess>, name: string): void {
+    let postProcessInput = null;
+    if (postProcess) {
+        if (postProcess._forcedOutputTexture) {
+            postProcessInput = postProcess._forcedOutputTexture;
+        } else if (postProcess._textures.data[postProcess._currentRenderTextureInd]) {
+            postProcessInput = postProcess._textures.data[postProcess._currentRenderTextureInd];
+        }
+    }
+
+    this._bindTexture(channel, postProcessInput?.texture ?? null, name);
+};
+
+AbstractEngine.prototype.setTextureFromPostProcessOutput = function (channel: number, postProcess: Nullable<PostProcess>, name: string): void {
+    this._bindTexture(channel, postProcess?._outputTexture?.texture ?? null, name);
+};
+
+declare module "../Materials/effect" {
+    export interface Effect {
+        /**
+         * Sets a texture to be the input of the specified post process. (To use the output, pass in the next post process in the pipeline)
+         * @param channel Name of the sampler variable.
+         * @param postProcess Post process to get the input texture from.
+         */
+        setTextureFromPostProcess(channel: string, postProcess: Nullable<PostProcess>): void;
+
+        /**
+         * (Warning! setTextureFromPostProcessOutput may be desired instead)
+         * Sets the input texture of the passed in post process to be input of this effect. (To use the output of the passed in post process use setTextureFromPostProcessOutput)
+         * @param channel Name of the sampler variable.
+         * @param postProcess Post process to get the output texture from.
+         */
+        setTextureFromPostProcessOutput(channel: string, postProcess: Nullable<PostProcess>): void;
+    }
+}
+
+/**
+ * Sets a texture to be the input of the specified post process. (To use the output, pass in the next post process in the pipeline)
+ * @param channel Name of the sampler variable.
+ * @param postProcess Post process to get the input texture from.
+ */
+Effect.prototype.setTextureFromPostProcess = function (channel: string, postProcess: Nullable<PostProcess>): void {
+    this._engine.setTextureFromPostProcess(this._samplers[channel], postProcess, channel);
+};
+
+/**
+ * (Warning! setTextureFromPostProcessOutput may be desired instead)
+ * Sets the input texture of the passed in post process to be input of this effect. (To use the output of the passed in post process use setTextureFromPostProcessOutput)
+ * @param channel Name of the sampler variable.
+ * @param postProcess Post process to get the output texture from.
+ */
+Effect.prototype.setTextureFromPostProcessOutput = function (channel: string, postProcess: Nullable<PostProcess>): void {
+    this._engine.setTextureFromPostProcessOutput(this._samplers[channel], postProcess, channel);
+};
 
 /**
  * Allows for custom processing of the shader code used by a post process
@@ -100,7 +176,7 @@ export type PostProcessOptions = {
     /**
      * The engine to be used to render the post process (default: engine from scene)
      */
-    engine?: Engine;
+    engine?: AbstractEngine;
     /**
      * If the post process can be reused on the same frame. (default: false)
      */
@@ -196,7 +272,6 @@ export class PostProcess {
     public _outputTexture: Nullable<RenderTargetWrapper> = null;
     /**
      * Sampling mode used by the shader
-     * See https://doc.babylonjs.com/classes/3.1/texture
      */
     @serialize()
     public renderTargetSamplingMode: number;
@@ -295,7 +370,7 @@ export class PostProcess {
 
     private _camera: Camera;
     protected _scene: Scene;
-    private _engine: Engine;
+    private _engine: AbstractEngine;
 
     private _options: number | { width: number; height: number };
     private _reusable = false;
@@ -521,7 +596,7 @@ export class PostProcess {
         options: number | PostProcessOptions,
         camera: Nullable<Camera>,
         samplingMode?: number,
-        engine?: Engine,
+        engine?: AbstractEngine,
         reusable?: boolean,
         defines?: Nullable<string>,
         textureType?: number,
@@ -541,7 +616,7 @@ export class PostProcess {
         _size?: number | PostProcessOptions,
         camera?: Nullable<Camera>,
         samplingMode: number = Constants.TEXTURE_NEAREST_SAMPLINGMODE,
-        engine?: Engine,
+        engine?: AbstractEngine,
         reusable?: boolean,
         defines: Nullable<string> = null,
         textureType: number = Constants.TEXTURETYPE_UNSIGNED_INT,
@@ -629,7 +704,7 @@ export class PostProcess {
      * Gets the engine which this post process belongs to.
      * @returns The engine the post process was enabled with.
      */
-    public getEngine(): Engine {
+    public getEngine(): AbstractEngine {
         return this._engine;
     }
 
@@ -895,11 +970,11 @@ export class PostProcess {
 
             if (needMipMaps || this.alwaysForcePOT) {
                 if (!(<PostProcessOptions>this._options).width) {
-                    desiredWidth = engine.needPOTTextures ? Engine.GetExponentOfTwo(desiredWidth, maxSize, this.scaleMode) : desiredWidth;
+                    desiredWidth = engine.needPOTTextures ? GetExponentOfTwo(desiredWidth, maxSize, this.scaleMode) : desiredWidth;
                 }
 
                 if (!(<PostProcessOptions>this._options).height) {
-                    desiredHeight = engine.needPOTTextures ? Engine.GetExponentOfTwo(desiredHeight, maxSize, this.scaleMode) : desiredHeight;
+                    desiredHeight = engine.needPOTTextures ? GetExponentOfTwo(desiredHeight, maxSize, this.scaleMode) : desiredHeight;
                 }
             }
 

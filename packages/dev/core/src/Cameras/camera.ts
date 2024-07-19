@@ -453,7 +453,7 @@ export class Camera extends Node {
      * @param setActiveOnSceneIfNoneActive Defines if the camera should be set as active after creation if no other camera have been defined in the scene
      */
     constructor(name: string, position: Vector3, scene?: Scene, setActiveOnSceneIfNoneActive = true) {
-        super(name, scene);
+        super(name, scene, false);
 
         this.getScene().addCamera(this);
 
@@ -476,6 +476,13 @@ export class Camera extends Node {
         return this;
     }
 
+    /**
+     * Returns true if a state has been stored by calling storeState method.
+     * @returns true if state has been stored.
+     */
+    public hasStateStored(): boolean {
+        return !!this._stateStored;
+    }
     /**
      * Restores the camera state values if it has been stored. You must call storeState() first
      * @returns true if restored and false otherwise
@@ -507,7 +514,7 @@ export class Camera extends Node {
      * Gets the class name of the camera.
      * @returns the class name
      */
-    public getClassName(): string {
+    public override getClassName(): string {
         return "Camera";
     }
 
@@ -519,7 +526,7 @@ export class Camera extends Node {
      * @param fullDetails Defines that a more verbose level of logging is required
      * @returns the string representation
      */
-    public toString(fullDetails?: boolean): string {
+    public override toString(fullDetails?: boolean): string {
         let ret = "Name: " + this.name;
         ret += ", type: " + this.getClassName();
         if (this.animations) {
@@ -568,7 +575,7 @@ export class Camera extends Node {
      * @param completeCheck defines if a complete check (including post processes) has to be done (false by default)
      * @returns true if the camera is ready
      */
-    public isReady(completeCheck = false): boolean {
+    public override isReady(completeCheck = false): boolean {
         if (completeCheck) {
             for (const pp of this._postProcesses) {
                 if (pp && !pp.isReady()) {
@@ -580,7 +587,7 @@ export class Camera extends Node {
     }
 
     /** @internal */
-    public _initCache() {
+    public override _initCache() {
         super._initCache();
 
         this._cache.position = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
@@ -608,7 +615,7 @@ export class Camera extends Node {
     /**
      * @internal
      */
-    public _updateCache(ignoreParentClass?: boolean): void {
+    public override _updateCache(ignoreParentClass?: boolean): void {
         if (!ignoreParentClass) {
             super._updateCache();
         }
@@ -618,7 +625,7 @@ export class Camera extends Node {
     }
 
     /** @internal */
-    public _isSynchronized(): boolean {
+    public override _isSynchronized(): boolean {
         return this._isSynchronizedViewMatrix() && this._isSynchronizedProjectionMatrix();
     }
 
@@ -831,7 +838,7 @@ export class Camera extends Node {
      * Gets the current world matrix of the camera
      * @returns the world matrix
      */
-    public getWorldMatrix(): Matrix {
+    public override getWorldMatrix(): Matrix {
         if (this._isSynchronizedViewMatrix()) {
             return this._worldMatrix;
         }
@@ -1134,7 +1141,7 @@ export class Camera extends Node {
      * @param doNotRecurse Set to true to not recurse into each children (recurse into each children by default)
      * @param disposeMaterialAndTextures Set to true to also dispose referenced materials and textures (false by default)
      */
-    public dispose(doNotRecurse?: boolean, disposeMaterialAndTextures = false): void {
+    public override dispose(doNotRecurse?: boolean, disposeMaterialAndTextures = false): void {
         // Observables
         this.onViewMatrixChangedObservable.clear();
         this.onProjectionMatrixChangedObservable.clear();
@@ -1401,7 +1408,7 @@ export class Camera extends Node {
      * @param newParent The cloned camera's new parent (none by default)
      * @returns the cloned camera
      */
-    public clone(name: string, newParent: Nullable<Node> = null): Camera {
+    public override clone(name: string, newParent: Nullable<Node> = null): Camera {
         const camera = SerializationHelper.Clone(
             Camera.GetConstructorFromName(this.getClassName(), name, this.getScene(), this.interaxialDistance, this.isStereoscopicSideBySide),
             this
@@ -1474,7 +1481,7 @@ export class Camera extends Node {
      * Compute the world  matrix of the camera.
      * @returns the camera world matrix
      */
-    public computeWorldMatrix(): Matrix {
+    public override computeWorldMatrix(): Matrix {
         return this.getWorldMatrix();
     }
 

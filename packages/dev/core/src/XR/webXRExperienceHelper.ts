@@ -10,6 +10,8 @@ import { WebXRFeatureName, WebXRFeaturesManager } from "./webXRFeaturesManager";
 import { Logger } from "../Misc/logger";
 import { UniversalCamera } from "../Cameras/universalCamera";
 import { Quaternion, Vector3 } from "../Maths/math.vector";
+import { Engine } from "../Engines/engine";
+import type { ThinEngine } from "../Engines/thinEngine";
 
 /**
  * Options for setting up XR spectator camera.
@@ -180,6 +182,9 @@ export class WebXRExperienceHelper implements IDisposable {
                 this.onInitialXRPoseSetObservable.notifyObservers(this.camera);
             }
 
+            // Vision Pro suspends the audio context when entering XR, so we resume it here if needed.
+            Engine.audioEngine?._resumeAudioContextOnStateChange();
+
             this.sessionManager.onXRSessionEnded.addOnce(() => {
                 // when using the back button and not the exit button (default on mobile), the session is ending but the EXITING state was not set
                 if (this.state !== WebXRState.EXITING_XR) {
@@ -286,7 +291,7 @@ export class WebXRExperienceHelper implements IDisposable {
                     this._scene.onAfterRenderCameraObservable.add((camera) => {
                         if (camera === this.camera) {
                             // reset the dimensions object for correct resizing
-                            this._scene.getEngine().framebufferDimensionsObject = null;
+                            (this._scene.getEngine() as ThinEngine).framebufferDimensionsObject = null;
                         }
                     });
                 } else if (this.state === WebXRState.EXITING_XR) {

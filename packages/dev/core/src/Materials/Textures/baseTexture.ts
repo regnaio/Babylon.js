@@ -11,12 +11,14 @@ import type { IAnimatable } from "../../Animations/animatable.interface";
 import { RandomGUID } from "../../Misc/guid";
 
 import "../../Misc/fileTools";
-import type { ThinEngine } from "../../Engines/thinEngine";
+import type { AbstractEngine } from "../../Engines/abstractEngine";
 import { ThinTexture } from "./thinTexture";
 import type { AbstractScene } from "../../abstractScene";
 
 import type { Animation } from "../../Animations/animation";
 import { SerializationHelper } from "../../Misc/decorators.serialization";
+
+import "../../Engines/Extensions/engine.readTexture";
 
 /**
  * Base class of all the textures in babylon.
@@ -152,7 +154,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * | 8     | FIXED_EQUIRECTANGULAR_MODE          |             |
      * | 9     | FIXED_EQUIRECTANGULAR_MIRRORED_MODE |             |
      */
-    public set coordinatesMode(value: number) {
+    public override set coordinatesMode(value: number) {
         if (this._coordinatesMode === value) {
             return;
         }
@@ -163,7 +165,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
             });
         }
     }
-    public get coordinatesMode(): number {
+    public override get coordinatesMode(): number {
         return this._coordinatesMode;
     }
 
@@ -175,10 +177,10 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * | 2     | MIRROR_ADDRESSMODE |             |
      */
     @serialize()
-    public get wrapU() {
+    public override get wrapU() {
         return this._wrapU;
     }
-    public set wrapU(value: number) {
+    public override set wrapU(value: number) {
         this._wrapU = value;
     }
 
@@ -190,10 +192,10 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * | 2     | MIRROR_ADDRESSMODE |             |
      */
     @serialize()
-    public get wrapV() {
+    public override get wrapV() {
         return this._wrapV;
     }
-    public set wrapV(value: number) {
+    public override set wrapV(value: number) {
         this._wrapV = value;
     }
 
@@ -205,7 +207,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * | 2     | MIRROR_ADDRESSMODE |             |
      */
     @serialize()
-    public wrapR = Constants.TEXTURE_WRAP_ADDRESSMODE;
+    public override wrapR = Constants.TEXTURE_WRAP_ADDRESSMODE;
 
     /**
      * With compliant hardware and browser (supporting anisotropic filtering)
@@ -213,7 +215,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * The higher the better but the slower. This defaults to 4 as it seems to be the best tradeoff.
      */
     @serialize()
-    public anisotropicFilteringLevel = BaseTexture.DEFAULT_ANISOTROPIC_FILTERING_LEVEL;
+    public override anisotropicFilteringLevel = BaseTexture.DEFAULT_ANISOTROPIC_FILTERING_LEVEL;
 
     /** @internal */
     public _isCube = false;
@@ -221,7 +223,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * Define if the texture is a cube texture or if false a 2d texture.
      */
     @serialize()
-    public get isCube(): boolean {
+    public override get isCube(): boolean {
         if (!this._texture) {
             return this._isCube;
         }
@@ -230,7 +232,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    protected set isCube(value: boolean) {
+    protected override set isCube(value: boolean) {
         if (!this._texture) {
             this._isCube = value;
         } else {
@@ -242,7 +244,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * Define if the texture is a 3d texture (webgl 2) or if false a 2d texture.
      */
     @serialize()
-    public get is3D(): boolean {
+    public override get is3D(): boolean {
         if (!this._texture) {
             return false;
         }
@@ -251,7 +253,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    protected set is3D(value: boolean) {
+    protected override set is3D(value: boolean) {
         if (!this._texture) {
             return;
         }
@@ -263,7 +265,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * Define if the texture is a 2d array texture (webgl 2) or if false a 2d texture.
      */
     @serialize()
-    public get is2DArray(): boolean {
+    public override get is2DArray(): boolean {
         if (!this._texture) {
             return false;
         }
@@ -272,7 +274,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    protected set is2DArray(value: boolean) {
+    protected override set is2DArray(value: boolean) {
         if (!this._texture) {
             return;
         }
@@ -455,7 +457,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * Return a string representation of the texture.
      * @returns the texture as a string
      */
-    public toString(): string {
+    public override toString(): string {
         return this.name;
     }
 
@@ -463,7 +465,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * Get the class name of the texture.
      * @returns "BaseTexture"
      */
-    public getClassName(): string {
+    public override getClassName(): string {
         return "BaseTexture";
     }
 
@@ -538,7 +540,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      * @param sceneOrEngine Define the scene or engine the texture belongs to
      * @param internalTexture Define the internal texture associated with the texture
      */
-    constructor(sceneOrEngine?: Nullable<Scene | ThinEngine>, internalTexture: Nullable<InternalTexture> = null) {
+    constructor(sceneOrEngine?: Nullable<Scene | AbstractEngine>, internalTexture: Nullable<InternalTexture> = null) {
         super(null);
 
         if (sceneOrEngine) {
@@ -571,17 +573,8 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     }
 
     /** @internal */
-    protected _getEngine(): Nullable<ThinEngine> {
+    protected _getEngine(): Nullable<AbstractEngine> {
         return this._engine;
-    }
-
-    /**
-     * Checks if the texture has the same transform matrix than another texture
-     * @param texture texture to check against
-     * @returns true if the transforms are the same, else false
-     */
-    public checkTransformsAreIdentical(texture: Nullable<BaseTexture>): boolean {
-        return texture !== null;
     }
 
     /**
@@ -831,7 +824,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     /**
      * Dispose the texture and release its associated resources.
      */
-    public dispose(): void {
+    public override dispose(): void {
         if (this._scene) {
             // Animations
             if (this._scene.stopAnimation) {
@@ -921,7 +914,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
         }
     }
 
-    private static _IsScene(sceneOrEngine: Scene | ThinEngine): sceneOrEngine is Scene {
+    private static _IsScene(sceneOrEngine: Scene | AbstractEngine): sceneOrEngine is Scene {
         return sceneOrEngine.getClassName() === "Scene";
     }
 }

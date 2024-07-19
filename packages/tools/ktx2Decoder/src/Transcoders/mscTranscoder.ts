@@ -33,9 +33,9 @@ export class MSCTranscoder extends Transcoder {
 
     public static UseFromWorkerThread = true;
 
-    public static Name = "MSCTranscoder";
+    public static override Name = "MSCTranscoder";
 
-    public getName(): string {
+    public override getName(): string {
         return MSCTranscoder.Name;
     }
 
@@ -66,7 +66,13 @@ export class MSCTranscoder extends Transcoder {
                         script.setAttribute("src", Transcoder.GetWasmUrl(MSCTranscoder.JSModuleURL));
 
                         script.onload = () => {
-                            MSC_TRANSCODER({ wasmBinary }).then((basisModule: any) => {
+                            // defensive
+                            if (typeof MSC_TRANSCODER === "undefined") {
+                                reject("MSC_TRANSCODER script loaded but MSC_TRANSCODER is not defined.");
+                                return;
+                            }
+
+                            (MSC_TRANSCODER as any)({ wasmBinary }).then((basisModule: any) => {
                                 basisModule.initTranscoders();
                                 this._mscBasisModule = basisModule;
                                 resolve();
@@ -95,11 +101,11 @@ export class MSCTranscoder extends Transcoder {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public static CanTranscode(src: KTX2.SourceTextureFormat, dst: KTX2.TranscodeTarget, isInGammaSpace: boolean): boolean {
+    public static override CanTranscode(src: KTX2.SourceTextureFormat, dst: KTX2.TranscodeTarget, isInGammaSpace: boolean): boolean {
         return true;
     }
 
-    public transcode(
+    public override transcode(
         src: KTX2.SourceTextureFormat,
         dst: KTX2.TranscodeTarget,
         level: number,

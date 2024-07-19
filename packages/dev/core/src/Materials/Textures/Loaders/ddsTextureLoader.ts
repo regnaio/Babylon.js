@@ -6,6 +6,8 @@ import type { IInternalTextureLoader } from "../../../Materials/Textures/interna
 import type { DDSInfo } from "../../../Misc/dds";
 import { DDSTools } from "../../../Misc/dds";
 
+import "../../../Engines/Extensions/engine.cubeTexture";
+
 /**
  * Implementation of the DDS Texture Loader.
  * @internal
@@ -104,7 +106,7 @@ export class _DDSTextureLoader implements IInternalTextureLoader {
     ): void {
         const info = DDSTools.GetDDSInfo(data);
 
-        const loadMipmap = (info.isRGB || info.isLuminance || info.mipmapCount > 1) && texture.generateMipMaps && info.width >> (info.mipmapCount - 1) === 1;
+        const loadMipmap = (info.isRGB || info.isLuminance || info.mipmapCount > 1) && texture.generateMipMaps && Math.max(info.width, info.height) >> (info.mipmapCount - 1) === 1;
         callback(info.width, info.height, loadMipmap, info.isFourCC, () => {
             DDSTools.UploadDDSLevels(texture.getEngine(), texture, data, info, loadMipmap, 1);
         });

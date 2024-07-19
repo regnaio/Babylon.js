@@ -2,7 +2,7 @@
     "commands": [
         {
             "command": "declarations-es6",
-            "args": ["-r", "../../../dev/core/src/LibDeclarations", "-atf", "./Engines/engine.d.ts"]
+            "args": ["-r", "../../../dev/core/src/LibDeclarations", "-atf", "./Engines/engine.d.ts", "-cete"]
         },
         {
             "command": "add-js-to-es6"
@@ -18,6 +18,14 @@
         {
             "command": "cp",
             "args": ["-f", "../../../tools/babylonServer/public/basisTranscoder/1", "--to", "./assets/Basis"]
+        },
+        {
+            "command": "cp",
+            "args": ["-f", "../../../tools/babylonServer/public/glslang", "--to", "./assets/glslang"]
+        },
+        {
+            "command": "cp",
+            "args": ["-f", "../../../tools/babylonServer/public/twgsl", "--to", "./assets/twgsl"]
         }
     ]
 }

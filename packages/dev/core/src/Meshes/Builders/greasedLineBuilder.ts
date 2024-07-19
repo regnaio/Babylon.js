@@ -19,7 +19,7 @@ import { GreasedLineMaterialDefaults } from "../../Materials/GreasedLine/greased
  * How are the colors distributed along the color table
  * {@link https://doc.babylonjs.com/features/featuresDeepDive/mesh/creation/param/greased_line#colors-and-colordistribution}
  */
-export enum GreasedLineMeshColorDistribution {
+export const enum GreasedLineMeshColorDistribution {
     /**
      * Do no modify the color table
      */
@@ -50,7 +50,7 @@ export enum GreasedLineMeshColorDistribution {
  * How are the widths distributed along the width table
  * {@link https://doc.babylonjs.com/features/featuresDeepDive/mesh/creation/param/greased_line#widths-and-widthdistribution}
  */
-export enum GreasedLineMeshWidthDistribution {
+export const enum GreasedLineMeshWidthDistribution {
     /**
      * Do no modify the width table
      */
@@ -167,17 +167,11 @@ export function CreateGreasedLine(name: string, options: GreasedLineMeshBuilderO
     materialOptions.colorDistribution = materialOptions?.colorDistribution ?? GreasedLineMeshColorDistribution.COLOR_DISTRIBUTION_START;
     materialOptions.materialType = materialOptions.materialType ?? GreasedLineMeshMaterialType.MATERIAL_TYPE_STANDARD;
 
-    let length = 0;
-    if (Array.isArray(allPoints[0])) {
-        allPoints.forEach((points) => {
-            length += points.length / 3;
-        });
-    }
-
-    const widths = CompleteGreasedLineWidthTable(length, options.widths ?? [], options.widthDistribution);
+    const pointsCount = GetPointsCount(allPoints);
+    const widths = CompleteGreasedLineWidthTable(pointsCount, options.widths ?? [], options.widthDistribution);
 
     const colors = materialOptions?.colors
-        ? CompleteGreasedLineColorTable(length, materialOptions.colors, materialOptions.colorDistribution, materialOptions.color ?? GreasedLineMaterialDefaults.DEFAULT_COLOR)
+        ? CompleteGreasedLineColorTable(pointsCount, materialOptions.colors, materialOptions.colorDistribution, materialOptions.color ?? GreasedLineMaterialDefaults.DEFAULT_COLOR)
         : undefined;
 
     // create new mesh if instance is not defined
@@ -238,8 +232,8 @@ export function CreateGreasedLine(name: string, options: GreasedLineMeshBuilderO
         if (instance instanceof GreasedLineRibbonMesh) {
             instance.addPoints(allPoints, initialGreasedLineOptions);
         } else {
+            // add widths
             const currentWidths = instance.widths;
-
             if (currentWidths) {
                 const newWidths = currentWidths.slice();
                 for (const w of widths) {
@@ -249,7 +243,21 @@ export function CreateGreasedLine(name: string, options: GreasedLineMeshBuilderO
             } else {
                 instance.widths = widths;
             }
+
             instance.addPoints(allPoints);
+
+            // add UVs
+            if (options.uvs) {
+                const currentUVs = instance.uvs;
+                if (currentUVs) {
+                    const newUVs = new Float32Array(currentUVs.length + options.uvs.length);
+                    newUVs.set(currentUVs, 0);
+                    newUVs.set(options.uvs, currentUVs.length);
+                    instance.uvs = newUVs;
+                } else {
+                    instance.uvs = options.uvs;
+                }
+            }
         }
     }
 
@@ -266,6 +274,19 @@ export function CreateGreasedLine(name: string, options: GreasedLineMeshBuilderO
     }
 
     return instance;
+}
+
+/**
+ * Counts the number of points
+ * @param allPoints Array of points [[x, y, z], [x, y, z], ...] or Array of points [x, y, z, x, y, z, ...]
+ * @returns total number of points
+ */
+export function GetPointsCount(allPoints: number[][]) {
+    let pointCount = 0;
+    for (const points of allPoints) {
+        pointCount += (<number[]>points).length / 3;
+    }
+    return pointCount;
 }
 
 /**

@@ -8,7 +8,7 @@ import type { NodeGeometryBuildState } from "./nodeGeometryBuildState";
 /**
  * Enum used to define the compatibility state between two connection points
  */
-export enum NodeGeometryConnectionPointCompatibilityStates {
+export const enum NodeGeometryConnectionPointCompatibilityStates {
     /** Points are compatibles */
     Compatible,
     /** Points are incompatible because of their types */
@@ -20,7 +20,7 @@ export enum NodeGeometryConnectionPointCompatibilityStates {
 /**
  * Defines the direction of a connection point
  */
-export enum NodeGeometryConnectionPointDirection {
+export const enum NodeGeometryConnectionPointDirection {
     /** Input */
     Input,
     /** Output */
@@ -75,6 +75,11 @@ export class NodeGeometryConnectionPoint {
      * Observable triggered when this point is connected
      */
     public onConnectionObservable = new Observable<NodeGeometryConnectionPoint>();
+
+    /**
+     * Observable triggered when this point is disconnected
+     */
+    public onDisconnectionObservable = new Observable<NodeGeometryConnectionPoint>();
 
     /**
      * Gets or sets a boolean indicating that this connection point is exposed on a frame
@@ -359,6 +364,10 @@ export class NodeGeometryConnectionPoint {
 
         this._endpoints.splice(index, 1);
         endpoint._connectedPoint = null;
+
+        this.onDisconnectionObservable.notifyObservers(endpoint);
+        endpoint.onDisconnectionObservable.notifyObservers(this);
+
         return this;
     }
 
@@ -400,6 +409,13 @@ export class NodeGeometryConnectionPoint {
             serializationObject.inputName = this.name;
             serializationObject.targetBlockId = this.connectedPoint.ownerBlock.uniqueId;
             serializationObject.targetConnectionName = this.connectedPoint.name;
+            serializationObject.isExposedOnFrame = true;
+            serializationObject.exposedPortPosition = this.exposedPortPosition;
+        }
+
+        if (this.isExposedOnFrame || this.exposedPortPosition >= 0) {
+            serializationObject.isExposedOnFrame = true;
+            serializationObject.exposedPortPosition = this.exposedPortPosition;
         }
 
         return serializationObject;
@@ -410,5 +426,6 @@ export class NodeGeometryConnectionPoint {
      */
     public dispose() {
         this.onConnectionObservable.clear();
+        this.onDisconnectionObservable.clear();
     }
 }

@@ -3,12 +3,12 @@ import type { Analyser } from "./analyser";
 import type { Nullable } from "../types";
 import { Observable } from "../Misc/observable";
 import { Logger } from "../Misc/logger";
-import { Engine } from "../Engines/engine";
+import { AbstractEngine } from "../Engines/abstractEngine";
 import type { IAudioEngine } from "./Interfaces/IAudioEngine";
 import { IsWindowObjectExist } from "../Misc/domManagement";
 
 // Sets the default audio engine to Babylon.js
-Engine.AudioEngineFactory = (
+AbstractEngine.AudioEngineFactory = (
     hostElement: Nullable<HTMLElement>,
     audioContext: Nullable<AudioContext>,
     audioDestination: Nullable<AudioDestinationNode | MediaStreamAudioDestinationNode>
@@ -173,6 +173,23 @@ export class AudioEngine implements IAudioEngine {
         } else {
             this._triggerRunningState();
         }
+    }
+
+    /** @internal */
+    public _resumeAudioContextOnStateChange(): void {
+        this._audioContext?.addEventListener(
+            "statechange",
+            () => {
+                if (this.unlocked && this._audioContext?.state !== "running") {
+                    this._resumeAudioContext();
+                }
+            },
+            {
+                once: true,
+                passive: true,
+                signal: AbortSignal.timeout(3000),
+            }
+        );
     }
 
     private _resumeAudioContext(): Promise<void> {

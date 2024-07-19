@@ -25,7 +25,7 @@ export class Image extends Control {
     private _imageHeight: number;
     private _loaded = false;
     private _stretch = Image.STRETCH_FILL;
-    private _source: Nullable<string>;
+    private _source: Nullable<string> = null;
     private _autoScale = false;
 
     private _sourceLeft = 0;
@@ -81,7 +81,7 @@ export class Image extends Control {
         return this._loaded;
     }
 
-    public isReady(): boolean {
+    public override isReady(): boolean {
         return this.isLoaded;
     }
 
@@ -528,6 +528,13 @@ export class Image extends Control {
         const value = source && Image.SourceImgCache.get(source);
         if (value) {
             value.timesUsed -= 1;
+
+            // Remove from DOM
+            const htmlElement = value.img as HTMLImageElement;
+            if (htmlElement.parentNode) {
+                htmlElement.parentNode.removeChild(htmlElement);
+            }
+
             // Since the image isn't being used anymore, we can clean it from the cache
             if (value.timesUsed === 0) {
                 Image.SourceImgCache.delete(source);
@@ -539,6 +546,10 @@ export class Image extends Control {
      * Gets or sets image source url
      */
     public set source(value: Nullable<string>) {
+        if (this._urlRewriter && value) {
+            value = this._urlRewriter(value);
+        }
+
         if (this._source === value) {
             return;
         }
@@ -570,6 +581,17 @@ export class Image extends Control {
             return;
         }
         this._domImage = engine.createCanvasImage();
+        // need to add to enforce rendering
+        const imgElement = this._domImage as HTMLImageElement;
+        let addedToDom = false;
+        if (imgElement.style && this._source?.endsWith(".svg")) {
+            imgElement.style.visibility = "hidden";
+            imgElement.style.position = "absolute";
+            imgElement.style.top = "0";
+            engine.getRenderingCanvas()?.parentNode?.appendChild(imgElement);
+            addedToDom = true;
+        }
+
         if (value) {
             Image.SourceImgCache.set(value, { img: this._domImage, timesUsed: 1, loaded: false, waitingForLoadCallback: [this._onImageLoaded.bind(this)] });
         }
@@ -583,10 +605,12 @@ export class Image extends Control {
                         waitingCallback();
                     }
                     cachedData.waitingForLoadCallback.length = 0;
+                    addedToDom && imgElement.remove();
                     return;
                 }
             }
             this._onImageLoaded();
+            addedToDom && imgElement.remove();
         };
         if (value) {
             Tools.SetCorsBehavior(value, this._domImage);
@@ -601,7 +625,7 @@ export class Image extends Control {
      * @returns the svg
      */
     private _svgCheck(value: string): string {
-        if (window.SVGSVGElement && value.search(/.svg#/gi) !== -1 && value.indexOf("#") === value.lastIndexOf("#")) {
+        if (window.SVGSVGElement && value.search(/(\.svg|\.svg?[?|#].*)$/gi) !== -1 && value.indexOf("#") === value.lastIndexOf("#")) {
             this._isSVG = true;
             const svgsrc = value.split("#")[0];
             const elemid = value.split("#")[1];
@@ -746,7 +770,7 @@ export class Image extends Control {
      * @param url defines the image url
      */
     constructor(
-        public name?: string,
+        public override name?: string,
         url: Nullable<string> = null
     ) {
         super(name);
@@ -759,7 +783,7 @@ export class Image extends Control {
      * @param y defines y coordinate to test
      * @returns true if the coordinates are inside the control
      */
-    public contains(x: number, y: number): boolean {
+    public override contains(x: number, y: number): boolean {
         if (!super.contains(x, y)) {
             return false;
         }
@@ -790,7 +814,7 @@ export class Image extends Control {
         return pickedPixel > 0;
     }
 
-    protected _getTypeName(): string {
+    protected override _getTypeName(): string {
         return "Image";
     }
 
@@ -804,7 +828,7 @@ export class Image extends Control {
         this.height = this._domImage.height + "px";
     }
 
-    protected _processMeasures(parentMeasure: Measure, context: ICanvasRenderingContext): void {
+    protected override _processMeasures(parentMeasure: Measure, context: ICanvasRenderingContext): void {
         if (this._loaded) {
             switch (this._stretch) {
                 case Image.STRETCH_NONE:
@@ -874,7 +898,7 @@ export class Image extends Control {
         workingCanvasContext.restore();
     }
 
-    public _draw(context: ICanvasRenderingContext): void {
+    public override _draw(context: ICanvasRenderingContext): void {
         context.save();
 
         if (this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY) {
@@ -936,40 +960,79 @@ export class Image extends Control {
     }
 
     private _renderNinePatch(context: ICanvasRenderingContext, sx: number, sy: number, sw: number, sh: number): void {
+        const idealRatio = this.host.idealWidth
+            ? this._width.getValue(this.host) / this.host.idealWidth
+            : this.host.idealHeight
+              ? this._height.getValue(this.host) / this.host.idealHeight
+              : 1;
         const leftWidth = this._sliceLeft;
         const topHeight = this._sliceTop;
         const bottomHeight = sh - this._sliceBottom;
         const rightWidth = sw - this._sliceRight;
         const centerWidth = this._sliceRight - this._sliceLeft;
         const centerHeight = this._sliceBottom - this._sliceTop;
-        const targetCenterWidth = this._currentMeasure.width - rightWidth - leftWidth + 2;
-        const targetCenterHeight = this._currentMeasure.height - bottomHeight - topHeight + 2;
-        const centerLeftOffset = this._currentMeasure.left + leftWidth - 1;
-        const centerTopOffset = this._currentMeasure.top + topHeight - 1;
-        const rightOffset = this._currentMeasure.left + this._currentMeasure.width - rightWidth;
-        const bottomOffset = this._currentMeasure.top + this._currentMeasure.height - bottomHeight;
+        const leftWidthAdjusted = Math.round(leftWidth * idealRatio);
+        const topHeightAdjusted = Math.round(topHeight * idealRatio);
+        const bottomHeightAdjusted = Math.round(bottomHeight * idealRatio);
+        const rightWidthAdjusted = Math.round(rightWidth * idealRatio);
+        const targetCenterWidth = Math.round(this._currentMeasure.width) - rightWidthAdjusted - leftWidthAdjusted + 2;
+        const targetCenterHeight = Math.round(this._currentMeasure.height) - bottomHeightAdjusted - topHeightAdjusted + 2;
+        const centerLeftOffset = Math.round(this._currentMeasure.left) + leftWidthAdjusted - 1;
+        const centerTopOffset = Math.round(this._currentMeasure.top) + topHeightAdjusted - 1;
+        const rightOffset = Math.round(this._currentMeasure.left + this._currentMeasure.width) - rightWidthAdjusted;
+        const bottomOffset = Math.round(this._currentMeasure.top + this._currentMeasure.height) - bottomHeightAdjusted;
 
         //Top Left
-        this._drawImage(context, sx, sy, leftWidth, topHeight, this._currentMeasure.left, this._currentMeasure.top, leftWidth, topHeight);
+        this._drawImage(context, sx, sy, leftWidth, topHeight, this._currentMeasure.left, this._currentMeasure.top, leftWidthAdjusted, topHeightAdjusted);
         //Top
-        this._drawImage(context, sx + this._sliceLeft, sy, centerWidth, topHeight, centerLeftOffset + 1, this._currentMeasure.top, targetCenterWidth - 2, topHeight);
+        this._drawImage(context, sx + this._sliceLeft, sy, centerWidth, topHeight, centerLeftOffset + 1, this._currentMeasure.top, targetCenterWidth - 2, topHeightAdjusted);
         //Top Right
-        this._drawImage(context, sx + this._sliceRight, sy, rightWidth, topHeight, rightOffset, this._currentMeasure.top, rightWidth, topHeight);
+        this._drawImage(context, sx + this._sliceRight, sy, rightWidth, topHeight, rightOffset, this._currentMeasure.top, rightWidthAdjusted, topHeightAdjusted);
         //Left
-        this._drawImage(context, sx, sy + this._sliceTop, leftWidth, centerHeight, this._currentMeasure.left, centerTopOffset + 1, leftWidth, targetCenterHeight - 2);
+        this._drawImage(context, sx, sy + this._sliceTop, leftWidth, centerHeight, this._currentMeasure.left, centerTopOffset + 1, leftWidthAdjusted, targetCenterHeight - 2);
         // Center
-        this._drawImage(context, sx + this._sliceLeft, sy + this._sliceTop, centerWidth, centerHeight, centerLeftOffset, centerTopOffset, targetCenterWidth, targetCenterHeight);
+        this._drawImage(
+            context,
+            sx + this._sliceLeft,
+            sy + this._sliceTop,
+            centerWidth,
+            centerHeight,
+            centerLeftOffset + 1,
+            centerTopOffset + 1,
+            targetCenterWidth - 2,
+            targetCenterHeight - 2
+        );
         //Right
-        this._drawImage(context, sx + this._sliceRight, sy + this._sliceTop, rightWidth, centerHeight, rightOffset, centerTopOffset + 1, rightWidth, targetCenterHeight - 2);
+        this._drawImage(
+            context,
+            sx + this._sliceRight,
+            sy + this._sliceTop,
+            rightWidth,
+            centerHeight,
+            rightOffset,
+            centerTopOffset + 1,
+            rightWidthAdjusted,
+            targetCenterHeight - 2
+        );
         //Bottom Left
-        this._drawImage(context, sx, sy + this._sliceBottom, leftWidth, bottomHeight, this._currentMeasure.left, bottomOffset, leftWidth, bottomHeight);
+        this._drawImage(context, sx, sy + this._sliceBottom, leftWidth, bottomHeight, this._currentMeasure.left, bottomOffset, leftWidthAdjusted, bottomHeightAdjusted);
         //Bottom
-        this._drawImage(context, sx + this.sliceLeft, sy + this._sliceBottom, centerWidth, bottomHeight, centerLeftOffset + 1, bottomOffset, targetCenterWidth - 2, bottomHeight);
+        this._drawImage(
+            context,
+            sx + this.sliceLeft,
+            sy + this._sliceBottom,
+            centerWidth,
+            bottomHeight,
+            centerLeftOffset + 1,
+            bottomOffset,
+            targetCenterWidth - 2,
+            bottomHeightAdjusted
+        );
         //Bottom Right
-        this._drawImage(context, sx + this._sliceRight, sy + this._sliceBottom, rightWidth, bottomHeight, rightOffset, bottomOffset, rightWidth, bottomHeight);
+        this._drawImage(context, sx + this._sliceRight, sy + this._sliceBottom, rightWidth, bottomHeight, rightOffset, bottomOffset, rightWidthAdjusted, bottomHeightAdjusted);
     }
 
-    public dispose() {
+    public override dispose() {
         super.dispose();
         this.onImageLoadedObservable.clear();
         this.onSVGAttributesComputedObservable.clear();

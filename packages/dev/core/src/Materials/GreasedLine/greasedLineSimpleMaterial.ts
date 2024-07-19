@@ -126,7 +126,9 @@ export class GreasedLineSimpleMaterial extends ShaderMaterial implements IGrease
         }
 
         if (this._colors) {
-            this.setColors(this._colors);
+            if (this.useColors) {
+                this.colorsTexture = GreasedLineTools.CreateColorsTexture(`${this.name}-colors-texture`, this._colors, this.colorsSampling, scene);
+            }
         }
 
         engine.onDisposeObservable.add(() => {
@@ -137,7 +139,7 @@ export class GreasedLineSimpleMaterial extends ShaderMaterial implements IGrease
     /**
      * Disposes the plugin material.
      */
-    public dispose(): void {
+    public override dispose(): void {
         this._colorsTexture?.dispose();
         super.dispose();
     }
@@ -429,7 +431,7 @@ export class GreasedLineSimpleMaterial extends ShaderMaterial implements IGrease
      * Serializes this plugin material
      * @returns serializationObjec
      */
-    public serialize(): any {
+    public override serialize(): any {
         const serializationObject = super.serialize();
 
         const greasedLineMaterialOptions: GreasedLineMaterialOptions = {

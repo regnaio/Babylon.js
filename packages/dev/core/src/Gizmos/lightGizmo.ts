@@ -1,7 +1,6 @@
 import type { Nullable } from "../types";
 import { Vector3, Quaternion, TmpVectors } from "../Maths/math.vector";
 import { Color3 } from "../Maths/math.color";
-import { AbstractMesh } from "../Meshes/abstractMesh";
 import { Mesh } from "../Meshes/mesh";
 import type { IGizmo } from "./gizmo";
 import { Gizmo } from "./gizmo";
@@ -57,7 +56,7 @@ export class LightGizmo extends Gizmo implements ILightGizmo {
      */
     constructor(gizmoLayer: UtilityLayerRenderer = UtilityLayerRenderer.DefaultUtilityLayer) {
         super(gizmoLayer);
-        this.attachedMesh = new AbstractMesh("", this.gizmoLayer.utilityLayerScene);
+        this.attachedMesh = new Mesh("", this.gizmoLayer.utilityLayerScene);
         this._attachedMeshParent = new TransformNode("parent", this.gizmoLayer.utilityLayerScene);
 
         this.attachedMesh.parent = this._attachedMeshParent;
@@ -83,10 +82,10 @@ export class LightGizmo extends Gizmo implements ILightGizmo {
      * It will return the attached mesh (if any) and setting an attached node will log
      * a warning
      */
-    public get attachedNode() {
+    public override get attachedNode() {
         return this.attachedMesh;
     }
-    public set attachedNode(value: Nullable<Node>) {
+    public override set attachedNode(value: Nullable<Node>) {
         Logger.Warn("Nodes cannot be attached to LightGizmo. Attach to a mesh instead.");
     }
 
@@ -174,7 +173,7 @@ export class LightGizmo extends Gizmo implements ILightGizmo {
      * @internal
      * Updates the gizmo to match the attached mesh's position/rotation
      */
-    protected _update() {
+    protected override _update() {
         super._update();
         if (!this._light) {
             return;
@@ -298,7 +297,7 @@ export class LightGizmo extends Gizmo implements ILightGizmo {
     /**
      * Disposes of the light gizmo
      */
-    public dispose() {
+    public override dispose() {
         this.onClickedObservable.clear();
         this.gizmoLayer.utilityLayerScene.onPointerObservable.remove(this._pointerObserver);
         this._material.dispose();

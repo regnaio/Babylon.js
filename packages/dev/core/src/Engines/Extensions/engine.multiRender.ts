@@ -9,8 +9,8 @@ import type { WebGLRenderTargetWrapper } from "../WebGL/webGLRenderTargetWrapper
 import type { WebGLHardwareTexture } from "../WebGL/webGLHardwareTexture";
 import type { TextureSize } from "../../Materials/Textures/textureCreationOptions";
 
-declare module "../../Engines/thinEngine" {
-    export interface ThinEngine {
+declare module "../../Engines/abstractEngine" {
+    export interface AbstractEngine {
         /**
          * Unbind a list of render target textures from the webGL context
          * This is used only when drawBuffer extension or webGL2 are active
@@ -140,7 +140,7 @@ ThinEngine.prototype.unBindMultiColorAttachmentFramebuffer = function (
 
     for (let i = 0; i < count; i++) {
         const texture = rtWrapper.textures![i];
-        if (texture?.generateMipMaps && !disableGenerateMipMaps && !texture.isCube) {
+        if (texture?.generateMipMaps && !disableGenerateMipMaps && !texture?.isCube && !texture?.is3D) {
             this._bindTextureDirectly(gl.TEXTURE_2D, texture, true);
             gl.generateMipmap(gl.TEXTURE_2D);
             this._bindTextureDirectly(gl.TEXTURE_2D, null);

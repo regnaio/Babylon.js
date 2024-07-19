@@ -1,5 +1,5 @@
 import type { Nullable, DataArray, FloatArray } from "../types";
-import type { ThinEngine } from "../Engines/thinEngine";
+import type { AbstractEngine } from "../Engines/abstractEngine";
 import { DataBuffer } from "./dataBuffer";
 import type { Mesh } from "../Meshes/mesh";
 import { Logger } from "../Misc/logger";
@@ -9,7 +9,7 @@ import { Constants } from "../Engines/constants";
  * Class used to store data that will be store in GPU memory
  */
 export class Buffer {
-    private _engine: ThinEngine;
+    private _engine: AbstractEngine;
     private _buffer: Nullable<DataBuffer>;
     /** @internal */
     public _data: Nullable<DataArray>;
@@ -45,7 +45,7 @@ export class Buffer {
      * @param label defines the label of the buffer (for debug purpose)
      */
     constructor(
-        engine: ThinEngine,
+        engine: AbstractEngine,
         data: DataArray | DataBuffer,
         updatable: boolean,
         stride = 0,
@@ -446,7 +446,7 @@ export class VertexBuffer {
     /**
      * Gets the engine associated with the buffer
      */
-    public readonly engine: ThinEngine;
+    public readonly engine: AbstractEngine;
 
     /**
      * Gets the max possible amount of vertices stored within the current vertex buffer.
@@ -485,7 +485,7 @@ export class VertexBuffer {
      * @param takeBufferOwnership defines if the buffer should be released when the vertex buffer is disposed
      */
     constructor(
-        engine: ThinEngine,
+        engine: AbstractEngine,
         data: DataArray | Buffer | DataBuffer,
         kind: string,
         updatable: boolean,
@@ -508,11 +508,11 @@ export class VertexBuffer {
      * @param kind the vertex buffer kind
      * @param options defines the rest of the options used to create the buffer
      */
-    constructor(engine: ThinEngine, data: DataArray | Buffer | DataBuffer, kind: string, options?: IVertexBufferOptions);
+    constructor(engine: AbstractEngine, data: DataArray | Buffer | DataBuffer, kind: string, options?: IVertexBufferOptions);
 
     /** @internal */
     constructor(
-        engine: ThinEngine,
+        engine: AbstractEngine,
         data: DataArray | Buffer | DataBuffer,
         kind: string,
         updatableOrOptions?: boolean | IVertexBufferOptions,
@@ -1025,24 +1025,20 @@ export class VertexBuffer {
             } else if (data instanceof ArrayBuffer) {
                 return new Float32Array(data, byteOffset, count);
             } else {
-                let offset = data.byteOffset + byteOffset;
+                const offset = data.byteOffset + byteOffset;
+                if ((offset & 3) !== 0) {
+                    Logger.Warn("Float array must be aligned to 4-bytes border");
+                    forceCopy = true;
+                }
+
                 if (forceCopy) {
-                    const result = new Float32Array(count);
-                    const source = new Float32Array(data.buffer, offset, count);
-
+                    const result = new Uint8Array(count * Float32Array.BYTES_PER_ELEMENT);
+                    const source = new Uint8Array(data.buffer, offset, result.length);
                     result.set(source);
-
-                    return result;
+                    return new Float32Array(result.buffer);
+                } else {
+                    return new Float32Array(data.buffer, offset, count);
                 }
-
-                // Protect against bad data
-                const remainder = offset % 4;
-
-                if (remainder) {
-                    offset = Math.max(0, offset - remainder);
-                }
-
-                return new Float32Array(data.buffer, offset, count);
             }
         }
 

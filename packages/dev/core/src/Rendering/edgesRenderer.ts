@@ -254,6 +254,7 @@ export class EdgesRenderer implements IEdgesRenderer {
                 {
                     attributes: ["position", "normal"],
                     uniforms: ["world", "viewProjection", "color", "width", "aspectRatio"],
+                    uniformBuffers: ["Scene", "Mesh"],
                 },
                 false
             );
@@ -546,7 +547,7 @@ export class EdgesRenderer implements IEdgesRenderer {
          * Find all vertices that are at the same location (with an epsilon) and remapp them on the same vertex
          */
         const useFastVertexMerger = this._options?.useFastVertexMerger ?? true;
-        const epsVertexMerge = useFastVertexMerger ? Math.round(-Math.log(this._options?.epsilonVertexMerge ?? 1e-6) / Math.log(10)) : this._options?.epsilonVertexMerge ?? 1e-6;
+        const epsVertexMerge = useFastVertexMerger ? Math.round(-Math.log(this._options?.epsilonVertexMerge ?? 1e-6) / Math.log(10)) : (this._options?.epsilonVertexMerge ?? 1e-6);
         const remapVertexIndices: Array<number> = [];
         const uniquePositions: Array<number> = []; // list of unique index of vertices - needed for tessellation
 
@@ -994,7 +995,7 @@ export class EdgesRenderer implements IEdgesRenderer {
         }
 
         this._lineShader.setFloat("aspectRatio", engine.getAspectRatio(scene.activeCamera));
-        this._lineShader.bind(this._source.getWorldMatrix());
+        this._lineShader.bind(this._source.getWorldMatrix(), this._source);
 
         // Draw order
         engine.drawElementsType(Material.TriangleFillMode, 0, this._indicesCount, instanceCount);
@@ -1030,7 +1031,7 @@ export class LineEdgesRenderer extends EdgesRenderer {
     /**
      * Generate edges for each line in LinesMesh. Every Line should be rendered as edge.
      */
-    _generateEdgesLines(): void {
+    override _generateEdgesLines(): void {
         const positions = this._source.getVerticesData(VertexBuffer.PositionKind);
         const indices = this._source.getIndices();
 
