@@ -80,6 +80,7 @@ export class AnimationGroup implements IDisposable {
     private _enableBlending: Nullable<boolean> = null;
     private _blendingSpeed: Nullable<number> = null;
     private _numActiveAnimatables = 0;
+    private _shouldStart = true;
 
     /** @internal */
     public _parentContainer: Nullable<AbstractScene> = null;
@@ -543,6 +544,7 @@ export class AnimationGroup implements IDisposable {
         }
 
         this._targetedAnimations.push(targetedAnimation);
+        this._shouldStart = true;
 
         return targetedAnimation;
     }
@@ -648,6 +650,7 @@ export class AnimationGroup implements IDisposable {
 
         this._loopAnimation = loop;
 
+        this._shouldStart = false;
         this._animationLoopCount = 0;
         this._animationLoopFlags.length = 0;
 
@@ -718,7 +721,7 @@ export class AnimationGroup implements IDisposable {
      */
     public play(loop?: boolean): AnimationGroup {
         // only if there are animatable available
-        if (this.isStarted && this._animatables.length) {
+        if (this.isStarted && this._animatables.length && !this._shouldStart) {
             if (loop !== undefined) {
                 this.loopAnimation = loop;
             }
@@ -741,7 +744,7 @@ export class AnimationGroup implements IDisposable {
         if (!this._isStarted) {
             this.play();
             this.goToFrame(0);
-            this.stop();
+            this.stop(true);
             return this;
         }
 
@@ -776,16 +779,17 @@ export class AnimationGroup implements IDisposable {
 
     /**
      * Stop all animations
+     * @param skipOnAnimationEnd defines if the system should not raise onAnimationEnd. Default is false
      * @returns the animation group
      */
-    public stop(): AnimationGroup {
+    public stop(skipOnAnimationEnd = false): AnimationGroup {
         if (!this._isStarted) {
             return this;
         }
 
         const list = this._animatables.slice();
         for (let index = 0; index < list.length; index++) {
-            list[index].stop(undefined, undefined, true);
+            list[index].stop(undefined, undefined, true, skipOnAnimationEnd);
         }
 
         // We will take care of removing all stopped animatables
@@ -794,6 +798,11 @@ export class AnimationGroup implements IDisposable {
             const animatable = this._scene._activeAnimatables[index];
             if (animatable._runtimeAnimations.length > 0) {
                 this._scene._activeAnimatables[curIndex++] = animatable;
+            } else if (skipOnAnimationEnd) {
+                // We normally rely on the onAnimationEnd callback (assigned in the start function) to be notified when an animatable
+                // ends and should be removed from the active animatables array. However, if the animatable is stopped with the skipOnAnimationEnd
+                // flag set to true, then we need to explicitly remove it from the active animatables array.
+                this._checkAnimationGroupEnded(animatable, skipOnAnimationEnd);
             }
         }
         this._scene._activeAnimatables.length = curIndex;
@@ -888,7 +897,7 @@ export class AnimationGroup implements IDisposable {
         this.onAnimationGroupLoopObservable.clear();
     }
 
-    private _checkAnimationGroupEnded(animatable: Animatable) {
+    private _checkAnimationGroupEnded(animatable: Animatable, skipOnAnimationEnd = false) {
         // animatable should be taken out of the array
         const idx = this._animatables.indexOf(animatable);
         if (idx > -1) {
@@ -898,7 +907,9 @@ export class AnimationGroup implements IDisposable {
         // all animatables were removed? animation group ended!
         if (this._animatables.length === 0) {
             this._isStarted = false;
-            this.onAnimationGroupEndObservable.notifyObservers(this);
+            if (!skipOnAnimationEnd) {
+                this.onAnimationGroupEndObservable.notifyObservers(this);
+            }
         }
     }
 
