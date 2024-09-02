@@ -2,6 +2,59 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "EXR Loader",
+            "playgroundId": "#4RN0VF#151",
+            "referenceImage": "exr-loader.png",
+            "excludedEngines": ["webgl1"]
+        },
+        {
+            "title": "Simple refraction",
+            "playgroundId": "#22KZUW#652",
+            "referenceImage": "simple-refraction.png"
+        },
+        {
+            "title": "Detail map",
+            "playgroundId": "#F8FDYT#2",
+            "referenceImage": "detail-map.png"
+        },
+        {
+            "title": "needDepthPrePass",
+            "playgroundId": "#7A66KI#1",
+            "referenceImage": "needDepthPrePass.png"
+        },
+        {
+            "title": "Decal map PP",
+            "playgroundId": "#9BVW2S#82",
+            "renderCount": 120,
+            "referenceImage": "decal-map-pp.png",
+            "excludedEngines": ["webgl1"]
+        },
+        {
+            "title": "Convolution Post Process",
+            "playgroundId": "#FBH4J7#281",
+            "referenceImage": "convolution.png"
+        },
+        {
+            "title": "Volumetric Light Scattering Post Process with Skeleton",
+            "playgroundId": "#5E318S#6",
+            "referenceImage": "volumetricLightScatteringSkeleton.png"
+        },
+        {
+            "title": "Volumetric Light Scattering Post Process with Morph Targets",
+            "playgroundId": "#5E318S#5",
+            "referenceImage": "volumetricLightScatteringMorphTargets.png"
+        },
+        {
+            "title": "Color correction",
+            "playgroundId": "#FBH4J7#278",
+            "referenceImage": "color-correction.png"
+        },
+        {
+            "title": "NME Multi Build",
+            "playgroundId": "#D8AK3Z#104",
+            "referenceImage": "nme-multi-build.png"
+        },
+        {
             "title": "BoundingInfo Helper",
             "playgroundId": "#BCNJD4#42",
             "referenceImage": "bbhelper.png",
@@ -1623,6 +1676,19 @@
             "referenceImage": "bakedVertexAnimation.png"
         },
         {
+            "title": "Baked Vertex Animation with Depth Of Field",
+            "renderCount": 20,
+            "playgroundId": "#JWO4R0#8",
+            "referenceImage": "bakedVertexAnimationDOF.png"
+        },
+        {
+            "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
+            "renderCount": 20,
+            "playgroundId": "#1LF9GK#3",
+            "referenceImage": "bakedVertexAnimationVLS.png",
+            "excludedEngines": ["webgl1"]
+        },
+        {
             "title": "Bones and morphs computation order",
             "renderCount": 40,
             "playgroundId": "#WGZLGJ#4040",
@@ -1707,6 +1773,7 @@
         {
             "title": "Fluid rendering particle system",
             "playgroundId": "#544N0Q#67",
+            "renderCount": 120,
             "referenceImage": "fluidParticleSystem.png",
             "excludedEngines": ["webgl1"]
         },
@@ -1715,7 +1782,7 @@
             "playgroundId": "#PCMH7A#2",
             "referenceImage": "fluidBoxSphere.png",
             "renderCount": 120,
-            "excludedEngines": ["webgl1"]
+            "excludedEngines": ["webgl1", "webgpu"]
         },
         {
             "title": "Export GLTF Extension KHR_texture_transform",
@@ -2160,6 +2227,13 @@
             "title": "glTF Loader Capabilities",
             "playgroundId": "#EBO3J1#10",
             "referenceImage": "glTFLoaderCapabilities.png"
+        },
+        {
+            "title": "IBL Voxel Shadowing",
+            "playgroundId": "#8R5SSE#180",
+            "referenceImage": "voxelShadows.png",
+            "renderCount": 15,
+            "excludedEngines": ["webgl1", "webgpu"]
         }
     ]
 }

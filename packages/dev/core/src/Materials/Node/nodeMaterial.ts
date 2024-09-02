@@ -115,14 +115,26 @@ export class NodeMaterialDefines extends MaterialDefines implements IImageProces
     public PREPASS_NORMAL = false;
     /** Prepass normal index */
     public PREPASS_NORMAL_INDEX = -1;
+    /** Prepass world normal */
+    public PREPASS_WORLD_NORMAL = false;
+    /** Prepass world normal index */
+    public PREPASS_WORLD_NORMAL_INDEX = -1;
     /** Prepass position */
     public PREPASS_POSITION = false;
     /** Prepass position index */
     public PREPASS_POSITION_INDEX = -1;
+    /** Prepass local position */
+    public PREPASS_LOCAL_POSITION = false;
+    /** Prepass local position index */
+    public PREPASS_LOCAL_POSITION_INDEX = -1;
     /** Prepass depth */
     public PREPASS_DEPTH = false;
     /** Prepass depth index */
     public PREPASS_DEPTH_INDEX = -1;
+    /** Clip-space depth */
+    public PREPASS_NDC_DEPTH = false;
+    /** Clip-space depth index */
+    public PREPASS_NDC_DEPTH_INDEX = -1;
     /** Scene MRT count */
     public SCENE_MRT_COUNT = 0;
 
@@ -252,6 +264,7 @@ export class NodeMaterial extends PushMaterial {
     private _cachedWorldViewProjectionMatrix = new Matrix();
     private _optimizers = new Array<NodeMaterialOptimizer>();
     private _animationFrame = -1;
+    private _buildIsInProgress = false;
 
     /** Define the Url to load node editor script */
     public static EditorURL = `${Tools._DefaultCdnUrl}/v${AbstractEngine.Version}/nodeEditor/babylon.nodeEditor.js`;
@@ -801,6 +814,11 @@ export class NodeMaterial extends PushMaterial {
      * @param autoConfigure defines if the autoConfigure method should be called when initializing blocks (default is false)
      */
     public build(verbose: boolean = false, updateBuildId = true, autoConfigure = false) {
+        if (this._buildIsInProgress) {
+            Logger.Warn("Build is already in progress, You can use NodeMaterial.onBuildObservable to determine when the build is completed.");
+            return;
+        }
+        this._buildIsInProgress = true;
         // First time?
         if (!this._vertexCompilationState && !autoConfigure) {
             autoConfigure = true;
@@ -917,6 +935,7 @@ export class NodeMaterial extends PushMaterial {
             Logger.Log(this._fragmentCompilationState.compilationString);
         }
 
+        this._buildIsInProgress = false;
         this._buildWasSuccessful = true;
         this.onBuildObservable.notifyObservers(this);
 
@@ -1011,8 +1030,16 @@ export class NodeMaterial extends PushMaterial {
             result.push(Constants.PREPASS_DEPTH_TEXTURE_TYPE);
         }
 
+        if (prePassOutputBlock.viewDepthNDC.isConnected) {
+            result.push(Constants.PREPASS_NDC_DEPTH_TEXTURE_TYPE);
+        }
+
         if (prePassOutputBlock.viewNormal.isConnected) {
             result.push(Constants.PREPASS_NORMAL_TEXTURE_TYPE);
+        }
+
+        if (prePassOutputBlock.worldNormal.isConnected) {
+            result.push(Constants.PREPASS_WORLD_NORMAL_TEXTURE_TYPE);
         }
 
         if (prePassOutputBlock.worldPosition.isConnected) {
@@ -1036,8 +1063,14 @@ export class NodeMaterial extends PushMaterial {
             if (block.depth.isConnected && !result.includes(Constants.PREPASS_DEPTH_TEXTURE_TYPE)) {
                 result.push(Constants.PREPASS_DEPTH_TEXTURE_TYPE);
             }
+            if (block.clipSpaceDepth.isConnected && !result.includes(Constants.PREPASS_NDC_DEPTH_TEXTURE_TYPE)) {
+                result.push(Constants.PREPASS_NDC_DEPTH_TEXTURE_TYPE);
+            }
             if (block.normal.isConnected && !result.includes(Constants.PREPASS_NORMAL_TEXTURE_TYPE)) {
                 result.push(Constants.PREPASS_NORMAL_TEXTURE_TYPE);
+            }
+            if (block.worldNormal.isConnected && !result.includes(Constants.PREPASS_WORLD_NORMAL_TEXTURE_TYPE)) {
+                result.push(Constants.PREPASS_WORLD_NORMAL_TEXTURE_TYPE);
             }
         }
 
@@ -1248,7 +1281,7 @@ export class NodeMaterial extends PushMaterial {
         proceduralTexture._setEffect(effect);
 
         let buildId = this._buildId;
-        proceduralTexture.onBeforeGenerationObservable.add(() => {
+        const refreshEffect = () => {
             if (buildId !== this._buildId) {
                 delete Effect.ShadersStore[tempName + "VertexShader"];
                 delete Effect.ShadersStore[tempName + "PixelShader"];
@@ -1284,6 +1317,15 @@ export class NodeMaterial extends PushMaterial {
             }
 
             this._checkInternals(effect);
+        };
+
+        proceduralTexture.onBeforeGenerationObservable.add(() => {
+            refreshEffect();
+        });
+
+        // This is needed if the procedural texture is not set to refresh automatically
+        this.onBuildObservable.add(() => {
+            refreshEffect();
         });
 
         return proceduralTexture;
