@@ -171,12 +171,12 @@ export class AbstractAssetContainer implements IAssetContainer {
     /**
      * The list of lens flare systems added to the scene
      */
-    public lensFlareSystems: LensFlareSystem[];
+    public lensFlareSystems: LensFlareSystem[] = [];
 
     /**
      * The list of procedural textures added to the scene
      */
-    public proceduralTextures: ProceduralTexture[];
+    public proceduralTextures: ProceduralTexture[] = [];
 
     /**
      * The list of sprite managers added to the scene
@@ -270,7 +270,6 @@ export class AssetContainer extends AbstractAssetContainer {
             return;
         }
         this.scene = scene;
-        this["proceduralTextures"] = [];
 
         scene.onDisposeObservable.add(() => {
             if (!this._wasAddedToScene) {
@@ -1379,8 +1378,7 @@ export class AssetContainer extends AbstractAssetContainer {
 
         const listByTags = [];
 
-        for (const i in list) {
-            const item = list[i];
+        for (const item of list) {
             if (Tags && Tags.MatchesQuery(item, tagsQuery) && (!filter || filter(item))) {
                 listByTags.push(item);
             }

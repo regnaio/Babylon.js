@@ -1175,7 +1175,7 @@ export class PostProcess {
 
         index = camera._postProcesses.indexOf(this);
         if (index === 0 && camera._postProcesses.length > 0) {
-            const firstPostProcess = this._camera._getFirstPostProcess();
+            const firstPostProcess = camera._getFirstPostProcess();
             if (firstPostProcess) {
                 firstPostProcess.markTextureDirty();
             }

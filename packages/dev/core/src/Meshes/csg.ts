@@ -256,7 +256,11 @@ class CSGPolygon {
     constructor(vertices: Vertex[], shared: any) {
         this.vertices = vertices;
         this.shared = shared;
-        this.plane = <CSGPlane>CSGPlane.FromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
+        const plane = CSGPlane.FromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
+        if (!plane) {
+            throw new Error("CSGPolygon: Cannot construct polygon from degenerate vertices");
+        }
+        this.plane = plane;
     }
 
     /**

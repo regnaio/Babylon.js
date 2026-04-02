@@ -159,7 +159,7 @@ export abstract class Light extends Node implements ISortableLight {
      */
     public set range(value: number) {
         this._range = value;
-        this._inverseSquaredRange = 1.0 / (this.range * this.range);
+        this._inverseSquaredRange = value > 0 ? 1.0 / (this.range * this.range) : 0;
     }
 
     /**

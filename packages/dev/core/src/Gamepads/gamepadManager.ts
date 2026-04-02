@@ -201,7 +201,7 @@ export class GamepadManager {
         this._isMonitoring = false;
     }
 
-    private _loggedErrors: number[];
+    private _loggedErrors: number[] = [];
 
     /** @internal */
     public _checkGamepadsStatus() {

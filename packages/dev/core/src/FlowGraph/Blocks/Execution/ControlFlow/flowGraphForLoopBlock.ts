@@ -83,11 +83,12 @@ export class FlowGraphForLoopBlock extends FlowGraphExecutionBlockWithOutSignal 
         const index = getNumericValue(this.startIndex.getValue(context));
         const step = this.step.getValue(context);
         let endIndex = getNumericValue(this.endIndex.getValue(context));
+        let iterationCount = 0;
         for (let i = index; i < endIndex; i += step) {
             this.index.setValue(new FlowGraphInteger(i), context);
             this.executionFlow._activateSignal(context);
             endIndex = getNumericValue(this.endIndex.getValue(context));
-            if (i > FlowGraphForLoopBlock.MaxLoopIterations * step) {
+            if (++iterationCount > FlowGraphForLoopBlock.MaxLoopIterations) {
                 break;
             }
         }

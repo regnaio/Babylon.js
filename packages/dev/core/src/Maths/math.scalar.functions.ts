@@ -221,19 +221,22 @@ export function Repeat(value: number, length: number): number {
 /**
  * Normalize the value between 0.0 and 1.0 using min and max values
  * @param value value to normalize
- * @param min max to normalize between
- * @param max min to normalize between
+ * @param min min to normalize between
+ * @param max max to normalize between
  * @returns the normalized value
  */
 export function Normalize(value: number, min: number, max: number): number {
+    if (max === min) {
+        return 0;
+    }
     return (value - min) / (max - min);
 }
 
 /**
  * Denormalize the value from 0.0 and 1.0 using min and max values
  * @param normalized value to denormalize
- * @param min max to denormalize between
- * @param max min to denormalize between
+ * @param min min to denormalize between
+ * @param max max to denormalize between
  * @returns the denormalized value
  */
 export function Denormalize(normalized: number, min: number, max: number): number {
@@ -334,6 +337,9 @@ export function MoveTowardsAngle(current: number, target: number, maxDelta: numb
  * @returns the percentage
  */
 export function RangeToPercent(number: number, min: number, max: number): number {
+    if (max === min) {
+        return 0;
+    }
     return (number - min) / (max - min);
 }
 

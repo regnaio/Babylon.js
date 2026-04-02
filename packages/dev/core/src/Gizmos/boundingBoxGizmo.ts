@@ -693,23 +693,23 @@ export class BoundingBoxGizmo extends Gizmo implements IBoundingBoxGizmo {
         });
 
         // Hover color change
-        const pointerIds: AbstractMesh[] = [];
+        const pointerIds = new Map<number, AbstractMesh>();
         this._pointerObserver = gizmoLayer.utilityLayerScene.onPointerObservable.add((pointerInfo) => {
-            if (!pointerIds[(<IPointerEvent>pointerInfo.event).pointerId]) {
+            if (!pointerIds.has((<IPointerEvent>pointerInfo.event).pointerId)) {
                 const meshes = this._rotateAnchorsParent.getChildMeshes().concat(this._scaleBoxesParent.getChildMeshes());
 
                 for (const mesh of meshes) {
                     if (pointerInfo.pickInfo && pointerInfo.pickInfo.pickedMesh == mesh) {
-                        pointerIds[(<IPointerEvent>pointerInfo.event).pointerId] = mesh;
+                        pointerIds.set((<IPointerEvent>pointerInfo.event).pointerId, mesh);
                         mesh.material = this._hoverColoredMaterial;
                         this.onHoverStartObservable.notifyObservers();
                         this._isHovered = true;
                     }
                 }
             } else {
-                if (pointerInfo.pickInfo && pointerInfo.pickInfo.pickedMesh != pointerIds[(<IPointerEvent>pointerInfo.event).pointerId]) {
-                    pointerIds[(<IPointerEvent>pointerInfo.event).pointerId].material = this._coloredMaterial;
-                    pointerIds.splice((<IPointerEvent>pointerInfo.event).pointerId, 1);
+                if (pointerInfo.pickInfo && pointerInfo.pickInfo.pickedMesh != pointerIds.get((<IPointerEvent>pointerInfo.event).pointerId)) {
+                    pointerIds.get((<IPointerEvent>pointerInfo.event).pointerId)!.material = this._coloredMaterial;
+                    pointerIds.delete((<IPointerEvent>pointerInfo.event).pointerId);
                     this.onHoverEndObservable.notifyObservers();
                     this._isHovered = false;
                 }

@@ -401,9 +401,7 @@ export class DepthRenderer {
                 }
             }
 
-            if (this.alphaBlendedDepth) {
-                engine.setAlphaMode(previousAlphaMode);
-            }
+            engine.setAlphaMode(previousAlphaMode);
         };
     }
 

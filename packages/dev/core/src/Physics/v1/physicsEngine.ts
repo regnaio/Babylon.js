@@ -181,7 +181,10 @@ export class PhysicsEngine implements IPhysicsEngine {
         });
         if (matchingJoints.length) {
             this._physicsPlugin.removeJoint(matchingJoints[0]);
-            //TODO remove it from the list as well
+            const index = this._joints.indexOf(matchingJoints[0]);
+            if (index !== -1) {
+                this._joints.splice(index, 1);
+            }
         }
     }
 

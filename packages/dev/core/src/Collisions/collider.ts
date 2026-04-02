@@ -240,7 +240,7 @@ export class Collider {
             return;
         }
 
-        if (normalDotVelocity == 0) {
+        if (normalDotVelocity === 0) {
             if (Math.abs(signedDistToTrianglePlane) >= 1.0) {
                 return;
             }

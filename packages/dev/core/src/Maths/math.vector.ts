@@ -719,9 +719,10 @@ export class Vector2 implements Vector<Tuple<number, 2>, IVector2Like>, IVector2
      */
     public normalizeToRef<T extends IVector2Like>(result: T): T {
         const len = this.length();
-        if (len === 0) {
+        if (len === 0 || len === 1.0) {
             result.x = this.x;
             result.y = this.y;
+            return result;
         }
         return this.scaleToRef(1.0 / len, result);
     }

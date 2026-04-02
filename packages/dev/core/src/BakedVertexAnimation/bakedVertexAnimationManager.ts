@@ -104,7 +104,7 @@ export class BakedVertexAnimationManager implements IBakedVertexAnimationManager
     constructor(scene?: Nullable<Scene>) {
         scene = scene || EngineStore.LastCreatedScene;
         if (!scene) {
-            return;
+            throw new Error("BakedVertexAnimationManager: No scene available");
         }
         this._scene = scene;
         this.animationParameters = new Vector4(0, 0, 0, 30);
