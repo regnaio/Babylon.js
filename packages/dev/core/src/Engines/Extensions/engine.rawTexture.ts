@@ -197,7 +197,7 @@ ThinEngine.prototype.updateRawTexture = function (
     const internalFormat = this._getInternalFormat(format);
     const textureType = this._getWebGLTextureType(type);
     this._bindTextureDirectly(this._gl.TEXTURE_2D, texture, true);
-    this._unpackFlipY(invertY === undefined ? true : invertY ? true : false);
+    this._unpackFlipY(invertY !== false);
 
     if (!this._doNotHandleContextLost) {
         texture._bufferView = data;
@@ -410,7 +410,7 @@ ThinEngine.prototype.updateRawCubeTexture = function (
     }
 
     this._bindTextureDirectly(gl.TEXTURE_CUBE_MAP, texture, true);
-    this._unpackFlipY(invertY === undefined ? true : invertY ? true : false);
+    this._unpackFlipY(invertY !== false);
 
     if (texture.width % 4 !== 0) {
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -680,7 +680,7 @@ function MakeUpdateRawTextureFunction(is3D: boolean) {
         const internalSizedFomat = this._getRGBABufferInternalSizedFormat(textureType, format);
 
         this._bindTextureDirectly(target, texture, true);
-        this._unpackFlipY(invertY === undefined ? true : invertY ? true : false);
+        this._unpackFlipY(invertY !== false);
 
         if (!this._doNotHandleContextLost) {
             texture._bufferView = data;

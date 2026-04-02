@@ -380,6 +380,8 @@ export class SnapshotRenderingHelper {
             return;
         }
 
+        this._enableCancelFunctions.clear();
+        this._disableCancelFunctions.clear();
         this._scene.onBeforeRenderObservable.remove(this._onBeforeRenderObserver);
         this._scene.onBeforeRenderObservable.remove(this._onBeforeRenderObserverUpdateLayer);
         this._engine.onResizeObservable.remove(this._onResizeObserver);

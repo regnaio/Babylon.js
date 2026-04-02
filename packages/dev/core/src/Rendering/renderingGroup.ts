@@ -19,6 +19,7 @@ import { type Camera } from "../Cameras/camera";
  */
 export class RenderingGroup {
     private static _ZeroVector: DeepImmutable<Vector3> = Vector3.Zero();
+    private static _SortedArray: SubMesh[] = [];
     private _scene: Scene;
     private _opaqueSubMeshes = new SmartArray<SubMesh>(256);
     /** @internal */
@@ -265,7 +266,16 @@ export class RenderingGroup {
             }
         }
 
-        const sortedArray = subMeshes.length === subMeshes.data.length ? subMeshes.data : subMeshes.data.slice(0, subMeshes.length);
+        let sortedArray: SubMesh[];
+        if (subMeshes.length === subMeshes.data.length) {
+            sortedArray = subMeshes.data;
+        } else {
+            sortedArray = RenderingGroup._SortedArray;
+            sortedArray.length = subMeshes.length;
+            for (let i = 0; i < subMeshes.length; i++) {
+                sortedArray[i] = subMeshes.data[i];
+            }
+        }
 
         if (sortCompareFn) {
             sortedArray.sort(sortCompareFn);

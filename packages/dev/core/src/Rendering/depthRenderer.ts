@@ -613,6 +613,8 @@ export class DepthRenderer {
      * Disposes of the depth renderer.
      */
     public dispose(): void {
+        this._alphaBlendedDepthMaterialCache.clear();
+
         const keysToDelete = [];
         for (const key in this._scene._depthRenderer) {
             const depthRenderer = this._scene._depthRenderer[key];

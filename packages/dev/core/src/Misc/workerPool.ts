@@ -12,6 +12,7 @@ interface IWorkerInfo {
 export class WorkerPool implements IDisposable {
     protected _workerInfos: Array<IWorkerInfo>;
     protected _pendingActions = new Array<(worker: Worker, onComplete: () => void) => void>();
+    private _disposed = false;
 
     /**
      * Constructor
@@ -28,6 +29,7 @@ export class WorkerPool implements IDisposable {
      * Terminates all workers and clears any pending actions.
      */
     public dispose(): void {
+        this._disposed = true;
         for (const workerInfo of this._workerInfos) {
             // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
             workerInfo.workerPromise.then((worker) => {
@@ -65,7 +67,13 @@ export class WorkerPool implements IDisposable {
         workerInfo.idle = false;
         // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
         workerInfo.workerPromise.then((worker) => {
+            if (this._disposed) {
+                return;
+            }
             action(worker, () => {
+                if (this._disposed) {
+                    return;
+                }
                 const nextAction = this._pendingActions.shift();
                 if (nextAction) {
                     this._execute(workerInfo, nextAction);

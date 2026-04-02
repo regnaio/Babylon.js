@@ -224,7 +224,7 @@ export class BoneIKController {
             ang = 0;
         }
 
-        if (ang > Math.PI || ang == undefined) {
+        if (ang > Math.PI || ang === undefined) {
             ang = Math.PI;
         }
 

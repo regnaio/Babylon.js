@@ -460,5 +460,6 @@ export class GizmoManager implements IDisposable {
         }
         this.boundingBoxDragBehavior.detach();
         this.onAttachedToMeshObservable.clear();
+        this.onAttachedToNodeObservable.clear();
     }
 }

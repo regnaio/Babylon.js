@@ -3592,7 +3592,7 @@ export class ThinEngine extends AbstractEngine {
         }
 
         this._bindTextureDirectly(gl.TEXTURE_2D, texture, true);
-        this._unpackFlipY(invertY === undefined ? true : invertY ? true : false);
+        this._unpackFlipY(invertY !== false);
 
         texture.baseWidth = img.width;
         texture.baseHeight = img.height;

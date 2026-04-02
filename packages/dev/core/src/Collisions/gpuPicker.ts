@@ -192,7 +192,7 @@ export class GPUPicker {
             return;
         }
 
-        const material = this._meshMaterialMap.get(mesh)!;
+        const material = this._meshMaterialMap.get(mesh);
 
         if (!material) {
             if (!this._renderWarningIssued) {

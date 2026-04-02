@@ -368,7 +368,9 @@ export class Database implements IOfflineProvider {
                                     if (error && error.name === "QuotaExceededError") {
                                         this._hasReachedQuota = true;
                                     }
-                                } catch (ex) {}
+                                } catch (ex) {
+                                    Logger.Error("Error checking IndexedDB error status: " + ex);
+                                }
                                 generateBlobUrl();
                             };
 
@@ -487,7 +489,9 @@ export class Database implements IOfflineProvider {
                         if (error && error.name === "QuotaExceededError") {
                             this._hasReachedQuota = true;
                         }
-                    } catch (ex) {}
+                    } catch (ex) {
+                        Logger.Error("Error checking IndexedDB error status: " + ex);
+                    }
                     callback(-1);
                 };
 
@@ -651,7 +655,9 @@ export class Database implements IOfflineProvider {
                                     if (error && error.name === "QuotaExceededError") {
                                         this._hasReachedQuota = true;
                                     }
-                                } catch (ex) {}
+                                } catch (ex) {
+                                    Logger.Error("Error checking IndexedDB error status: " + ex);
+                                }
                                 callback(fileData);
                             };
 

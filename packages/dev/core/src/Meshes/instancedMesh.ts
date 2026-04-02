@@ -287,7 +287,7 @@ export class InstancedMesh extends AbstractMesh {
         if (this.sourceMesh) {
             this.sourceMesh.setVerticesData(kind, data, updatable, stride);
         }
-        return this.sourceMesh;
+        return this;
     }
 
     /**
@@ -323,7 +323,7 @@ export class InstancedMesh extends AbstractMesh {
         if (this.sourceMesh) {
             this.sourceMesh.updateVerticesData(kind, data, updateExtends, makeItUnique);
         }
-        return this.sourceMesh;
+        return this;
     }
 
     /**
@@ -340,7 +340,7 @@ export class InstancedMesh extends AbstractMesh {
         if (this.sourceMesh) {
             this.sourceMesh.setIndices(indices, totalVertices);
         }
-        return this.sourceMesh;
+        return this;
     }
 
     /**

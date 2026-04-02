@@ -309,6 +309,8 @@ export class _WebAudioEngine extends AudioEngineV2 {
     public override dispose(): void {
         super.dispose();
 
+        clearInterval(this._resumeOnPauseTimerId);
+
         this._listener?.dispose();
         this._listener = null;
 

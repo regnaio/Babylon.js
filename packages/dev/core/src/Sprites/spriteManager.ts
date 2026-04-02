@@ -816,7 +816,13 @@ export class SpriteManager implements ISpriteManager {
             request.addEventListener("readystatechange", () => {
                 if (request.readyState == 4) {
                     if (request.status == 200) {
-                        const serializationObject = JSON.parse(request.responseText);
+                        let serializationObject;
+                        try {
+                            serializationObject = JSON.parse(request.responseText);
+                        } catch (e) {
+                            reject("Unable to parse sprite manager JSON: " + e);
+                            return;
+                        }
                         const output = SpriteManager.Parse(serializationObject, scene || EngineStore.LastCreatedScene, rootUrl);
 
                         if (name) {

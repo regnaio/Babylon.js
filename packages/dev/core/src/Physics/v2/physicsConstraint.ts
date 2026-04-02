@@ -50,7 +50,7 @@ export class PhysicsConstraint {
         if (!physicsEngine) {
             throw new Error("No Physics Engine available.");
         }
-        if (physicsEngine.getPluginVersion() != 2) {
+        if (physicsEngine.getPluginVersion() !== 2) {
             throw new Error("Plugin version is incorrect. Expected version 2.");
         }
         const physicsPlugin = physicsEngine.getPhysicsPlugin();
