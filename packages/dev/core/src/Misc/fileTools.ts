@@ -512,7 +512,7 @@ export const LoadFile = (
     if (match) {
         const fileRequest: IFileRequest = {
             onCompleteObservable: new Observable<IFileRequest>(),
-            abort: () => () => {},
+            abort: () => {},
         };
 
         try {

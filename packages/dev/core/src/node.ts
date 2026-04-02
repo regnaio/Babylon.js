@@ -964,6 +964,7 @@ export class Node implements IBehaviorAware<Node> {
 
         this.onEnabledStateChangedObservable.clear();
         this.onClonedObservable.clear();
+        this.onAccessibilityTagChangedObservable.clear();
 
         // Behaviors
         for (const behavior of this._behaviors) {
@@ -1020,15 +1021,16 @@ export class Node implements IBehaviorAware<Node> {
 
             for (const descendant of descendants) {
                 const childMesh = <AbstractMesh>descendant;
+
+                //make sure we have the needed params to get min and max
+                if (!childMesh.getBoundingInfo || childMesh.getTotalVertices() === 0) {
+                    continue;
+                }
+
                 childMesh.computeWorldMatrix(true);
 
                 // Filters meshes based on custom predicate function.
                 if (predicate && !predicate(childMesh)) {
-                    continue;
-                }
-
-                //make sure we have the needed params to get mix and max
-                if (!childMesh.getBoundingInfo || childMesh.getTotalVertices() === 0) {
                     continue;
                 }
 

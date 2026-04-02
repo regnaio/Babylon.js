@@ -1712,7 +1712,7 @@ export abstract class AbstractEngine {
                     scene ? scene.offlineProvider : undefined,
                     true,
                     (request?: IWebRequest, exception?: any) => {
-                        onInternalError("Unable to load " + (request ? request.responseURL : url, exception));
+                        onInternalError("Unable to load " + (request ? request.responseURL : url), exception);
                     }
                 );
             } else {
@@ -2697,6 +2697,14 @@ export abstract class AbstractEngine {
         if (this._emptyCubeTexture) {
             this._releaseTexture(this._emptyCubeTexture);
             this._emptyCubeTexture = null;
+        }
+        if (this._emptyTexture3D) {
+            this._releaseTexture(this._emptyTexture3D);
+            this._emptyTexture3D = null;
+        }
+        if (this._emptyTexture2DArray) {
+            this._releaseTexture(this._emptyTexture2DArray);
+            this._emptyTexture2DArray = null;
         }
 
         this._renderingCanvas = null;

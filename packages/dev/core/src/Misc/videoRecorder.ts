@@ -226,7 +226,7 @@ export class VideoRecorder {
         if (this._reject) {
             this._reject(event.error);
         } else {
-            throw new event.error();
+            throw event.error;
         }
     }
 

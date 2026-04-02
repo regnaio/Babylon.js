@@ -1072,7 +1072,7 @@ export class Mesh extends AbstractMesh implements IGetSetVerticesData {
 
         if (this.animations) {
             for (let i = 0; i < this.animations.length; i++) {
-                ret += ", animation[0]: " + this.animations[i].toString(fullDetails);
+                ret += ", animation[" + i + "]: " + this.animations[i].toString(fullDetails);
             }
         }
 
@@ -2967,7 +2967,7 @@ export class Mesh extends AbstractMesh implements IGetSetVerticesData {
             }
         }
         this.setVerticesData(VertexBuffer.MatricesWeightsKind, matricesWeights);
-        this.setVerticesData(VertexBuffer.MatricesWeightsKind, matricesWeightsExtra);
+        this.setVerticesData(VertexBuffer.MatricesWeightsExtraKind, matricesWeightsExtra);
     }
 
     /**

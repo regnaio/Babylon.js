@@ -590,7 +590,23 @@ export class Animation {
 
         host.animations.push(transition);
 
-        const animation: Animatable = scene.beginAnimation(host, 0, endFrame, false, 1.0, onAnimationEnd ?? undefined, undefined, stopCurrent);
+        const originalOnAnimationEnd = onAnimationEnd;
+        const animation: Animatable = scene.beginAnimation(
+            host,
+            0,
+            endFrame,
+            false,
+            1.0,
+            () => {
+                const index = host.animations ? host.animations.indexOf(transition) : -1;
+                if (index > -1) {
+                    host.animations!.splice(index, 1);
+                }
+                originalOnAnimationEnd?.();
+            },
+            undefined,
+            stopCurrent
+        );
         return animation;
     }
 
@@ -658,10 +674,10 @@ export class Animation {
             ret += ", Ranges: {";
             let first = true;
             for (const name in this._ranges) {
-                if (first) {
+                if (!first) {
                     ret += ", ";
-                    first = false;
                 }
+                first = false;
                 ret += name;
             }
             ret += "}";
@@ -1020,7 +1036,7 @@ export class Animation {
         const frameDelta = endKey.frame - startKey.frame;
 
         // gradient : percent of currentFrame between the frame inf and the frame sup
-        let gradient = (currentFrame - startKey.frame) / frameDelta;
+        let gradient = frameDelta === 0 ? 0 : (currentFrame - startKey.frame) / frameDelta;
 
         // check for easingFunction and correction of gradient
         const easingFunction = startKey.easingFunction || this.getEasingFunction();

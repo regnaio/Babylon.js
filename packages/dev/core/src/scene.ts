@@ -1551,6 +1551,9 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
             this._frameGraph = value;
             if (!value) {
                 this.customRenderFunction = this._currentCustomRenderFunction;
+            } else {
+                this.customRenderFunction = this._renderWithFrameGraph;
+                this.activeCamera = null;
             }
             return;
         }
@@ -4403,6 +4406,9 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
      * @returns true if the data was successfully removed, false if it doesn't exist
      */
     public removeExternalData(key: string): boolean {
+        if (!this._externalData) {
+            return false;
+        }
         return this._externalData.remove(key);
     }
 
@@ -5840,7 +5846,7 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
             while (engineIndex >= 0) {
                 const engine = EngineStore.Instances[engineIndex];
                 if (engine.scenes.length > 0) {
-                    EngineStore._LastCreatedScene = engine.scenes[this._engine.scenes.length - 1];
+                    EngineStore._LastCreatedScene = engine.scenes[engine.scenes.length - 1];
                     break;
                 }
                 engineIndex--;
@@ -5908,6 +5914,20 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
         this.onClearColorChangedObservable.clear();
         this.onEnvironmentTextureChangedObservable.clear();
         this.onMeshUnderPointerUpdatedObservable.clear();
+        this.onNewParticleSystemAddedObservable.clear();
+        this.onParticleSystemRemovedObservable.clear();
+        this.onNewAnimationGroupAddedObservable.clear();
+        this.onAnimationGroupRemovedObservable.clear();
+        this.onActiveCamerasChanged.clear();
+        this.onAnimationFileImportedObservable.clear();
+        this.onNewPostProcessAddedObservable.clear();
+        this.onPostProcessRemovedObservable.clear();
+        this.onNewEffectLayerAddedObservable.clear();
+        this.onEffectLayerRemovedObservable.clear();
+        if (this._executeWhenReadyTimeoutId !== null) {
+            clearTimeout(this._executeWhenReadyTimeoutId);
+            this._executeWhenReadyTimeoutId = null;
+        }
         this._isDisposed = true;
     }
 

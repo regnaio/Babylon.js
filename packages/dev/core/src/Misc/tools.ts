@@ -250,7 +250,7 @@ export class Tools {
      * @returns The mixed value
      */
     public static Mix(a: number, b: number, alpha: number): number {
-        return 0;
+        return Mix(a, b, alpha);
     }
 
     /**
@@ -276,7 +276,7 @@ export class Tools {
      * @returns true if the value is an exponent of 2
      */
     public static IsExponentOfTwo(value: number): boolean {
-        return true;
+        return IsExponentOfTwo(value);
     }
 
     /**

@@ -149,15 +149,15 @@ export class FollowCamera extends TargetCamera {
         let vz: number = dz * this.cameraAcceleration * 2;
 
         if (vx > this.maxCameraSpeed || vx < -this.maxCameraSpeed) {
-            vx = vx < 1 ? -this.maxCameraSpeed : this.maxCameraSpeed;
+            vx = vx < 0 ? -this.maxCameraSpeed : this.maxCameraSpeed;
         }
 
         if (vy > this.maxCameraSpeed || vy < -this.maxCameraSpeed) {
-            vy = vy < 1 ? -this.maxCameraSpeed : this.maxCameraSpeed;
+            vy = vy < 0 ? -this.maxCameraSpeed : this.maxCameraSpeed;
         }
 
         if (vz > this.maxCameraSpeed || vz < -this.maxCameraSpeed) {
-            vz = vz < 1 ? -this.maxCameraSpeed : this.maxCameraSpeed;
+            vz = vz < 0 ? -this.maxCameraSpeed : this.maxCameraSpeed;
         }
 
         this.position = new Vector3(this.position.x + vx, this.position.y + vy, this.position.z + vz);

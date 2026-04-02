@@ -486,7 +486,7 @@ export class RenderingGroup {
         for (let particleIndex = 0; particleIndex < this._particleSystems.length; particleIndex++) {
             const particleSystem = this._particleSystems.data[particleIndex];
 
-            if ((activeCamera && activeCamera.layerMask & particleSystem.layerMask) === 0) {
+            if ((activeCamera && (activeCamera.layerMask & particleSystem.layerMask)) === 0) {
                 continue;
             }
 
@@ -509,7 +509,7 @@ export class RenderingGroup {
         for (let id = 0; id < this._spriteManagers.length; id++) {
             const spriteManager = this._spriteManagers.data[id];
 
-            if ((activeCamera && activeCamera.layerMask & spriteManager.layerMask) !== 0) {
+            if ((activeCamera && (activeCamera.layerMask & spriteManager.layerMask)) !== 0) {
                 spriteManager.render();
             }
         }

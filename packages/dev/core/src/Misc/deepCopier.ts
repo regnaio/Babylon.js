@@ -1,7 +1,7 @@
 import { Logger } from "./logger";
 
 const CloneValue = (source: any, destinationObject: any, shallowCopyValues: boolean) => {
-    if (!source) {
+    if (source === null || source === undefined) {
         return null;
     }
 

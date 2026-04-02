@@ -410,7 +410,7 @@ export function CopyFloatData(
 
     if (input instanceof Array) {
         const offset = byteOffset / 4;
-        output.set(input, offset);
+        output.set(input.slice(offset, offset + count));
     } else if (ArrayBuffer.isView(input)) {
         const offset = input.byteOffset + byteOffset;
         if ((offset & 3) !== 0) {

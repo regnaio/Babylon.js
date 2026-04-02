@@ -273,8 +273,8 @@ export class ThinDepthPeelingRenderer {
         for (let i = 0; i < this._depthMrts.length; i++) {
             this._depthMrts[i].dispose(true);
             this._colorMrts[i].dispose(true);
-            this._blendBackMrt.dispose(true);
         }
+        this._blendBackMrt.dispose(true);
 
         this._thinTextures = [];
         this._colorMrts = [];
@@ -581,6 +581,7 @@ export class ThinDepthPeelingRenderer {
     public dispose() {
         this._disposeTextures();
         this._blendBackEffectWrapper.dispose();
+        this._blendBackEffectWrapperPingPong.dispose();
         this._finalEffectWrapper.dispose();
         this._effectRenderer.dispose();
         this._releaseRenderPassIds();

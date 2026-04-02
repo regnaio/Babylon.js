@@ -279,9 +279,9 @@ export class TargetCamera extends Camera {
         this._referencePoint.normalize().scaleInPlace(this._initialFocalDistance);
 
         if (this.getScene().useRightHandedSystem) {
-            Matrix.LookAtRHToRef(this.position, target, Vector3.UpReadOnly, TmpMatrix);
+            Matrix.LookAtRHToRef(this.position, target, this.upVector, TmpMatrix);
         } else {
-            Matrix.LookAtLHToRef(this.position, target, Vector3.UpReadOnly, TmpMatrix);
+            Matrix.LookAtLHToRef(this.position, target, this.upVector, TmpMatrix);
         }
         TmpMatrix.invert();
 

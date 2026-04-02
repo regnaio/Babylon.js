@@ -2288,7 +2288,7 @@ export abstract class AbstractMesh extends TransformNode implements IDisposable,
         }
 
         // SubMeshes
-        if (this.getClassName() !== "InstancedMesh" || this.getClassName() !== "InstancedLinesMesh") {
+        if (this.getClassName() !== "InstancedMesh" && this.getClassName() !== "InstancedLinesMesh") {
             this.releaseSubMeshes(true);
         }
 

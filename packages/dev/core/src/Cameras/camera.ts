@@ -1342,7 +1342,8 @@ export class Camera extends Node {
 
     /** @internal */
     public _getVRProjectionMatrix(): Matrix {
-        Matrix.PerspectiveFovLHToRef(
+        const perspectiveFovToRef = this.getScene().useRightHandedSystem ? Matrix.PerspectiveFovRHToRef : Matrix.PerspectiveFovLHToRef;
+        perspectiveFovToRef(
             this._cameraRigParams.vrMetrics.aspectRatioFov,
             this._cameraRigParams.vrMetrics.aspectRatio,
             this.minZ,

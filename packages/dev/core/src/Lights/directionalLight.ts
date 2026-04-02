@@ -76,9 +76,9 @@ export class DirectionalLight extends ShadowLight {
     @serialize("orthoLeft")
     private _orthoLeft = Number.MAX_VALUE;
     @serialize("orthoRight")
-    private _orthoRight = Number.MIN_VALUE;
+    private _orthoRight = -Number.MAX_VALUE;
     @serialize("orthoTop")
-    private _orthoTop = Number.MIN_VALUE;
+    private _orthoTop = -Number.MAX_VALUE;
     @serialize("orthoBottom")
     private _orthoBottom = Number.MAX_VALUE;
 

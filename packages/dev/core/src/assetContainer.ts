@@ -581,6 +581,7 @@ export class AssetContainer extends AbstractAssetContainer {
 
                             if (sourceMaterial.getClassName() === "MultiMaterial") {
                                 const multi = sourceMaterial as MultiMaterial;
+                                const clonedMulti = storeMap[conversionMap[sourceMaterial.uniqueId]] as MultiMaterial;
 
                                 for (const material of multi.subMaterials) {
                                     if (!material) {
@@ -592,7 +593,7 @@ export class AssetContainer extends AbstractAssetContainer {
                                     storeMap[swap.uniqueId] = swap;
                                 }
 
-                                multi.subMaterials = multi.subMaterials.map((m) => m && storeMap[conversionMap[m.uniqueId]]);
+                                clonedMulti.subMaterials = multi.subMaterials.map((m) => m && storeMap[conversionMap[m.uniqueId]]);
                             }
                         }
 

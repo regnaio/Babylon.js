@@ -496,7 +496,7 @@ export abstract class Light extends Node implements ISortableLight {
         ret += ", type: " + ["Point", "Directional", "Spot", "Hemispheric", "Clustered"][this.getTypeID()];
         if (this.animations) {
             for (let i = 0; i < this.animations.length; i++) {
-                ret += ", animation[0]: " + this.animations[i].toString(fullDetails);
+                ret += ", animation[" + i + "]: " + this.animations[i].toString(fullDetails);
             }
         }
         return ret;

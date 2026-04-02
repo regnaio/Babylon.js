@@ -201,7 +201,7 @@ export class RuntimeAnimation {
         }
 
         // Limits
-        this._keys = this._animation.getKeys();
+        this._keys = this._animation.getKeys().slice();
         this._minFrame = this._keys[0].frame;
         this._maxFrame = this._keys[this._keys.length - 1].frame;
 
@@ -576,7 +576,7 @@ export class RuntimeAnimation {
                 returnValue = false;
                 highLimitValue = animation.evaluate(from);
             } else if (this._animationState.loopMode !== Animation.ANIMATIONLOOPMODE_CYCLE) {
-                const keyOffset = to.toString() + from.toString();
+                const keyOffset = to.toString() + "_" + from.toString();
                 if (!this._offsetsCache[keyOffset]) {
                     this._animationState.repeatCount = 0;
                     this._animationState.loopMode = Animation.ANIMATIONLOOPMODE_CYCLE; // force a specific codepath in animation._interpolate()!

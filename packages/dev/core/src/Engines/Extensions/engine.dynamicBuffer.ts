@@ -39,7 +39,11 @@ ThinEngine.prototype.updateDynamicIndexBuffer = function (this: ThinEngine, inde
         view = indices instanceof Uint16Array ? indices : new Uint16Array(indices);
     }
 
-    this._gl.bufferData(this._gl.ELEMENT_ARRAY_BUFFER, view, this._gl.DYNAMIC_DRAW);
+    if (offset) {
+        this._gl.bufferSubData(this._gl.ELEMENT_ARRAY_BUFFER, offset, view);
+    } else {
+        this._gl.bufferData(this._gl.ELEMENT_ARRAY_BUFFER, view, this._gl.DYNAMIC_DRAW);
+    }
 
     this._resetIndexBufferBinding();
 };

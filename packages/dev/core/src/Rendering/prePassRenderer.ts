@@ -53,6 +53,7 @@ export class PrePassRenderer {
     public mrtCount: number = 0;
 
     private _mrtTypes: number[] = [];
+    private _textureFormats: typeof PrePassRenderer.TextureFormats = [];
     private _mrtFormats: number[] = [];
     private _mrtLayout: number[] = [];
     private _mrtNames: string[] = [];
@@ -311,17 +312,19 @@ export class PrePassRenderer {
             type = Constants.TEXTURETYPE_HALF_FLOAT;
         }
 
-        for (let i = 0; i < PrePassRenderer.TextureFormats.length; ++i) {
-            const format = PrePassRenderer.TextureFormats[i].format;
-            if (PrePassRenderer.TextureFormats[i].type === Constants.TEXTURETYPE_FLOAT) {
-                PrePassRenderer.TextureFormats[i].type = type;
+        // Work on a per-instance copy to avoid mutating the shared static array
+        this._textureFormats = PrePassRenderer.TextureFormats.map((f) => ({ ...f }));
+        for (let i = 0; i < this._textureFormats.length; ++i) {
+            const format = this._textureFormats[i].format;
+            if (this._textureFormats[i].type === Constants.TEXTURETYPE_FLOAT) {
+                this._textureFormats[i].type = type;
                 if (
                     type === Constants.TEXTURETYPE_FLOAT &&
                     (format === Constants.TEXTUREFORMAT_R || format === Constants.TEXTUREFORMAT_RG || format === Constants.TEXTUREFORMAT_RGBA) &&
                     !this._engine._caps.supportFloatTexturesResolve
                 ) {
                     // We don't know in advance if the texture will be used as a resolve target, so we revert to half_float if the extension to resolve full float textures is not supported
-                    PrePassRenderer.TextureFormats[i].type = Constants.TEXTURETYPE_HALF_FLOAT;
+                    this._textureFormats[i].type = Constants.TEXTURETYPE_HALF_FLOAT;
                 }
             }
         }
@@ -426,9 +429,9 @@ export class PrePassRenderer {
 
         this._textureIndices[Constants.PREPASS_COLOR_TEXTURE_TYPE] = 0;
         this._mrtLayout = [Constants.PREPASS_COLOR_TEXTURE_TYPE];
-        this._mrtTypes = [PrePassRenderer.TextureFormats[Constants.PREPASS_COLOR_TEXTURE_TYPE].type];
-        this._mrtFormats = [PrePassRenderer.TextureFormats[Constants.PREPASS_COLOR_TEXTURE_TYPE].format];
-        this._mrtNames = [PrePassRenderer.TextureFormats[Constants.PREPASS_COLOR_TEXTURE_TYPE].name];
+        this._mrtTypes = [this._textureFormats[Constants.PREPASS_COLOR_TEXTURE_TYPE].type];
+        this._mrtFormats = [this._textureFormats[Constants.PREPASS_COLOR_TEXTURE_TYPE].format];
+        this._mrtNames = [this._textureFormats[Constants.PREPASS_COLOR_TEXTURE_TYPE].name];
         this.mrtCount = 1;
     }
 
@@ -851,9 +854,9 @@ export class PrePassRenderer {
                 this._textureIndices[type] = this._mrtLayout.length;
                 this._mrtLayout.push(type);
 
-                this._mrtTypes.push(PrePassRenderer.TextureFormats[type].type);
-                this._mrtFormats.push(PrePassRenderer.TextureFormats[type].format);
-                this._mrtNames.push(PrePassRenderer.TextureFormats[type].name);
+                this._mrtTypes.push(this._textureFormats[type].type);
+                this._mrtFormats.push(this._textureFormats[type].format);
+                this._mrtNames.push(this._textureFormats[type].name);
                 this.mrtCount++;
             }
 
