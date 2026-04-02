@@ -65,7 +65,12 @@ export class SmartArray<T> implements ISmartArrayLike<T> {
      * @param compareFn defines the comparison function to apply.
      */
     public sort(compareFn: (a: T, b: T) => number): void {
-        this.data.sort(compareFn);
+        // Only sort active elements, not the entire backing array
+        const active = this.data.slice(0, this.length);
+        active.sort(compareFn);
+        for (let i = 0; i < this.length; i++) {
+            this.data[i] = active[i];
+        }
     }
 
     /**

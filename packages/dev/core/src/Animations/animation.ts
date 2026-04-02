@@ -667,7 +667,7 @@ export class Animation {
      */
     public toString(fullDetails?: boolean): string {
         let ret = "Name: " + this.name + ", property: " + this.targetProperty;
-        ret += ", datatype: " + ["Float", "Vector3", "Quaternion", "Matrix", "Color3", "Vector2"][this.dataType];
+        ret += ", datatype: " + ["Float", "Vector3", "Quaternion", "Matrix", "Color3", "Vector2", "Size", "Color4"][this.dataType];
         ret += ", nKeys: " + (this._keys ? this._keys.length : "none");
         ret += ", nRanges: " + (this._ranges ? Object.keys(this._ranges).length : "none");
         if (fullDetails) {

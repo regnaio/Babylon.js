@@ -212,13 +212,14 @@ export class SubMesh implements ICullable {
         this._renderingMesh = renderingMesh || <Mesh>mesh;
         if (addToMesh) {
             mesh.subMeshes.push(this);
+            this._id = mesh.subMeshes.length - 1;
+        } else {
+            this._id = 0;
         }
 
         this._engine = this._mesh.getScene().getEngine();
         this.resetDrawCache();
         this._trianglePlanes = [];
-
-        this._id = mesh.subMeshes.length - 1;
 
         if (createBoundingBox) {
             this.refreshBoundingInfo();

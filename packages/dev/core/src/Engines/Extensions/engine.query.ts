@@ -191,6 +191,7 @@ ThinEngine.prototype.endTimeQuery = function (token: _TimeToken): int {
         }
         if (timerQuery.endQueryEXT) {
             timerQuery.endQueryEXT(timerQuery.TIME_ELAPSED_EXT);
+            this._currentNonTimestampToken = null;
         } else {
             this._gl.endQuery(timerQuery.TIME_ELAPSED_EXT);
             this._currentNonTimestampToken = null;

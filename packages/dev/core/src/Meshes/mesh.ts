@@ -1211,7 +1211,7 @@ export class Mesh extends AbstractMesh implements IGetSetVerticesData {
 
         const bSphere = boundingSphere || this.getBoundingInfo().boundingSphere;
 
-        const distanceToCamera = camera.mode === Camera.ORTHOGRAPHIC_CAMERA ? camera.minZ : bSphere.centerWorld.subtract(camera.globalPosition).length();
+        const distanceToCamera = camera.mode === Camera.ORTHOGRAPHIC_CAMERA ? camera.minZ : Vector3.Distance(bSphere.centerWorld, camera.globalPosition);
         let compareValue = distanceToCamera;
         let compareSign = 1;
 

@@ -1,0 +1,383 @@
+================================================================================
+BABYLON.JS CORE ENGINE CODE REVIEW
+================================================================================
+Date: 2026-04-01
+Scope: /packages/dev/core/src/ (1,697 TypeScript files across 48 subsystems)
+Reviewed: 10 major subsystems covering the most critical engine code
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. HIGH SEVERITY BUGS
+2. MEDIUM SEVERITY BUGS
+3. PERFORMANCE ISSUES
+4. MEMORY LEAKS
+5. NUMERICAL STABILITY ISSUES
+6. LOW SEVERITY / CODE QUALITY
+
+================================================================================
+1. HIGH SEVERITY BUGS
+================================================================================
+
+[H1] scene.ts:5843 — Wrong engine variable used for LastCreatedScene
+    In dispose(), the code uses `this._engine.scenes.length - 1` as index into
+    a different `engine.scenes` array. When `engine !== this._engine`, this
+    yields an out-of-bounds or incorrect index.
+    FIX: Change `engine.scenes[this._engine.scenes.length - 1]` to
+         `engine.scenes[engine.scenes.length - 1]`
+
+[H2] abstractMesh.ts:2291 — Always-true OR condition in dispose()
+    `this.getClassName() !== "InstancedMesh" || this.getClassName() !== "InstancedLinesMesh"`
+    is a tautology (always true). InstancedMesh incorrectly releases sub-meshes
+    it shares with its source mesh.
+    FIX: Change `||` to `&&`
+
+[H3] mesh.ts:2970 — Wrong vertex buffer kind corrupts skinning weights
+    `_normalizeSkinWeightsAndExtra()` writes extra weights to
+    `MatricesWeightsKind` instead of `MatricesWeightsExtraKind`, overwriting
+    the just-normalized base weights.
+    FIX: Change second `MatricesWeightsKind` to `MatricesWeightsExtraKind`
+
+[H4] abstractEngine.ts:1715 — Comma operator silently drops error URL
+    `onInternalError("Unable to load " + (request ? request.responseURL : url, exception))`
+    The parentheses create a comma expression. The URL is discarded and only
+    `exception` is concatenated. The exception object is never passed as arg 2.
+    FIX: Move closing paren: `onInternalError("Unable to load " + (request ? request.responseURL : url), exception)`
+
+[H5] assetContainer.ts:596 — Source multi-material mutated during clone
+    `instantiateModelsToScene` mutates `sourceMaterial.subMaterials` to point
+    to cloned materials instead of originals. After cloning, the source
+    multi-material in the asset container is corrupted.
+    FIX: Operate on the cloned multi-material, not the source.
+
+[H6] tools.ts:253 — Tools.Mix always returns 0
+    `Tools.Mix(a, b, alpha)` is a stub returning `0` instead of delegating to
+    the real implementation in `tools.functions.ts`. Same for
+    `Tools.IsExponentOfTwo` (line 278) which always returns `true`.
+    FIX: Delegate to the real functions or remove the stubs.
+
+[H7] videoRecorder.ts:229 — `new event.error()` crashes with TypeError
+    `event.error` is already an Error instance, not a constructor. Calling
+    `new event.error()` throws TypeError.
+    FIX: Change to `throw event.error;`
+
+[H8] prePassRenderer.ts:314-327 — Static TextureFormats mutated in constructor
+    The static `TextureFormats` array is mutated during construction. A second
+    PrePassRenderer (multi-scene/multi-engine) won't get correct type
+    adjustments because the `if` condition no longer matches.
+    FIX: Work on a per-instance copy of TextureFormats, not the static.
+
+================================================================================
+2. MEDIUM SEVERITY BUGS
+================================================================================
+
+[M1] scene.ts:1549-1564 — frameGraph setter skips init when replacing
+    Setting a new frameGraph when one already exists doesn't re-execute setup
+    logic (customRenderFunction override, activeCamera = null).
+    FIX: Run setup logic when replacing, not just when setting for the first time.
+
+[M2] scene.ts:4406 — removeExternalData crashes if _externalData not initialized
+    Missing null guard unlike `getExternalData`.
+    FIX: Add `if (!this._externalData) return false;`
+
+[M3] scene.ts:1324 — getInternalStep() always returns 0
+    `_currentInternalStep` is never written to in the deterministic lockstep loop.
+    FIX: Update `_currentInternalStep` during the lockstep loop.
+
+[M4] math.vector.ts:720-727 — Vector2.normalizeToRef missing early return
+    When len === 0, the method copies values but falls through to divide by zero,
+    producing NaN. Vector3 and Vector4 versions are correct.
+    FIX: Add `return result;` inside the `if (len === 0)` block.
+
+[M5] math.scalar.functions.ts:359-365 — HighestCommonFactor infinite recursion
+    When b === 0, `a % 0` returns NaN, causing infinite recursion and stack overflow.
+    FIX: Add guard `if (b === 0) return a;`
+
+[M6] followCamera.ts:151-161 — Velocity clamping uses `< 1` instead of `< 0`
+    Sign detection for clamped velocity uses threshold `1` instead of `0`.
+    Small positive velocities (0 < v < 1) get clamped to the wrong sign.
+    FIX: Change `vx < 1` to `vx < 0` (same for vy, vz).
+
+[M7] targetCamera.ts:282-284 — setTarget uses hardcoded UpReadOnly
+    Ignores `this.upVector`, breaking cameras with custom up vectors.
+    FIX: Use `this.upVector` instead of `Vector3.UpReadOnly`.
+
+[M8] camera.ts:1344-1356 — _getVRProjectionMatrix ignores right-handed scenes
+    Always uses `PerspectiveFovLHToRef`. VR is broken in right-handed scenes.
+    FIX: Check `scene.useRightHandedSystem` and use RH variant.
+
+[M9] shaderMaterial.ts:1357 — clone() mutates source options instead of clone's
+    `this._options` is shallow-copied/array-sliced on the source material.
+    Should operate on `result._options`.
+    FIX: Change `this._options` to `result._options` on lines 1358 and 1365.
+
+[M10] engine.dynamicBuffer.ts:28-45 — updateDynamicIndexBuffer ignores offset
+    Uses `bufferData()` (full replace) instead of `bufferSubData()` with offset.
+    FIX: Use `bufferSubData` when offset > 0.
+
+[M11] runtimeAnimation.ts:204-212 — Constructor mutates shared Animation keys
+    `splice` inserts a frame-0 key into the Animation's internal `_keys` array
+    which is shared across all RuntimeAnimation instances.
+    FIX: Clone the keys array before modifying: `this._keys = this._animation.getKeys().slice();`
+
+[M12] runtimeAnimation.ts:579 — Cache key collision from string concatenation
+    `to.toString() + from.toString()` — pairs (1,23) and (12,3) both produce "123".
+    FIX: Use a separator: `to + "_" + from`
+
+[M13] animation.ts:1023 — Division by zero with duplicate keyframes
+    When two adjacent keys have the same frame, gradient becomes NaN.
+    FIX: Guard against `frameDelta === 0`.
+
+[M14] animation.ts:591 — TransitionTo leaks animations into host.animations
+    Each call pushes a transition animation that is never removed.
+    FIX: Clean up the transition animation after completion.
+
+[M15] geometry.ts:986-993 — dispose() skips meshes during iteration
+    `releaseForMesh` splices from the array being iterated, skipping elements.
+    FIX: Iterate over a copy: `const meshesToRelease = meshes.slice();`
+
+[M16] abstractEngine.views.ts:89-102 — Shared module-level view observables
+    `OnBeforeViewRenderObservable` and `OnAfterViewRenderObservable` are singletons
+    shared across all engine instances. Cross-engine observer pollution.
+    FIX: Make these per-instance.
+
+[M17] bufferUtils.ts:413 — CopyFloatData incorrect copy from number[] input
+    `output.set(input, offset)` — offset is destination offset, not source.
+    Copies from wrong position in the source array.
+    FIX: `output.set(input.slice(offset, offset + count))`
+
+[M18] node.ts:1026 — getHierarchyBoundingVectors passes non-mesh nodes to predicate
+    User predicate receives Lights/Cameras unsafely cast as AbstractMesh.
+    FIX: Move the predicate call after the mesh-specific guard.
+
+[M19] fileTools.ts:515 — abort function is a no-op
+    `abort: () => () => {}` returns a function instead of executing abort.
+    FIX: Change to `abort: () => {}`
+
+[M20] assetContainer.ts:1133-1138 — moveAllFromScene iterates non-array properties
+    `for (const key in this)` iterates booleans, observers, and scene reference.
+    `_wasAddedToScene` gets overwritten to `[]`.
+    FIX: Explicitly iterate known array property names.
+
+[M21] deepCopier.ts:4 — CloneValue treats falsy primitives as null
+    `if (!source) return null;` converts 0, "", false, NaN to null.
+    FIX: `if (source === null || source === undefined) return null;`
+
+================================================================================
+3. PERFORMANCE ISSUES
+================================================================================
+
+[P1] material.ts:1807-1835 — _markAllSubMeshesAsDirty ignores meshMap
+    Always iterates ALL scene meshes even when `scene.useMaterialMeshMap` is true.
+    Other methods (`markDirty`, `getBindedMeshes`) correctly use meshMap.
+    FIX: Use meshMap when available (same pattern as markDirty).
+
+[P2] animation.ts:818-926 — Per-frame object allocation in all interpolation functions
+    Every Lerp/Slerp allocates a new Vector3/Quaternion/Color3/Color4 every frame
+    per animated property. Matrix path already uses ToRef variants.
+    FIX: Use LerpToRef/SlerpToRef with pre-allocated temporaries.
+
+[P3] arcRotateCamera.ts:1079 — Per-frame Vector3 allocation during panning
+    `new Vector3(...)` in _checkInputs hot path.
+    FIX: Use TmpVectors.Vector3.
+
+[P4] mesh.ts:1214 — Vector3 allocation in LOD distance calculation
+    `bSphere.centerWorld.subtract(camera.globalPosition).length()` allocates.
+    FIX: Use `Vector3.Distance(bSphere.centerWorld, camera.globalPosition)`.
+
+[P5] boundingInfo.ts:310-335 — 9 Vector3 allocations per OBB intersection test
+    `Vector3.Cross()` allocates 9 new vectors for SAT test axes.
+    FIX: Use `Vector3.CrossToRef()` with TmpVectors.
+
+[P6] spotLight.ts:445-464, hemisphericLight.ts:93-100 — Per-frame allocation in light transfer
+    `Vector3.Normalize()` allocates per light per frame.
+    FIX: Use `Vector3.NormalizeToRef()`.
+
+[P7] assetContainer.ts:373 — O(n²) topological sort from Array.shift()
+    `shift()` is O(n), called in a loop over all nodes.
+    FIX: Use index-based approach or proper queue.
+
+[P8] assetContainer.ts:441-467 — O(n²) in _isValidHierarchy from indexOf
+    Multiple indexOf calls per node.
+    FIX: Use Set for O(1) lookups.
+
+[P9] observable.ts:426 — for..of creates iterator object per notification
+    Hot path called multiple times per frame.
+    FIX: Use indexed for loop.
+
+[P10] tools.functions.ts:8-16 — IsExponentOfTwo uses loop instead of bit math
+    Also infinite loop for negative input, wrong result for 0.
+    FIX: `return value > 0 && (value & (value - 1)) === 0;`
+
+[P11] smartArray.ts:67 — sort() sorts entire backing array including stale entries
+    FIX: Sort only `this.data.slice(0, this.length)` or use a subarray view.
+
+[P12] math.path.ts:957-963 — 6 unnecessary Vector3.clone() per interpolation call
+    Cloned vectors are only read, never mutated.
+    FIX: Remove clones, use originals directly.
+
+[P13] math.vector.ts:2196 — Redundant Math.acos call
+    `Math.acos(dot)` called twice. Should reuse `angle` variable.
+    FIX: Change `-Math.acos(dot)` to `-angle`.
+
+================================================================================
+4. MEMORY LEAKS
+================================================================================
+
+[L1] scene.ts:5857-5910 — 11+ observables not cleared in dispose()
+    onNewParticleSystemAddedObservable, onParticleSystemRemovedObservable,
+    onNewAnimationGroupAddedObservable, onAnimationGroupRemovedObservable,
+    onActiveCamerasChanged, onAnimationFileImportedObservable,
+    onReadyTimeoutObservable, onNewPostProcessAddedObservable,
+    onPostProcessRemovedObservable, onNewEffectLayerAddedObservable,
+    onEffectLayerRemovedObservable
+    FIX: Add .clear() calls in dispose().
+
+[L2] scene.ts:1887,1962,1971 — 3 stage arrays not cleared in dispose()
+    _beforeRenderTargetClearStage, _afterCameraPostProcessStage,
+    _afterRenderTargetPostProcessStage
+    FIX: Clear these in dispose().
+
+[L3] scene.ts:2740 — _executeWhenReadyTimeoutId timer not cleared on dispose
+    Pending setTimeout callback fires on disposed scene.
+    FIX: Call clearTimeout in dispose().
+
+[L4] node.ts:146,962-965 — onAccessibilityTagChangedObservable never cleared
+    FIX: Add `this.onAccessibilityTagChangedObservable.clear()` in dispose().
+
+[L5] thinDepthPeelingRenderer.ts:581-587 — _blendBackEffectWrapperPingPong not disposed
+    Created at line 300 but never disposed.
+    FIX: Add `this._blendBackEffectWrapperPingPong.dispose()` in dispose().
+
+[L6] thinDepthPeelingRenderer.ts:276 — _blendBackMrt disposed twice (in loop)
+    Called inside loop iterating _depthMrts (length 2).
+    FIX: Move outside the loop.
+
+[L7] abstractEngine.ts:2686-2700 — _emptyTexture3D and _emptyTexture2DArray not released
+    FIX: Add release calls for both in dispose().
+
+[L8] assetContainer.ts:275 — Scene dispose observer leaks AssetContainer reference
+    Anonymous closure on scene.onDisposeObservable captures AssetContainer forever.
+    FIX: Store observer reference and remove it when container is disposed.
+
+[L9] instancedMesh.ts:888-908 — Per-pass VBOs not disposed (WebGPU)
+    _userInstancedBuffersStorage.renderPasses VBOs leak on dispose.
+    FIX: Iterate and dispose renderPasses VBOs.
+
+[L10] depthRenderer.ts:617-633 — Conditional dispose may skip depth map
+    If depthRenderer is not in scene._depthRenderer dict, _depthMap is never disposed.
+    FIX: Unconditionally dispose _depthMap.
+
+[L11] videoRecorder.ts:241 — Blob URL never revoked
+    `URL.createObjectURL(superBuffer)` created but never stored or revoked.
+    FIX: Store and eventually revoke, or use direct download approach.
+
+[L12] videoRecorder.ts:185-187 — setTimeout handle never stored
+    Timer prevents GC until it fires.
+    FIX: Store handle and clearTimeout on dispose.
+
+================================================================================
+5. NUMERICAL STABILITY ISSUES
+================================================================================
+
+[N1] math.vector.ts:5512-5520 — Quaternion.RotationAxisToRef with zero-length axis
+    Division by axis.length() produces Infinity quaternion components.
+    FIX: Normalize axis or guard against zero length.
+
+[N2] math.vector.ts:2588 — TransformCoordinatesFromFloatsToRef no guard for w=0
+    Perspective divide produces Infinity when point is on camera plane.
+    FIX: Guard or document the contract.
+
+[N3] math.vector.ts:2172 — GetClipFactor unguarded division when d0 === d1
+    FIX: Guard against d0 === d1.
+
+[N4] math.path.ts:44 — BezierCurve.Interpolate slope division by zero
+    Newton-Raphson step can produce Infinity.
+    FIX: Guard against zero slope.
+
+[N5] math.path.ts:177-181 — Arc2 constructor unguarded division by det
+    Collinear points produce det=0 and Infinity coordinates.
+    FIX: Check for collinear points.
+
+[N6] math.scalar.functions.ts:228-229 — Normalize/RangeToPercent division by zero
+    When min === max. InverseLerp correctly handles this.
+    FIX: Guard against min === max.
+
+[N7] shadowLight.ts:419, shadowGenerator.ts:2027, cascadedShadowGenerator.ts:538
+    Float exact-equality `=== 1.0` for dot product. Virtually never true.
+    FIX: Use threshold comparison `> 0.9999`.
+
+[N8] collider.ts:243 — Float equality `== 0` for dot product
+    FIX: Use epsilon comparison.
+
+================================================================================
+6. LOW SEVERITY / CODE QUALITY
+================================================================================
+
+[Q1] animation.ts:658-666 — toString() comma logic inverted
+    Prints comma on first iteration, never again.
+
+[Q2] animation.ts:654 — toString datatype labels don't match type constants
+    COLOR4 maps to "Vector2", VECTOR2 and SIZE return undefined.
+
+[Q3] assetContainer.ts:394,485,715,878 — Error messages reference wrong class
+    Says "SceneSerializer" but code is in AssetContainer.
+
+[Q4] mesh.ts:1075 — Animation toString always says "animation[0]"
+    Loop variable `i` not used in string literal.
+
+[Q5] light.ts:499 — Same toString copy-paste bug as mesh.ts
+
+[Q6] node.ts:429-440 — Behavior visible before attach() during deferred loading
+
+[Q7] node.ts:1000 — getHierarchyBoundingVectors increments scene renderId as side effect
+
+[Q8] scene.ts:5243 — defaultFPS calculation is misleading (1000/x/1000 = 1/x)
+
+[Q9] assetContainer.ts:1382 — for..in on array (iterates prototype properties)
+
+[Q10] assetContainer.ts:174 — lensFlareSystems never initialized
+
+[Q11] assetContainer.ts:266-271 — scene left undefined when no scene provided
+
+[Q12] math.path.ts:64-68 — Angle constructor only adds 2*PI once for negative angles
+
+[Q13] engine.query.ts:188-198 — _currentNonTimestampToken not cleared on EXT path
+
+[Q14] engine.common.ts:176-195 — CreateImageBitmapFromSource swallows rejections
+
+[Q15] freeCamera.ts:329-330 — detachControl creates new vectors instead of zeroing
+
+[Q16] subMesh.ts:221 — _id set incorrectly when addToMesh is false
+
+[Q17] targetCamera.ts:468-474 — upVector cache only checks quaternion.z component
+
+[Q18] camera.ts:964-966 — minZ silently clamped to 0.1
+
+[Q19] renderingManager.ts:177 — getRenderingGroup uses || instead of ?? for id=0
+
+[Q20] renderingGroup.ts:479,502 — Operator precedence issue in layer mask checks
+
+[Q21] directionalLight.ts:79-80 — Number.MIN_VALUE used where -Number.MAX_VALUE intended
+
+================================================================================
+SUMMARY
+================================================================================
+Total findings: 76
+  High severity bugs:     8
+  Medium severity bugs:  21
+  Performance issues:    13
+  Memory leaks:          12
+  Numerical stability:    8
+  Low severity / quality:21
+
+Most impactful fixes (recommended priority order):
+1. H1 — scene.ts wrong engine index (affects scene cleanup)
+2. H2 — abstractMesh.ts always-true dispose condition (affects instanced meshes)
+3. H3 — mesh.ts wrong vertex buffer kind (corrupts skinning)
+4. H4 — abstractEngine.ts comma operator (loses error info)
+5. H6 — Tools.Mix returns 0 (silent wrong results)
+6. M4 — Vector2.normalizeToRef NaN (math correctness)
+7. P1 — material.ts meshMap optimization (major perf in large scenes)
+8. L1 — scene.ts observables not cleared (memory leaks)
+================================================================================

@@ -416,7 +416,7 @@ export abstract class ShadowLight extends Light implements IShadowLight {
         }
 
         Vector3.NormalizeToRef(this.getShadowDirection(faceIndex), lightDirection);
-        if (Math.abs(Vector3.Dot(lightDirection, Vector3.Up())) === 1.0) {
+        if (Math.abs(Vector3.Dot(lightDirection, Vector3.Up())) > 0.99) {
             lightDirection.z = 0.0000000000001; // Required to avoid perfectly perpendicular light
         }
 

@@ -535,7 +535,7 @@ export class CascadedShadowGenerator extends ShadowGenerator {
         }
 
         Vector3.NormalizeToRef(this._light.getShadowDirection(0), this._lightDirection);
-        if (Math.abs(Vector3.Dot(this._lightDirection, Vector3.Up())) === 1.0) {
+        if (Math.abs(Vector3.Dot(this._lightDirection, Vector3.Up())) > 0.99) {
             this._lightDirection.z = 0.0000000000001; // Required to avoid perfectly perpendicular light
         }
 

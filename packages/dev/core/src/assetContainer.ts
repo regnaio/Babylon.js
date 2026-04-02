@@ -253,6 +253,7 @@ export class InstantiatedEntries {
 export class AssetContainer extends AbstractAssetContainer {
     private _wasAddedToScene = false;
     private _onContextRestoredObserver: Nullable<Observer<AbstractEngine>>;
+    private _onSceneDisposeObserver: Nullable<Observer<Scene>>;
 
     /**
      * The scene the AssetContainer belongs to.
@@ -271,7 +272,7 @@ export class AssetContainer extends AbstractAssetContainer {
         }
         this.scene = scene;
 
-        scene.onDisposeObservable.add(() => {
+        this._onSceneDisposeObserver = scene.onDisposeObservable.add(() => {
             if (!this._wasAddedToScene) {
                 this.dispose();
             }
@@ -390,7 +391,7 @@ export class AssetContainer extends AbstractAssetContainer {
         }
 
         if (nodesUidMap.size > 0) {
-            Logger.Error("SceneSerializer._topologicalSort: There were unvisited nodes:");
+            Logger.Error("AssetContainer._topologicalSort: There were unvisited nodes:");
             nodesUidMap.forEach((node) => {
                 Logger.Error(node.name);
             });
@@ -481,7 +482,7 @@ export class AssetContainer extends AbstractAssetContainer {
         options?: { doNotInstantiate?: boolean | ((node: Node) => boolean); predicate?: (entity: any) => boolean }
     ): InstantiatedEntries {
         if (!this._isValidHierarchy()) {
-            Tools.Warn("SceneSerializer.InstantiateModelsToScene: The Asset Container hierarchy is not valid.");
+            Tools.Warn("AssetContainer.InstantiateModelsToScene: The Asset Container hierarchy is not valid.");
         }
         const conversionMap: { [key: number]: number } = {};
         const storeMap: { [key: number]: any } = {};
@@ -712,7 +713,7 @@ export class AssetContainer extends AbstractAssetContainer {
             return;
         }
         if (!this._isValidHierarchy()) {
-            Tools.Warn("SceneSerializer.addAllToScene: The Asset Container hierarchy is not valid.");
+            Tools.Warn("AssetContainer.addAllToScene: The Asset Container hierarchy is not valid.");
         }
 
         this._wasAddedToScene = true;
@@ -875,7 +876,7 @@ export class AssetContainer extends AbstractAssetContainer {
      */
     public removeAllFromScene() {
         if (!this._isValidHierarchy()) {
-            Tools.Warn("SceneSerializer.removeAllFromScene: The Asset Container hierarchy is not valid.");
+            Tools.Warn("AssetContainer.removeAllFromScene: The Asset Container hierarchy is not valid.");
         }
 
         this._wasAddedToScene = false;
@@ -1093,6 +1094,11 @@ export class AssetContainer extends AbstractAssetContainer {
         if (this._onContextRestoredObserver) {
             this.scene.getEngine().onContextRestoredObservable.remove(this._onContextRestoredObserver);
             this._onContextRestoredObserver = null;
+        }
+
+        if (this._onSceneDisposeObserver) {
+            this.scene.onDisposeObservable.remove(this._onSceneDisposeObserver);
+            this._onSceneDisposeObserver = null;
         }
     }
 

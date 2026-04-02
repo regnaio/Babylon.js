@@ -1,7 +1,7 @@
 import { serialize, serializeAsTexture } from "../Misc/decorators";
 import { type Nullable } from "../types";
 import { type Scene } from "../scene";
-import { Matrix, Vector3 } from "../Maths/math.vector";
+import { Matrix, TmpVectors, Vector3 } from "../Maths/math.vector";
 import { Node } from "../node";
 import { type AbstractMesh } from "../Meshes/abstractMesh";
 import { type Effect } from "../Materials/effect";
@@ -442,11 +442,11 @@ export class SpotLight extends ShadowLight {
                 lightIndex
             );
 
-            normalizeDirection = Vector3.Normalize(this.transformedDirection);
+            normalizeDirection = Vector3.NormalizeToRef(this.transformedDirection, TmpVectors.Vector3[0]);
         } else {
             this._uniformBuffer.updateFloat4("vLightData", this.position.x - offset.x, this.position.y - offset.y, this.position.z - offset.z, this.exponent, lightIndex);
 
-            normalizeDirection = Vector3.Normalize(this.direction);
+            normalizeDirection = Vector3.NormalizeToRef(this.direction, TmpVectors.Vector3[0]);
         }
 
         this._uniformBuffer.updateFloat4("vLightDirection", normalizeDirection.x, normalizeDirection.y, normalizeDirection.z, this._cosHalfAngle, lightIndex);
@@ -459,9 +459,9 @@ export class SpotLight extends ShadowLight {
         let normalizeDirection;
 
         if (this.computeTransformedInformation()) {
-            normalizeDirection = Vector3.Normalize(this.transformedDirection);
+            normalizeDirection = Vector3.NormalizeToRef(this.transformedDirection, TmpVectors.Vector3[0]);
         } else {
-            normalizeDirection = Vector3.Normalize(this.direction);
+            normalizeDirection = Vector3.NormalizeToRef(this.direction, TmpVectors.Vector3[0]);
         }
 
         if (this.getScene().useRightHandedSystem) {

@@ -2170,7 +2170,8 @@ export class Vector3 implements Vector<Tuple<number, 3>, IVector3LikeInternal>, 
         const d0 = Vector3.Dot(vector0, axis);
         const d1 = Vector3.Dot(vector1, axis);
 
-        return (d0 - size) / (d0 - d1);
+        const denom = d0 - d1;
+        return denom === 0 ? 0 : (d0 - size) / denom;
     }
 
     /**
@@ -2194,7 +2195,7 @@ export class Vector3 implements Vector<Tuple<number, 3>, IVector3LikeInternal>, 
         if (Vector3.Dot(n, normal) > 0) {
             return isNaN(angle) ? 0 : angle;
         }
-        return isNaN(angle) ? -Math.PI : -Math.acos(dot);
+        return isNaN(angle) ? -Math.PI : -angle;
     }
 
     /**
@@ -2586,7 +2587,8 @@ export class Vector3 implements Vector<Tuple<number, 3>, IVector3LikeInternal>, 
         const rx = x * m[0] + y * m[4] + z * m[8] + m[12];
         const ry = x * m[1] + y * m[5] + z * m[9] + m[13];
         const rz = x * m[2] + y * m[6] + z * m[10] + m[14];
-        const rw = 1 / (x * m[3] + y * m[7] + z * m[11] + m[15]);
+        const w = x * m[3] + y * m[7] + z * m[11] + m[15];
+        const rw = 1 / (w || 1);
 
         result._x = rx * rw;
         result._y = ry * rw;
@@ -5511,8 +5513,18 @@ export class Quaternion implements Tensor<Tuple<number, 4>, Quaternion>, IQuater
      * @returns the target quaternion
      */
     public static RotationAxisToRef<T extends Quaternion>(axis: DeepImmutable<Vector3>, angle: number, result: T): T {
+        const axisLength = axis.length();
+        if (axisLength === 0) {
+            // Return identity quaternion for zero-length axis
+            result._x = 0;
+            result._y = 0;
+            result._z = 0;
+            result._w = 1;
+            result._isDirty = true;
+            return result;
+        }
         result._w = Math.cos(angle / 2);
-        const sinByLength = Math.sin(angle / 2) / axis.length();
+        const sinByLength = Math.sin(angle / 2) / axisLength;
         result._x = axis._x * sinByLength;
         result._y = axis._y * sinByLength;
         result._z = axis._z * sinByLength;

@@ -623,12 +623,10 @@ export class DepthRenderer {
             }
         }
 
-        if (keysToDelete.length > 0) {
-            this._depthMap.dispose();
+        this._depthMap.dispose();
 
-            for (const key of keysToDelete) {
-                delete this._scene._depthRenderer[key];
-            }
+        for (const key of keysToDelete) {
+            delete this._scene._depthRenderer[key];
         }
     }
 }

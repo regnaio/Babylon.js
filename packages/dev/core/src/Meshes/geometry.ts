@@ -987,7 +987,7 @@ export class Geometry implements IGetSetVerticesData {
         const meshes = this._meshes;
         const numOfMeshes = meshes.length;
         let index: number;
-        for (index = 0; index < numOfMeshes; index++) {
+        for (index = numOfMeshes - 1; index >= 0; index--) {
             this.releaseForMesh(meshes[index]);
         }
         this._meshes.length = 0;

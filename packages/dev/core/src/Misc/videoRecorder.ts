@@ -99,6 +99,7 @@ export class VideoRecorder {
     private _reject: Nullable<(error: any) => void>;
 
     private _isRecording: boolean;
+    private _maxDurationTimeout: ReturnType<typeof setTimeout> | null = null;
 
     /**
      * True when a recording is already in progress.
@@ -182,7 +183,7 @@ export class VideoRecorder {
         }
 
         if (maxDuration > 0) {
-            setTimeout(() => {
+            this._maxDurationTimeout = setTimeout(() => {
                 this.stopRecording();
             }, maxDuration * 1000);
         }
@@ -207,6 +208,11 @@ export class VideoRecorder {
     public dispose() {
         this._canvas = null;
         this._mediaRecorder = null;
+
+        if (this._maxDurationTimeout) {
+            clearTimeout(this._maxDurationTimeout);
+            this._maxDurationTimeout = null;
+        }
 
         this._recordedChunks = [];
         this._fileName = null;

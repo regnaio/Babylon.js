@@ -174,7 +174,7 @@ export class RenderingManager {
      * @param id the id of the rendering group (0 by default)
      */
     public getRenderingGroup(id: number): RenderingGroup {
-        const renderingGroupId = id || 0;
+        const renderingGroupId = id ?? 0;
 
         this._prepareRenderingGroup(renderingGroupId);
 

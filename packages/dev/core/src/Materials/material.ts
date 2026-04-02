@@ -1810,24 +1810,43 @@ export class Material implements IAnimatable, IClipPlanesHolder {
             return;
         }
 
-        const meshes = scene.meshes;
-        for (const mesh of meshes) {
-            if (!mesh.subMeshes) {
-                continue;
-            }
-            for (const subMesh of mesh.subMeshes) {
-                // We want to skip the submeshes which are not using this material or which have not yet rendered at least once
-                const material = subMesh.getMaterial() || (scene._hasDefaultMaterial ? scene.defaultMaterial : null);
-                if (material !== this) {
+        if (this.meshMap) {
+            for (const meshId in this.meshMap) {
+                const mesh = this.meshMap[meshId];
+                if (!mesh || !mesh.subMeshes) {
                     continue;
                 }
-
-                for (const drawWrapper of subMesh._drawWrappers) {
-                    if (!drawWrapper || !drawWrapper.defines || !(drawWrapper.defines as MaterialDefines).markAllAsDirty) {
+                for (const subMesh of mesh.subMeshes) {
+                    for (const drawWrapper of subMesh._drawWrappers) {
+                        if (!drawWrapper || !drawWrapper.defines || !(drawWrapper.defines as MaterialDefines).markAllAsDirty) {
+                            continue;
+                        }
+                        if (this._materialContext === drawWrapper.materialContext) {
+                            func(drawWrapper.defines as MaterialDefines);
+                        }
+                    }
+                }
+            }
+        } else {
+            const meshes = scene.meshes;
+            for (const mesh of meshes) {
+                if (!mesh.subMeshes) {
+                    continue;
+                }
+                for (const subMesh of mesh.subMeshes) {
+                    // We want to skip the submeshes which are not using this material or which have not yet rendered at least once
+                    const material = subMesh.getMaterial() || (scene._hasDefaultMaterial ? scene.defaultMaterial : null);
+                    if (material !== this) {
                         continue;
                     }
-                    if (this._materialContext === drawWrapper.materialContext) {
-                        func(drawWrapper.defines as MaterialDefines);
+
+                    for (const drawWrapper of subMesh._drawWrappers) {
+                        if (!drawWrapper || !drawWrapper.defines || !(drawWrapper.defines as MaterialDefines).markAllAsDirty) {
+                            continue;
+                        }
+                        if (this._materialContext === drawWrapper.materialContext) {
+                            func(drawWrapper.defines as MaterialDefines);
+                        }
                     }
                 }
             }

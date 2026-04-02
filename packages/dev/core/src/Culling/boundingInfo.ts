@@ -307,31 +307,32 @@ export class BoundingInfo implements ICullable {
         if (!AxisOverlap(box1.directions[2], box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[0], box1.directions[0]), box0, box1)) {
+        const crossAxis = TmpVectors.Vector3[0];
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[0], box1.directions[0], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[0], box1.directions[1]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[0], box1.directions[1], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[0], box1.directions[2]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[0], box1.directions[2], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[1], box1.directions[0]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[1], box1.directions[0], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[1], box1.directions[1]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[1], box1.directions[1], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[1], box1.directions[2]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[1], box1.directions[2], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[2], box1.directions[0]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[2], box1.directions[0], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[2], box1.directions[1]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[2], box1.directions[1], crossAxis), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[2], box1.directions[2]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[2], box1.directions[2], crossAxis), box0, box1)) {
             return false;
         }
 

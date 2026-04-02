@@ -1,7 +1,7 @@
 import { serializeAsColor3, serializeAsVector3 } from "../Misc/decorators";
 import { type Nullable } from "../types";
 import { type Scene } from "../scene";
-import { Matrix, Vector3 } from "../Maths/math.vector";
+import { Matrix, TmpVectors, Vector3 } from "../Maths/math.vector";
 import { Color3 } from "../Maths/math.color";
 import { Node } from "../node";
 import { type Effect } from "../Materials/effect";
@@ -90,14 +90,14 @@ export class HemisphericLight extends Light {
      * @returns The hemispheric light
      */
     public transferToEffect(_effect: Effect, lightIndex: string): HemisphericLight {
-        const normalizeDirection = Vector3.Normalize(this.direction);
+        const normalizeDirection = Vector3.NormalizeToRef(this.direction, TmpVectors.Vector3[0]);
         this._uniformBuffer.updateFloat4("vLightData", normalizeDirection.x, normalizeDirection.y, normalizeDirection.z, 0.0, lightIndex);
         this._uniformBuffer.updateColor3("vLightGround", this.groundColor.scale(this.intensity), lightIndex);
         return this;
     }
 
     public transferToNodeMaterialEffect(effect: Effect, lightDataUniformName: string) {
-        const normalizeDirection = Vector3.Normalize(this.direction);
+        const normalizeDirection = Vector3.NormalizeToRef(this.direction, TmpVectors.Vector3[0]);
         effect.setFloat3(lightDataUniformName, normalizeDirection.x, normalizeDirection.y, normalizeDirection.z);
         return this;
     }

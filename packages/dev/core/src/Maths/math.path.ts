@@ -41,7 +41,11 @@ export class BezierCurve {
             const refinedT3 = refinedT2 * refinedT;
 
             const x = f0 * refinedT3 + f1 * refinedT2 + f2 * refinedT;
-            const slope = 1.0 / (3.0 * f0 * refinedT2 + 2.0 * f1 * refinedT + f2);
+            const slopeDenom = 3.0 * f0 * refinedT2 + 2.0 * f1 * refinedT + f2;
+            if (slopeDenom === 0) {
+                break;
+            }
+            const slope = 1.0 / slopeDenom;
             refinedT -= (x - t) * slope;
             refinedT = Math.min(1, Math.max(0, refinedT));
         }
@@ -63,7 +67,7 @@ export class Angle {
      */
     constructor(radians: number) {
         this._radians = radians;
-        if (this._radians < 0.0) {
+        while (this._radians < 0.0) {
             this._radians += 2.0 * Math.PI;
         }
     }
@@ -176,10 +180,15 @@ export class Arc2 {
         const midToEnd = (temp - Math.pow(endPoint.x, 2) - Math.pow(endPoint.y, 2)) / 2;
         const det = (startPoint.x - midPoint.x) * (midPoint.y - endPoint.y) - (midPoint.x - endPoint.x) * (startPoint.y - midPoint.y);
 
-        this.centerPoint = new Vector2(
-            (startToMid * (midPoint.y - endPoint.y) - midToEnd * (startPoint.y - midPoint.y)) / det,
-            ((startPoint.x - midPoint.x) * midToEnd - (midPoint.x - endPoint.x) * startToMid) / det
-        );
+        if (det === 0) {
+            // Collinear points — fallback to midpoint as center with zero radius
+            this.centerPoint = new Vector2((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+        } else {
+            this.centerPoint = new Vector2(
+                (startToMid * (midPoint.y - endPoint.y) - midToEnd * (startPoint.y - midPoint.y)) / det,
+                ((startPoint.x - midPoint.x) * midToEnd - (midPoint.x - endPoint.x) * startToMid) / det
+            );
+        }
 
         this.radius = this.centerPoint.subtract(this.startPoint).length();
 
@@ -954,13 +963,13 @@ export class Path3D {
         if (parentIndex !== this._tangents.length - 1) {
             const index = parentIndex + 1;
 
-            const tangentFrom = this._tangents[parentIndex].clone();
-            const normalFrom = this._normals[parentIndex].clone();
-            const binormalFrom = this._binormals[parentIndex].clone();
+            const tangentFrom = this._tangents[parentIndex];
+            const normalFrom = this._normals[parentIndex];
+            const binormalFrom = this._binormals[parentIndex];
 
-            const tangentTo = this._tangents[index].clone();
-            const normalTo = this._normals[index].clone();
-            const binormalTo = this._binormals[index].clone();
+            const tangentTo = this._tangents[index];
+            const normalTo = this._normals[index];
+            const binormalTo = this._binormals[index];
 
             const quatFrom = Quaternion.RotationQuaternionFromAxis(normalFrom, binormalFrom, tangentFrom);
             const quatTo = Quaternion.RotationQuaternionFromAxis(normalTo, binormalTo, tangentTo);

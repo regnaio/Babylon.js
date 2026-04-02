@@ -423,7 +423,8 @@ export class Observable<T> implements IReadonlyObservable<T> {
         state.lastReturnValue = eventData;
         state.userInfo = userInfo;
 
-        for (const obs of this._observers) {
+        for (let i = 0; i < this._observers.length; i++) {
+            const obs = this._observers[i];
             if (obs._willBeUnregistered) {
                 continue;
             }

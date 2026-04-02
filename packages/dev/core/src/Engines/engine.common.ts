@@ -178,12 +178,14 @@ export async function CreateImageBitmapFromSource(engine: AbstractEngine, imageS
         const image = new Image();
         image.onload = () => {
             // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
-            image.decode().then(() => {
-                // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
-                engine.createImageBitmap(image, options).then((imageBitmap) => {
-                    resolve(imageBitmap);
-                });
-            });
+            image
+                .decode()
+                .then(() => {
+                    // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+                    engine.createImageBitmap(image, options).then((imageBitmap) => {
+                        resolve(imageBitmap);
+                    }, reject);
+                }, reject);
         };
         image.onerror = () => {
             // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
