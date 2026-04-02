@@ -9,6 +9,7 @@ import {
     type IThinEffectLayerOptions,
     type Color3,
     type EffectWrapper,
+    type Node,
 } from "core/index";
 import { Vector2 } from "../Maths/math.vector";
 import { VertexBuffer } from "../Buffers/buffer";
@@ -76,6 +77,10 @@ interface IHighlightLayerMesh {
      * The mesh render callback use to come to the default behavior
      */
     observerDefault: Nullable<Observer<Mesh>>;
+    /**
+     * Observer for mesh disposal cleanup
+     */
+    observerDispose: Nullable<Observer<Node>>;
     /**
      * If it exists, the emissive color of the material will be used to generate the glow.
      * Else it falls back to the current color.
@@ -509,12 +514,12 @@ export class ThinHighlightLayer extends ThinEffectLayer {
                         this._defaultStencilReference(mesh);
                     }
                 }),
+                observerDispose: mesh.onDisposeObservable.add(() => {
+                    this._disposeMesh(mesh);
+                }),
                 glowEmissiveOnly: glowEmissiveOnly,
             };
-
-            mesh.onDisposeObservable.add(() => {
-                this._disposeMesh(mesh);
-            });
+        }
         }
 
         this._shouldRender = true;
@@ -537,6 +542,9 @@ export class ThinHighlightLayer extends ThinEffectLayer {
 
             if (meshHighlight.observerDefault) {
                 mesh.onAfterRenderObservable.remove(meshHighlight.observerDefault);
+            }
+            if (meshHighlight.observerDispose) {
+                mesh.onDisposeObservable.remove(meshHighlight.observerDispose);
             }
             delete this._meshes[mesh.uniqueId];
         }

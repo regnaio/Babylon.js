@@ -9,6 +9,8 @@ import { type Texture } from "../Materials/Textures/texture";
 import { type Effect } from "../Materials/effect";
 import { Material } from "../Materials/material";
 import { ThinEffectLayer, type IThinEffectLayerOptions } from "./thinEffectLayer";
+import type { Observer } from "../Misc/observable";
+import type { Node } from "../node";
 import { Constants } from "../Engines/constants";
 import { Color4 } from "../Maths/math.color";
 import { type PBRMaterial } from "../Materials/PBR/pbrMaterial";
@@ -113,6 +115,7 @@ export class ThinGlowLayer extends ThinEffectLayer {
     /** @internal */
     public _excludedMeshes: number[] = [];
     private _meshesUsingTheirOwnMaterials: number[] = [];
+    private _disposeObservers: Map<number, Observer<Node>> = new Map();
 
     /**
      * Callback used to let the user override the color selection on a per mesh basis
@@ -406,9 +409,10 @@ export class ThinGlowLayer extends ThinEffectLayer {
 
         this._meshesUsingTheirOwnMaterials.push(mesh.uniqueId);
 
-        mesh.onDisposeObservable.add(() => {
+        const observer = mesh.onDisposeObservable.add(() => {
             this._disposeMesh(mesh as Mesh);
         });
+        this._disposeObservers.set(mesh.uniqueId, observer!);
     }
 
     /**
@@ -421,6 +425,11 @@ export class ThinGlowLayer extends ThinEffectLayer {
         while (index >= 0) {
             this._meshesUsingTheirOwnMaterials.splice(index, 1);
             index = this._meshesUsingTheirOwnMaterials.indexOf(mesh.uniqueId);
+        }
+        const disposeObserver = this._disposeObservers.get(mesh.uniqueId);
+        if (disposeObserver) {
+            mesh.onDisposeObservable.remove(disposeObserver);
+            this._disposeObservers.delete(mesh.uniqueId);
         }
         mesh.resetDrawCache(renderPassId);
     }

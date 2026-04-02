@@ -2627,6 +2627,7 @@ export class NodeMaterial extends NodeMaterialBase {
                         } catch (err) {
                             // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                             reject(err);
+                            return;
                         }
 
                         if (waitForTextureReadyness) {

@@ -1524,7 +1524,7 @@ export class Animation {
                         outTangent = Color4.FromArray(key.values[5]);
                     }
                     if (key.values[6]) {
-                        interpolation = Color4.FromArray(key.values[6]);
+                        interpolation = key.values[6];
                     }
                     break;
                 case Animation.ANIMATIONTYPE_VECTOR3:

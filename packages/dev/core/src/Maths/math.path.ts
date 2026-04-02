@@ -803,7 +803,7 @@ export class Path3D {
             prevBinor = this._binormals[i - 1];
             this._normals[i] = Vector3.Cross(prevBinor, curTang);
             if (!this._raw) {
-                if (this._normals[i].length() === 0) {
+                if (this._normals[i].length() < 1e-10) {
                     prevNor = this._normals[i - 1];
                     this._normals[i] = prevNor.clone();
                 } else {
@@ -823,7 +823,7 @@ export class Path3D {
     private _getFirstNonNullVector(index: number): Vector3 {
         let i = 1;
         let nNVector: Vector3 = this._curve[index + i].subtract(this._curve[index]);
-        while (nNVector.length() === 0 && index + i + 1 < this._curve.length) {
+        while (nNVector.length() < 1e-10 && index + i + 1 < this._curve.length) {
             i++;
             nNVector = this._curve[index + i].subtract(this._curve[index]);
         }
@@ -835,7 +835,7 @@ export class Path3D {
     private _getLastNonNullVector(index: number): Vector3 {
         let i = 1;
         let nLVector: Vector3 = this._curve[index].subtract(this._curve[index - i]);
-        while (nLVector.length() === 0 && index > i + 1) {
+        while (nLVector.length() < 1e-10 && index > i + 1) {
             i++;
             nLVector = this._curve[index].subtract(this._curve[index - i]);
         }

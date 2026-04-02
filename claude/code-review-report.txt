@@ -225,3 +225,266 @@ SUMMARY
   Total actionable findings      25
 
 ================================================================================
+
+================================================================================
+PASS 3 — DEEP NUMERIC, EVENT/OBSERVER, TYPE SAFETY, AND RESOURCE LEAK ANALYSIS
+================================================================================
+
+Generated: 2026-04-01
+Additional findings from targeted scans of numeric bugs, event/observer leaks,
+type safety violations, and resource leaks.
+
+================================================================================
+CRITICAL — NUMERIC / MATH BUGS (Fixed)
+================================================================================
+
+26. EXR loader << 32 integer overflow — always produces wrong result
+    File: packages/dev/core/src/Materials/Textures/Loaders/EXR/exrLoader.core.ts:310
+
+    int = dataView.getUint32(offset.value + 4, true) + Number(dataView.getUint32(offset.value, true) << 32);
+    // BUG: << 32 in JS is a no-op (shift reduced mod 32), so the high 32 bits are lost
+
+    Fix: Changed to multiplication: getUint32(...) * 0x100000000
+    Impact: EXR int64 values silently misread on browsers without BigInt support.
+
+--------------------------------------------------------------------------------
+
+27. thinEngine integer clear color truncation instead of rounding
+    File: packages/dev/core/src/Engines/thinEngine.ts:961-971
+
+    ThinEngine._TempClearColorUint32[0] = color.r * 255;
+    // BUG: Typed array assignment truncates (not rounds). 0.5*255=127.5 → 127, not 128.
+
+    Fix: Added Math.round() to all 8 assignments (uint32 and int32 paths).
+    Impact: Off-by-one errors in integer render target clear color channels.
+
+--------------------------------------------------------------------------------
+
+28. HighestCommonFactor infinite recursion when b=0
+    File: packages/dev/core/src/Maths/math.scalar.functions.ts:365-371
+
+    export function HighestCommonFactor(a: number, b: number): number {
+        const r: number = a % b;  // NaN when b=0, recurses forever
+
+    Fix: Added early return: if (b === 0) return a;
+    Impact: Stack overflow crash on public API Scalar.HCF(n, 0).
+
+--------------------------------------------------------------------------------
+
+29. CeilingPOT(0) returns 0 instead of 1
+    File: packages/dev/core/src/Misc/tools.functions.ts:45-54
+
+    CeilingPOT(0): x-- → -1, bit-fill → 0xFFFFFFFF, x++ → 0 (int32 wrap)
+    // Returns 0 — a zero texture dimension — causing GPU errors downstream
+
+    Fix: Added guard: if (x <= 0) return 1;
+    Impact: Zero-size textures/render targets when input is 0.
+
+--------------------------------------------------------------------------------
+
+30. mesh.vertexData.subdivide: << 0 overflows for large coordinates
+    File: packages/dev/core/src/Meshes/mesh.vertexData.subdivide.ts:34
+
+    function Round(x: number): number {
+        return (x + (x > 0 ? 0.5 : -0.5)) << 0;
+    }
+    // BUG: << 0 truncates to int32. num * 10000 > 2^31 for |num| > 214748
+
+    Fix: Changed to Math.round(x).
+    Impact: Wrong vertex hash for world positions > ~214K units, causing
+    incorrect vertex merging in mesh subdivision.
+
+--------------------------------------------------------------------------------
+
+31. math.path: float === 0 comparison for vector length
+    File: packages/dev/core/src/Maths/math.path.ts:806,826,838
+
+    if (this._normals[i].length() === 0) { ... }
+    while (nNVector.length() === 0 && ...) { ... }
+    // BUG: Near-zero vectors from floating point error won't be exactly 0
+
+    Fix: Changed all three comparisons to < 1e-10.
+    Impact: Near-degenerate path tangents not detected, producing NaN normals
+    after normalization.
+
+================================================================================
+CRITICAL — TYPE SAFETY / API BUGS (Fixed)
+================================================================================
+
+32. COLOR4 animation interpolation deserialization — wrong type
+    File: packages/dev/core/src/Animations/animation.ts:1527
+
+    interpolation = Color4.FromArray(key.values[6]);
+    // BUG: key.values[6] is a number (interpolation enum), not an array.
+    // Color4.FromArray(number) produces Color4(undefined, undefined, undefined, undefined).
+
+    Fix: Changed to interpolation = key.values[6] (matching VECTOR3 pattern).
+    Impact: COLOR4 step interpolation silently reverts to smooth after
+    serialize/deserialize roundtrip.
+
+--------------------------------------------------------------------------------
+
+33. ComputeShader.dispatchWhenReady never rejects on error/timeout
+    File: packages/dev/core/src/Compute/computeShader.ts:464
+
+    return await new Promise((resolve) => {
+        _RetryWithInterval(() => this.dispatch(x, y, z), resolve, undefined, delay);
+    });
+    // BUG: onError is undefined. If dispatch() throws or times out (30s),
+    // the promise hangs forever — no reject path.
+
+    Fix: Added reject callback: (e) => reject(e ?? new Error("...timed out"))
+    Impact: await dispatchWhenReady() hangs indefinitely on shader compilation
+    failure or GPU error.
+
+--------------------------------------------------------------------------------
+
+34. NodeMaterial.ParseFromSnippetAsync — execution continues after reject
+    File: packages/dev/core/src/Materials/Node/nodeMaterial.ts:2627-2630
+
+    } catch (err) {
+        reject(err);
+    }
+    // Execution falls through to resolve(nodeMaterial) below!
+
+    Fix: Added return; after reject(err).
+    Impact: After build() throws, whenTexturesReadyAsync() starts on a broken
+    material, creating dangling async operations.
+
+================================================================================
+HIGH — EVENT/OBSERVER LEAKS (Fixed)
+================================================================================
+
+35. PerformanceViewerCollector.start() double-registration
+    File: packages/dev/core/src/Misc/PerformanceViewer/performanceViewerCollector.ts:513
+
+    public start(shouldPreserve?: boolean) {
+        // No guard on _isStarted — .add() unconditionally appends
+        this._scene.onAfterRenderObservable.add(this._collectDataAtFrame);
+
+    Fix: Added early return if this._isStarted is already true.
+    Impact: Calling start() twice doubles all data collection. stop() only
+    removes one observer, leaving a zombie collecting forever.
+
+--------------------------------------------------------------------------------
+
+36. thinHighlightLayer — mesh.onDisposeObservable observer leaked
+    File: packages/dev/core/src/Layers/thinHighlightLayer.ts:515-517
+
+    mesh.onDisposeObservable.add(() => {
+        this._disposeMesh(mesh);
+    });
+    // Observer reference discarded — never removed in removeMesh() or dispose()
+
+    Fix: Added observerDispose field to IHighlightLayerMesh interface,
+    stored the observer reference, and added removal in removeMesh().
+    Impact: Disposed highlight layer kept alive by meshes via closure reference.
+
+--------------------------------------------------------------------------------
+
+37. thinGlowLayer — mesh.onDisposeObservable observer leaked
+    File: packages/dev/core/src/Layers/thinGlowLayer.ts:409-411
+
+    mesh.onDisposeObservable.add(() => {
+        this._disposeMesh(mesh as Mesh);
+    });
+    // Same pattern — observer reference discarded
+
+    Fix: Added _disposeObservers Map<number, Observer<Node>>, stored observer
+    on registration, removed in unReferenceMeshFromUsingItsOwnMaterial().
+    Impact: Same as #36 — disposed glow layer kept alive by meshes.
+
+================================================================================
+HIGH — RESOURCE LEAKS (Fixed)
+================================================================================
+
+38. videoRecorder — dead createObjectURL leaks blob URL
+    File: packages/dev/core/src/Misc/videoRecorder.ts:241
+
+    window.URL.createObjectURL(superBuffer);  // return value discarded!
+    // Creates an unrevokable blob URL every recording. Dead code.
+
+    Fix: Removed the dead line.
+    Impact: Permanent blob URL leak per recording.
+
+--------------------------------------------------------------------------------
+
+39. gaussianSplattingMeshBase — blob URL leak per worker instantiation
+    File: packages/dev/core/src/Meshes/GaussianSplatting/gaussianSplattingMeshBase.ts:2157-2163
+
+    this._worker = new Worker(
+        URL.createObjectURL(new Blob([...]))  // URL never stored, never revoked
+    );
+    // Called on every sort toggle and clone(), not just once
+
+    Fix: Added _workerBlobUrl field, stored URL before passing to Worker,
+    revokeObjectURL on re-instantiation and in dispose().
+    Impact: Blob URL leak per GaussianSplatting worker creation.
+
+================================================================================
+NOTED BUT NOT FIXED (Require architectural changes or low priority)
+================================================================================
+
+N1. WithinEpsilon default epsilon is sub-denormal (1.401298e-45)
+    File: packages/dev/core/src/Maths/math.scalar.functions.ts:17
+    Functionally equivalent to === for all practical inputs.
+    Low priority: no callers use the default.
+
+N2. VRExperienceHelper — onPrePointerObservable observer never removed
+    File: packages/dev/core/src/Cameras/VR/vrExperienceHelper.ts:722-733
+    VR API is deprecated.
+
+N3. VRExperienceHelper — resize listener on hostWindow, removed from window
+    File: packages/dev/core/src/Cameras/VR/vrExperienceHelper.ts:705 vs 1633
+    VR API is deprecated.
+
+N4. GpuPicker._executePickingAsync — promise never settles if no meshes render
+    File: packages/dev/core/src/Collisions/gpuPicker.ts:716-763
+    Complex to fix — needs timeout/fallback architecture.
+
+N5. WebGPU bind group / render pipeline / sampler caches grow unbounded
+    Files: webgpuCacheBindGroups.ts, webgpuCacheRenderPipelineTree.ts,
+           webgpuCacheSampler.ts
+    Architectural: needs LRU eviction design.
+
+N6. database.ts blob URLs (offline texture cache) never revoked
+    File: packages/dev/core/src/Offline/database.ts:298,334
+    Needs onload revocation pattern like fileTools.ts.
+
+N7. String concatenation in loops (shader compilation paths)
+    Files: shaderProcessor.ts:472, nodeMaterialBuildState.ts:181,
+           materialDefines.ts:262
+    Performance improvement: use array.join() pattern.
+
+N8. geometryTextureBlock.ts — loadTextureFromFileAsync blob URL leak
+    File: packages/dev/core/src/Meshes/Node/Blocks/Textures/geometryTextureBlock.ts:128
+    Needs onload revocation.
+
+================================================================================
+CUMULATIVE SUMMARY (All 3 Passes)
+================================================================================
+
+  Pass   Severity                    Count   Fixed
+  ----   -------------------------   -----   -----
+  1      Critical bugs                   5       5
+  1      High-severity bugs              6       6
+  1      Memory leaks                    4       4
+  1      Division-by-zero risks          4       4
+  1      Performance optimizations       5       -
+  1      Doc bugs                        1       1
+  2      Critical (dispose/race)         3       3
+  2      High (leaks/errors)             6       6
+  2      Medium (cleanup/perf)           3       3
+  2      Code quality                    6       6
+  3      Critical numeric/math           6       6
+  3      Critical type/API               3       3
+  3      High event/observer leaks       3       3
+  3      High resource leaks             2       2
+  3      Noted (not fixed)               8       -
+         -------------------------   -----   -----
+         Total findings                 65
+         Total fixed                            52
+         Noted/deferred                          8
+         Perf suggestions (unfixed)              5
+
+================================================================================

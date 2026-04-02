@@ -363,6 +363,9 @@ export function PercentToRange(percent: number, min: number, max: number): numbe
  * @returns HCF of a and b
  */
 export function HighestCommonFactor(a: number, b: number): number {
+    if (b === 0) {
+        return a;
+    }
     const r: number = a % b;
     if (r === 0) {
         return b;

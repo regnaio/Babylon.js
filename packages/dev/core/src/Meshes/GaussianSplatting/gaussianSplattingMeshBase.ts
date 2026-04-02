@@ -305,6 +305,7 @@ export class GaussianSplattingMeshBase extends Mesh {
     /** @internal */
     public _vertexCount = 0;
     protected _worker: Nullable<Worker> = null;
+    private _workerBlobUrl: Nullable<string> = null;
     private _modelViewProjectionMatrix = Matrix.Identity();
     private _depthMix: BigInt64Array;
     protected _canPostToWorker = true;
@@ -1514,6 +1515,10 @@ export class GaussianSplattingMeshBase extends Mesh {
 
         this._worker?.terminate();
         this._worker = null;
+        if (this._workerBlobUrl) {
+            URL.revokeObjectURL(this._workerBlobUrl);
+            this._workerBlobUrl = null;
+        }
 
         // delete meshes created for each camera
         this._cameraViewInfos.forEach((cameraViewInfo) => {
@@ -2150,17 +2155,19 @@ export class GaussianSplattingMeshBase extends Mesh {
 
         // Start the worker thread
         this._worker?.terminate();
+        if (this._workerBlobUrl) {
+            URL.revokeObjectURL(this._workerBlobUrl);
+        }
         // Reset the posting gate so the new worker can immediately receive sort requests.
         // If the previous worker was terminated mid-sort it would never have set _canPostToWorker
         // back to true, leaving the sort permanently frozen on the new worker.
         this._canPostToWorker = true;
-        this._worker = new Worker(
-            URL.createObjectURL(
-                new Blob(["(", GaussianSplattingMeshBase._CreateWorker.toString(), ")(self)"], {
-                    type: "application/javascript",
-                })
-            )
+        this._workerBlobUrl = URL.createObjectURL(
+            new Blob(["(", GaussianSplattingMeshBase._CreateWorker.toString(), ")(self)"], {
+                type: "application/javascript",
+            })
         );
+        this._worker = new Worker(this._workerBlobUrl);
 
         const positions = Float32Array.from(this._splatPositions!);
 

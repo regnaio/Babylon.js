@@ -958,17 +958,17 @@ export class ThinEngine extends AbstractEngine {
                 ) {
                     const textureType = this._currentRenderTarget.texture?.type;
                     if (textureType === Constants.TEXTURETYPE_UNSIGNED_INTEGER || textureType === Constants.TEXTURETYPE_UNSIGNED_SHORT) {
-                        ThinEngine._TempClearColorUint32[0] = color.r * 255;
-                        ThinEngine._TempClearColorUint32[1] = color.g * 255;
-                        ThinEngine._TempClearColorUint32[2] = color.b * 255;
-                        ThinEngine._TempClearColorUint32[3] = color.a * 255;
+                        ThinEngine._TempClearColorUint32[0] = Math.round(color.r * 255);
+                        ThinEngine._TempClearColorUint32[1] = Math.round(color.g * 255);
+                        ThinEngine._TempClearColorUint32[2] = Math.round(color.b * 255);
+                        ThinEngine._TempClearColorUint32[3] = Math.round(color.a * 255);
                         this._gl.clearBufferuiv(this._gl.COLOR, 0, ThinEngine._TempClearColorUint32);
                         setBackBufferColor = false;
                     } else {
-                        ThinEngine._TempClearColorInt32[0] = color.r * 255;
-                        ThinEngine._TempClearColorInt32[1] = color.g * 255;
-                        ThinEngine._TempClearColorInt32[2] = color.b * 255;
-                        ThinEngine._TempClearColorInt32[3] = color.a * 255;
+                        ThinEngine._TempClearColorInt32[0] = Math.round(color.r * 255);
+                        ThinEngine._TempClearColorInt32[1] = Math.round(color.g * 255);
+                        ThinEngine._TempClearColorInt32[2] = Math.round(color.b * 255);
+                        ThinEngine._TempClearColorInt32[3] = Math.round(color.a * 255);
                         this._gl.clearBufferiv(this._gl.COLOR, 0, ThinEngine._TempClearColorInt32);
                         setBackBufferColor = false;
                     }

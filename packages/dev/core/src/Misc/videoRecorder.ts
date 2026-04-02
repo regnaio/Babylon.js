@@ -238,8 +238,6 @@ export class VideoRecorder {
             this._resolve(superBuffer);
         }
 
-        window.URL.createObjectURL(superBuffer);
-
         if (this._fileName) {
             Tools.Download(superBuffer, this._fileName);
         }

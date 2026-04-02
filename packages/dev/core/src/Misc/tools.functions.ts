@@ -43,6 +43,9 @@ export function NearestPOT(x: number): number {
  * @returns Next highest power of two.
  */
 export function CeilingPOT(x: number): number {
+    if (x <= 0) {
+        return 1;
+    }
     x--;
     x |= x >> 1;
     x |= x >> 2;

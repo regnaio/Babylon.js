@@ -510,6 +510,9 @@ export class PerformanceViewerCollector {
         } else if (this._startingTimestamp === undefined) {
             this._startingTimestamp = PrecisionDate.Now;
         }
+        if (this._isStarted) {
+            return;
+        }
         this._scene.onAfterRenderObservable.add(this._collectDataAtFrame);
         this._restoreStringEvents();
         this._isStarted = true;

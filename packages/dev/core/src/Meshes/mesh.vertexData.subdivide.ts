@@ -31,7 +31,7 @@ const PositionShift = Math.pow(10, 4);
  * @internal
  */
 function Round(x: number): number {
-    return (x + (x > 0 ? 0.5 : -0.5)) << 0;
+    return Math.round(x);
 }
 
 /**
