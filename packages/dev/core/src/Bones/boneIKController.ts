@@ -201,7 +201,14 @@ export class BoneIKController {
                 this.poleTargetLocalOffset.copyFrom(options.poleTargetLocalOffset);
             }
 
-            if (options.poleAngle) {
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	Changed from falsy checks to != null checks. The previous falsy checks
+            	would silently ignore valid zero values (e.g. poleAngle=0, maxAngle=0,
+            	slerpAmount=0).
+            */
+            if (options.poleAngle != null) {
                 this.poleAngle = options.poleAngle;
             }
 
@@ -209,11 +216,11 @@ export class BoneIKController {
                 this._bendAxis.copyFrom(options.bendAxis);
             }
 
-            if (options.maxAngle) {
+            if (options.maxAngle != null) {
                 this.maxAngle = options.maxAngle;
             }
 
-            if (options.slerpAmount) {
+            if (options.slerpAmount != null) {
                 this.slerpAmount = options.slerpAmount;
             }
         }
@@ -224,7 +231,14 @@ export class BoneIKController {
             ang = 0;
         }
 
-        if (ang > Math.PI || ang == undefined) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Removed dead code "|| ang == undefined". The parameter is typed as number,
+        	so this check could never be true. It also didn't protect against NaN
+        	(since NaN == undefined is false).
+        */
+        if (ang > Math.PI) {
             ang = Math.PI;
         }
 

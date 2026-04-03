@@ -1,0 +1,62 @@
+Bones Directory Analysis - core/src/Bones/
+==========================================
+
+Files Analyzed:
+  - bone.ts (1203 lines) - Core Bone class extending Node
+  - boneIKController.ts (378 lines) - Inverse kinematics controller
+  - boneLookController.ts (597 lines) - Look-at controller for bones
+  - skeleton.ts (1019 lines) - Skeleton class managing bone hierarchies
+  - skeleton.functions.ts (122 lines) - Utility to create skeletons from TransformNode hierarchies
+  - index.ts (5 lines) - Barrel exports
+
+Architecture Overview:
+  - Bone extends Node and represents a single bone in a skeleton hierarchy.
+  - Skeleton manages a collection of Bones, handles transform matrix computation for GPU skinning,
+    and provides animation support.
+  - BoneIKController applies 2-bone inverse kinematics to a bone chain.
+  - BoneLookController makes a bone look toward a target position with yaw/pitch constraints.
+  - skeleton.functions.ts provides CreateSkeletonFromTransformNodeHierarchy utility.
+
+Import Dependencies:
+  bone.ts imports from: skeleton (type), math.vector, arrayTools, types, transformNode (type), node, math.axis, animation (type), animationPropertiesOverride (type)
+  boneIKController.ts imports from: bone (type), math.vector, transformNode (type), types, math.axis, logger
+  boneLookController.ts imports from: types, arrayTools, math.vector, transformNode (type), bone (type), math.axis
+  skeleton.ts imports from: bone, observable, math.vector, scene (type), types, abstractMesh (type), rawTexture, animatable.core (type), animationPropertiesOverride (type), animation, animationRange, engineStore, constants, logger, deepCopier, iInspectable (type), animatable.interface (type), IAssetContainer (type), transformNode (type)
+  skeleton.functions.ts imports from: bone, math.vector, scene (type), transformNode (type), mesh, meshBuilder, buffer, skeleton
+
+Cross-file interactions:
+  - Bone references Skeleton (parent skeleton) and other Bones (parent/children)
+  - Skeleton creates and manages Bone instances
+  - BoneIKController and BoneLookController both manipulate Bone rotation/position
+  - Both controllers access bone._linkedTransformNode (internal property)
+  - skeleton.functions.ts creates both Skeleton and Bone instances
+
+=== BUGS FOUND ===
+
+1. skeleton.ts toString() - Inverted comma logic (line 246-248)
+   The code adds a comma BEFORE the first range name instead of BETWEEN range names.
+   Result: "{, range1range2range3}" instead of "{range1, range2, range3}"
+
+2. skeleton.ts serialize() - Ranges array reset inside bone loop (line 855)
+   `serializationObject.ranges = []` and the ranges iteration loop are inside the
+   `for (let index = 0; index < this.bones.length; index++)` loop. This means the
+   ranges array is needlessly rebuilt for every bone. It should be outside the bone loop.
+
+3. skeleton.ts _sortBones() - Wrong nullish check (line 999)
+   `bone._index === undefined` should be `bone._index === null` because _index is
+   typed as Nullable<number> (number | null) and initialized to null, never undefined.
+
+4. boneIKController.ts _setMaxAngle() - Dead/incorrect undefined check (line 227)
+   `ang == undefined` uses loose equality and is dead code since ang is typed as number.
+   Removed as it provides no protection (NaN == undefined is false).
+
+5. boneIKController.ts constructor - Falsy checks lose valid zero values (lines 204, 212, 216)
+   `if (options.maxAngle)` and `if (options.slerpAmount)` use falsy checks which
+   treat 0 as "not provided". maxAngle=0 and slerpAmount=0 are valid values that
+   would be silently ignored. Changed to != null checks.
+
+=== IMPROVEMENT ===
+
+6. boneLookController.ts - Typo in private field name (line 81)
+   `_fowardAxis` is misspelled; should be `_forwardAxis`. Private field only used
+   internally so no public API break.

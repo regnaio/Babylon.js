@@ -240,13 +240,19 @@ export class Skeleton implements IAnimatable {
         let ret = `Name: ${this.name}, nBones: ${this.bones.length}`;
         ret += `, nAnimationRanges: ${this._ranges ? Object.keys(this._ranges).length : "none"}`;
         if (fullDetails) {
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The comma logic was inverted - it added a comma before the first item
+            	instead of between items, producing "{, range1range2}" instead of "{range1, range2}".
+            */
             ret += ", Ranges: {";
             let first = true;
             for (const name in this._ranges) {
-                if (first) {
+                if (!first) {
                     ret += ", ";
-                    first = false;
                 }
+                first = false;
                 ret += name;
             }
             ret += "}";
@@ -852,21 +858,30 @@ export class Skeleton implements IAnimatable {
                 serializedBone.animation = bone.animations[0].serialize();
             }
 
-            serializationObject.ranges = [];
-            for (const name in this._ranges) {
-                const source = this._ranges[name];
-
-                if (!source) {
-                    continue;
-                }
-
-                const range: any = {};
-                range.name = name;
-                range.from = source.from;
-                range.to = source.to;
-                serializationObject.ranges.push(range);
-            }
         }
+
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The ranges serialization was previously inside the bone loop, causing it to be
+        	rebuilt for every bone. Moved it outside the loop since ranges are skeleton-level
+        	data, not per-bone data.
+        */
+        serializationObject.ranges = [];
+        for (const name in this._ranges) {
+            const source = this._ranges[name];
+
+            if (!source) {
+                continue;
+            }
+
+            const range: any = {};
+            range.name = name;
+            range.from = source.from;
+            range.to = source.to;
+            serializationObject.ranges.push(range);
+        }
+
         return serializationObject;
     }
 
@@ -996,7 +1011,13 @@ export class Skeleton implements IAnimatable {
             return;
         }
 
-        if (bone._index === undefined) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	bone._index is typed as Nullable<number> (number | null) and initialized to null,
+        	so the check should use === null instead of === undefined.
+        */
+        if (bone._index === null) {
             bone._index = index;
         }
 
