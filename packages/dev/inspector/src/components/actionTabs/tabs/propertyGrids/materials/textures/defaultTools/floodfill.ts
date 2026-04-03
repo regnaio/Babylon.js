@@ -1,8 +1,7 @@
-import type { IToolParameters, IToolData } from "../textureEditorComponent";
-import type { PointerInfo } from "core/Events/pointerEvents";
-import { PointerEventTypes } from "core/Events/pointerEvents";
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
+import { type IToolParameters, type IToolData } from "../textureEditorComponent";
+import { type PointerInfo, PointerEventTypes } from "core/Events/pointerEvents";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
 
 export const Floodfill: IToolData = {
     name: "Floodfill",
@@ -13,6 +12,7 @@ export const Floodfill: IToolData = {
             this.getParameters = getParameters;
         }
 
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         async fill() {
             const { metadata, startPainting, updatePainting, stopPainting } = this.getParameters();
             const ctx = await startPainting();
@@ -32,6 +32,7 @@ export const Floodfill: IToolData = {
                     this.getParameters().interactionEnabled() &&
                     pointerInfo.pickInfo?.hit
                 ) {
+                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
                     this.fill();
                 }
             });

@@ -2,7 +2,7 @@ import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
 /**
  * Block used to get the value of the first parameter raised to the power of the second
  */
@@ -71,16 +71,16 @@ export class GeometryPowBlock extends NodeGeometryBlock {
             switch (this.value.type) {
                 case NodeGeometryBlockConnectionPointTypes.Int:
                 case NodeGeometryBlockConnectionPointTypes.Float: {
-                    return func!(source, power);
+                    return func(source, power);
                 }
                 case NodeGeometryBlockConnectionPointTypes.Vector2: {
-                    return new Vector2(func!(source.x, power), func!(source.y, power));
+                    return new Vector2(func(source.x, power), func(source.y, power));
                 }
                 case NodeGeometryBlockConnectionPointTypes.Vector3: {
-                    return new Vector3(func!(source.x, power), func!(source.y, power), func!(source.z, power));
+                    return new Vector3(func(source.x, power), func(source.y, power), func(source.z, power));
                 }
                 case NodeGeometryBlockConnectionPointTypes.Vector4: {
-                    return new Vector4(func!(source.x, power), func!(source.y, power), func!(source.z, power), func!(source.w, power));
+                    return new Vector4(func(source.x, power), func(source.y, power), func(source.z, power), func(source.w, power));
                 }
             }
 

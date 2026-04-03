@@ -1,10 +1,11 @@
-/* eslint-disable import/no-internal-modules */
+/* eslint-disable @typescript-eslint/no-restricted-imports */
 export * from "./Background/index";
 export * from "./colorCurves";
 export * from "./iEffectFallbacks";
 export * from "./effectFallbacks";
 export * from "./effect";
 export * from "./fresnelParameters";
+export * from "./imageProcessing";
 export * from "./imageProcessingConfiguration";
 export * from "./material";
 export * from "./materialDefines";
@@ -37,7 +38,14 @@ export * from "./GreasedLine/greasedLineMaterialInterfaces";
 export * from "./GreasedLine/greasedLineMaterialDefaults";
 export * from "./meshDebugPluginMaterial";
 export * from "./GaussianSplatting/gaussianSplattingMaterial";
+export * from "./GaussianSplatting/gaussianSplattingSolidColorMaterialPlugin";
+export * from "./GaussianSplatting/gaussianSplattingGpuPickingMaterialPlugin";
 export * from "./materialHelper.functions";
+export * from "./materialHelper.geometryrendering";
+export * from "./materialStencilState";
+export * from "./uv.defines";
+export * from "./floatingOriginMatrixOverrides";
+export * from "./vertexPullingHelper.functions";
 import "./material.decalMap";
 
 // async-loaded shaders
@@ -47,3 +55,9 @@ export * from "../Shaders/default.fragment";
 export * from "../Shaders/default.vertex";
 export * from "../ShadersWGSL/default.fragment";
 export * from "../ShadersWGSL/default.vertex";
+
+// GreasedLineSimplMaterial
+export * from "../Shaders/greasedLine.fragment";
+export * from "../Shaders/greasedLine.vertex";
+export * from "../ShadersWGSL/greasedLine.fragment";
+export * from "../ShadersWGSL/greasedLine.vertex";

@@ -1,27 +1,27 @@
-import type { Vector3, Quaternion } from "../../Maths/math.vector";
-import type { IRaycastQuery, PhysicsRaycastResult } from "../physicsRaycastResult";
-import type { PhysicsBody } from "./physicsBody";
-import type { PhysicsShape } from "./physicsShape";
-import type { PhysicsConstraint } from "./physicsConstraint";
-import type { BoundingBox } from "../../Culling/boundingBox";
-import type { TransformNode } from "../../Meshes/transformNode";
-import type { PhysicsMaterial } from "./physicsMaterial";
-import type { Mesh } from "../../Meshes/mesh";
-import type { Nullable } from "../../types";
-import type { Observable } from "../../Misc/observable";
-import type { GroundMesh } from "../../Meshes/groundMesh";
+import { type Vector3, type Quaternion } from "../../Maths/math.vector";
+import { type IRaycastQuery, type PhysicsRaycastResult } from "../physicsRaycastResult";
+import { type PhysicsBody } from "./physicsBody";
+import { type PhysicsShape } from "./physicsShape";
+import { type PhysicsConstraint } from "./physicsConstraint";
+import { type BoundingBox } from "../../Culling/boundingBox";
+import { type TransformNode } from "../../Meshes/transformNode";
+import { type PhysicsMaterial } from "./physicsMaterial";
+import { type Mesh } from "../../Meshes/mesh";
+import { type Nullable } from "../../types";
+import { type Observable } from "../../Misc/observable";
+import { type GroundMesh } from "../../Meshes/groundMesh";
 
 /** How a specific axis can be constrained */
 export const enum PhysicsConstraintAxisLimitMode {
-    /*
+    /**
      * The axis is not restricted at all
      */
     FREE,
-    /*
+    /**
      * The axis has a minimum/maximum limit
      */
     LIMITED,
-    /*
+    /**
      * The axis allows no relative movement of the pivots
      */
     LOCKED,
@@ -29,37 +29,37 @@ export const enum PhysicsConstraintAxisLimitMode {
 
 /** The constraint specific axis to use when setting Friction, `ConstraintAxisLimitMode`, max force, ... */
 export const enum PhysicsConstraintAxis {
-    /*
+    /**
      * Translation along the primary axis of the constraint (i.e. the
      * direction specified by PhysicsConstraintParameters.axisA/axisB)
      */
     LINEAR_X,
-    /*
+    /**
      * Translation along the second axis of the constraint (i.e. the
      * direction specified by PhysicsConstraintParameters.perpAxisA/perpAxisB)
      */
     LINEAR_Y,
-    /*
+    /**
      * Translation along the third axis of the constraint. This axis is
      * computed from the cross product of axisA/axisB and perpAxisA/perpAxisB)
      */
     LINEAR_Z,
-    /*
+    /**
      * Rotation around the primary axis of the constraint (i.e. the
      * axis specified by PhysicsConstraintParameters.axisA/axisB)
      */
     ANGULAR_X,
-    /*
+    /**
      * Rotation around the second axis of the constraint (i.e. the
      * axis specified by PhysicsConstraintParameters.perpAxisA/perpAxisB)
      */
     ANGULAR_Y,
-    /*
+    /**
      * Rotation around the third axis of the constraint. This axis is
      * computed from the cross product of axisA/axisB and perpAxisA/perpAxisB)
      */
     ANGULAR_Z,
-    /*
+    /**
      * A 3D distance limit; similar to specifying the LINEAR_X/Y/Z axes
      * individually, but the distance calculation uses all three axes
      * simultaneously, instead of individually.
@@ -95,12 +95,12 @@ export const enum PhysicsConstraintType {
      * up between both bodies, allowing no relative movement.
      */
     LOCK = 5,
-    /*
+    /**
      * A prismatic will lock the rotations of the bodies, and allow translation
      * only along one axis
      */
     PRISMATIC = 6,
-    /*
+    /**
      * A generic constraint; this starts with no limits on how the bodies can
      * move relative to each other, but limits can be added via the PhysicsConstraint
      * interfaces. This can be used to specify a large variety of constraints
@@ -166,7 +166,7 @@ export interface IBasePhysicsCollisionEvent {
  */
 export interface IPhysicsCollisionEvent extends IBasePhysicsCollisionEvent {
     /**
-     * World position where the collision occured
+     * World position where the collision occurred
      */
     point: Nullable<Vector3>;
     /**
@@ -186,6 +186,7 @@ export interface IPhysicsCollisionEvent extends IBasePhysicsCollisionEvent {
 /**
  * Parameters used to describe the Shape
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface PhysicsShapeParameters {
     /**
      * Shape center position
@@ -208,7 +209,7 @@ export interface PhysicsShapeParameters {
      */
     rotation?: Quaternion;
     /**
-     * Dimesion extention for the box
+     * Dimension extents for the box
      */
     extents?: Vector3;
     /**
@@ -248,6 +249,7 @@ export interface PhysicsShapeParameters {
 /**
  * Parameters used to describe a Constraint
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface PhysicsConstraintParameters {
     /**
      * Location of the constraint pivot in the space of first body
@@ -281,7 +283,7 @@ export interface PhysicsConstraintParameters {
     perpAxisB?: Vector3;
 
     /**
-     * The maximum distance that can seperate the two pivots.
+     * The maximum distance that can separate the two pivots.
      * Only used for DISTANCE constraints
      */
     maxDistance?: number;
@@ -298,6 +300,7 @@ export interface PhysicsConstraintParameters {
 /**
  * Parameters used to describe mass and inertia of the Physics Body
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface PhysicsMassProperties {
     /**
      * The center of mass, in local space. This is The
@@ -321,7 +324,7 @@ export interface PhysicsMassProperties {
      * The principal moments of inertia of this object
      * for a unit mass. This determines how easy it is
      * for the body to rotate. A value of zero on any
-     * axis will be used as infinite interia about that
+     * axis will be used as infinite inertia about that
      * axis.
      *
      * If not provided, the physics engine will compute
@@ -433,9 +436,10 @@ export interface IPhysicsEnginePluginV2 {
     applyImpulse(body: PhysicsBody, impulse: Vector3, location: Vector3, instanceIndex?: number): void;
     applyAngularImpulse(body: PhysicsBody, angularImpulse: Vector3, instanceIndex?: number): void;
     applyForce(body: PhysicsBody, force: Vector3, location: Vector3, instanceIndex?: number): void;
+    applyTorque(body: PhysicsBody, torque: Vector3, instanceIndex?: number): void;
     setAngularVelocity(body: PhysicsBody, angVel: Vector3, instanceIndex?: number): void;
     getAngularVelocityToRef(body: PhysicsBody, angVel: Vector3, instanceIndex?: number): void;
-    getBodyGeometry(body: PhysicsBody): {};
+    getBodyGeometry(body: PhysicsBody): object;
     disposeBody(body: PhysicsBody): void;
     setCollisionCallbackEnabled(body: PhysicsBody, enabled: boolean, instanceIndex?: number): void;
     setCollisionEndedCallbackEnabled(body: PhysicsBody, enabled: boolean, instanceIndex?: number): void;
@@ -488,7 +492,7 @@ export interface IPhysicsEnginePluginV2 {
     getBodiesUsingConstraint(constraint: PhysicsConstraint): ConstrainedBodyPair[];
 
     // raycast
-    raycast(from: Vector3, to: Vector3, result: PhysicsRaycastResult, query?: IRaycastQuery): void;
+    raycast(from: Vector3, to: Vector3, result: PhysicsRaycastResult | Array<PhysicsRaycastResult>, query?: IRaycastQuery): void;
 
     dispose(): void;
 }

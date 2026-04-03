@@ -1,16 +1,16 @@
 import * as React from "react";
 
-import type { Observable } from "core/Misc/observable";
+import { type Observable } from "core/Misc/observable";
 
-import type { PropertyChangedEvent } from "../../../../propertyChangedEvent";
+import { type PropertyChangedEvent } from "../../../../propertyChangedEvent";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { GlobalState } from "../../../../globalState";
-import type { IExplorerExtensibilityGroup } from "core/Debug/debugLayer";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type GlobalState } from "../../../../globalState";
+import { type IExplorerExtensibilityGroup } from "core/Debug/debugLayer";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
 import { SliderLineComponent } from "shared-ui-components/lines/sliderLineComponent";
-import type { EffectLayer } from "core/Layers/effectLayer";
+import { type EffectLayer } from "core/Layers/effectLayer";
 import { GlowLayer } from "core/Layers/glowLayer";
 import { HighlightLayer } from "core/Layers/highlightLayer";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
@@ -80,6 +80,26 @@ export class LayerPropertyGridComponent extends React.Component<ILayerPropertyGr
                                 label="Outer Glow"
                                 target={layer}
                                 propertyName="outerGlow"
+                                onPropertyChangedObservable={this.props.onPropertyChangedObservable}
+                            />
+                            <SliderLineComponent
+                                lockObject={this.props.lockObject}
+                                label="Blur Horizontal Size"
+                                target={layer}
+                                propertyName="blurHorizontalSize"
+                                minimum={0}
+                                maximum={4}
+                                step={0.01}
+                                onPropertyChangedObservable={this.props.onPropertyChangedObservable}
+                            />
+                            <SliderLineComponent
+                                lockObject={this.props.lockObject}
+                                label="Blur Vertical Size"
+                                target={layer}
+                                propertyName="blurVerticalSize"
+                                minimum={0}
+                                maximum={4}
+                                step={0.01}
                                 onPropertyChangedObservable={this.props.onPropertyChangedObservable}
                             />
                         </div>

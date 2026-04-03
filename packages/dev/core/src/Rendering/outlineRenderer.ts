@@ -1,21 +1,20 @@
 import { VertexBuffer } from "../Buffers/buffer";
-import type { SubMesh } from "../Meshes/subMesh";
-import type { _InstancesBatch } from "../Meshes/mesh";
-import { Mesh } from "../Meshes/mesh";
+import { type SubMesh } from "../Meshes/subMesh";
+import { type _InstancesBatch, Mesh } from "../Meshes/mesh";
 import { Scene } from "../scene";
-import type { AbstractEngine } from "../Engines/abstractEngine";
+import { type AbstractEngine } from "../Engines/abstractEngine";
 import { Constants } from "../Engines/constants";
-import type { ISceneComponent } from "../sceneComponent";
-import { SceneComponentConstants } from "../sceneComponent";
+import { type ISceneComponent, SceneComponentConstants } from "../sceneComponent";
 import { DrawWrapper } from "../Materials/drawWrapper";
 
-import { addClipPlaneUniforms, bindClipPlane, prepareStringDefinesForClipPlanes } from "core/Materials/clipPlaneMaterialHelper";
-import { BindBonesParameters, BindMorphTargetParameters, PrepareAttributesForMorphTargetsInfluencers, PushAttributesForInstances } from "../Materials/materialHelper.functions";
+import { AddClipPlaneUniforms, BindClipPlane, PrepareStringDefinesForClipPlanes } from "core/Materials/clipPlaneMaterialHelper";
+import { BindBonesParameters, BindMorphTargetParameters, PrepareDefinesAndAttributesForMorphTargets, PushAttributesForInstances } from "../Materials/materialHelper.functions";
 import { EffectFallbacks } from "core/Materials/effectFallbacks";
-import type { IEffectCreationOptions } from "core/Materials/effect";
+import { type IEffectCreationOptions } from "core/Materials/effect";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
 declare module "../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /** @internal */
         _outlineRenderer: OutlineRenderer;
@@ -40,6 +39,7 @@ Scene.prototype.getOutlineRenderer = function (): OutlineRenderer {
 };
 
 declare module "../Meshes/abstractMesh" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractMesh {
         /** @internal (Backing field) */
         _renderOutline: boolean;
@@ -117,6 +117,11 @@ export class OutlineRenderer implements ISceneComponent {
      * Defines a zOffset default Unit to prevent zFighting between the overlay and the mesh.
      */
     public zOffsetUnits = 4; // 4 to account for projection a bit by default
+
+    /**
+     * Gets or sets a boolean indicating if the renderer is enabled
+     */
+    public enabled = true;
 
     private _engine: AbstractEngine;
     private _savedDepthWrite: boolean;
@@ -242,7 +247,7 @@ export class OutlineRenderer implements ISceneComponent {
         }
 
         // Alpha test
-        if (material && material.needAlphaTesting()) {
+        if (material && material.needAlphaTestingForMesh(effectiveMesh)) {
             const alphaTexture = material.getAlphaTestTexture();
             if (alphaTexture) {
                 effect.setTexture("diffuseSampler", alphaTexture);
@@ -251,7 +256,7 @@ export class OutlineRenderer implements ISceneComponent {
         }
 
         // Clip plane
-        bindClipPlane(effect, material, scene);
+        BindClipPlane(effect, material, scene);
 
         engine.setZOffset(-this.zOffset);
         engine.setZOffsetUnits(-this.zOffsetUnits);
@@ -287,16 +292,22 @@ export class OutlineRenderer implements ISceneComponent {
 
         const scene = mesh.getScene();
 
+        let uv1 = false;
+        let uv2 = false;
+        const color = false;
+
         // Alpha test
-        if (material.needAlphaTesting()) {
+        if (material.needAlphaTestingForMesh(mesh)) {
             defines.push("#define ALPHATEST");
             if (mesh.isVerticesDataPresent(VertexBuffer.UVKind)) {
                 attribs.push(VertexBuffer.UVKind);
                 defines.push("#define UV1");
+                uv1 = true;
             }
             if (mesh.isVerticesDataPresent(VertexBuffer.UV2Kind)) {
                 attribs.push(VertexBuffer.UV2Kind);
                 defines.push("#define UV2");
+                uv2 = true;
             }
         }
         //Logarithmic depth
@@ -304,7 +315,7 @@ export class OutlineRenderer implements ISceneComponent {
             defines.push("#define LOGARITHMICDEPTH");
         }
         // Clip planes
-        prepareStringDefinesForClipPlanes(material, scene, defines);
+        PrepareStringDefinesForClipPlanes(material, scene, defines);
 
         // Bones
         const fallbacks = new EffectFallbacks();
@@ -331,21 +342,20 @@ export class OutlineRenderer implements ISceneComponent {
         }
 
         // Morph targets
-        const morphTargetManager = (mesh as Mesh).morphTargetManager;
-        let numMorphInfluencers = 0;
-        if (morphTargetManager) {
-            numMorphInfluencers = morphTargetManager.numMaxInfluencers || morphTargetManager.numInfluencers;
-            if (numMorphInfluencers > 0) {
-                defines.push("#define MORPHTARGETS");
-                defines.push("#define NUM_MORPH_INFLUENCERS " + numMorphInfluencers);
-
-                if (morphTargetManager.isUsingTextureForTargets) {
-                    defines.push("#define MORPHTARGETS_TEXTURE");
-                }
-
-                PrepareAttributesForMorphTargetsInfluencers(attribs, mesh, numMorphInfluencers);
-            }
-        }
+        const numMorphInfluencers = mesh.morphTargetManager
+            ? PrepareDefinesAndAttributesForMorphTargets(
+                  mesh.morphTargetManager,
+                  defines,
+                  attribs,
+                  mesh,
+                  true, // usePositionMorph
+                  true, // useNormalMorph
+                  false, // useTangentMorph
+                  uv1, // useUVMorph
+                  uv2, // useUV2Morph
+                  color // useColorMorph
+              )
+            : 0;
 
         // Instances
         if (useInstances) {
@@ -380,7 +390,7 @@ export class OutlineRenderer implements ISceneComponent {
                 "color",
                 "logarithmicDepthConstant",
                 "morphTargetInfluences",
-                "boneTextureWidth",
+                "boneTextureInfo",
                 "morphTargetCount",
                 "morphTargetTextureInfo",
                 "morphTargetTextureIndices",
@@ -391,7 +401,7 @@ export class OutlineRenderer implements ISceneComponent {
             ];
             const samplers = ["diffuseSampler", "boneSampler", "morphTargets", "bakedVertexAnimationTexture"];
 
-            addClipPlaneUniforms(uniforms);
+            AddClipPlaneUniforms(uniforms);
 
             drawWrapper.setEffect(
                 this.scene.getEngine().createEffect(
@@ -425,6 +435,10 @@ export class OutlineRenderer implements ISceneComponent {
     }
 
     private _beforeRenderingMesh(mesh: Mesh, subMesh: SubMesh, batch: _InstancesBatch): void {
+        if (!this.enabled) {
+            return;
+        }
+
         // Outline - step 1
         this._savedDepthWrite = this._engine.getDepthWrite();
         if (mesh.renderOutline) {
@@ -460,6 +474,10 @@ export class OutlineRenderer implements ISceneComponent {
     }
 
     private _afterRenderingMesh(mesh: Mesh, subMesh: SubMesh, batch: _InstancesBatch): void {
+        if (!this.enabled) {
+            return;
+        }
+
         // Overlay
         if (mesh.renderOverlay) {
             const currentMode = this._engine.getAlphaMode();
@@ -468,7 +486,7 @@ export class OutlineRenderer implements ISceneComponent {
             this.render(subMesh, batch, true, this._passIdForDrawWrapper[3]);
             this._engine.setAlphaMode(currentMode);
             this._engine.setDepthWrite(this._savedDepthWrite);
-            this._engine.alphaState.alphaBlend = alphaBlendState;
+            this._engine.alphaState.setAlphaBlend(alphaBlendState);
         }
 
         // Outline - step 2

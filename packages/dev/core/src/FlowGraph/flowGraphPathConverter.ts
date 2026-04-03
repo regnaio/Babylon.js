@@ -1,9 +1,9 @@
-import type { FlowGraphContext } from "./flowGraphContext";
-import type { IPathToObjectConverter, IObjectInfo } from "../ObjectModel/objectModelInterfaces";
-import type { IObjectAccessor } from "./typeDefinitions";
+import { type FlowGraphContext } from "./flowGraphContext";
+import { type IPathToObjectConverter, type IObjectInfo } from "../ObjectModel/objectModelInterfaces";
+import { type IObjectAccessor } from "./typeDefinitions";
 
 /**
- * @experimental
+ * @deprecated Avoid using this on the flow-graph (glTF only)
  * A path converter that converts a path on the flow graph context variables to an object accessor.
  */
 export class FlowGraphPathConverter implements IPathToObjectConverter<IObjectAccessor> {
@@ -28,7 +28,8 @@ export class FlowGraphPathConverter implements IPathToObjectConverter<IObjectAcc
                 type: "object",
                 get: () => currentObject[property],
                 set: (value: any) => (currentObject[property] = value),
-                getObject: () => currentObject,
+                getTarget: () => currentObject,
+                getPropertyName: [() => property],
             },
         };
     }

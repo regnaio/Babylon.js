@@ -1,11 +1,10 @@
-import type { FloatArray, Nullable, IndicesArray } from "../types";
-import type { Vector2 } from "./math.vector";
-import { Vector3 } from "./math.vector";
+import { type FloatArray, type Nullable, type IndicesArray } from "../types";
+import { type Vector2, Vector3 } from "./math.vector";
 import { nativeOverride } from "../Misc/decorators";
 
 // This helper class is only here so we can apply the nativeOverride decorator to functions.
 class MathHelpers {
-    @nativeOverride.filter((...[positions, indices]: Parameters<typeof MathHelpers.extractMinAndMaxIndexed>) => !Array.isArray(positions) && !Array.isArray(indices))
+    @nativeOverride.filter((...args: Parameters<typeof MathHelpers.extractMinAndMaxIndexed>) => !Array.isArray(args[0]) && !Array.isArray(args[1]))
     // eslint-disable-next-line @typescript-eslint/naming-convention
     public static extractMinAndMaxIndexed(positions: FloatArray, indices: IndicesArray, indexStart: number, indexCount: number, minimum: Vector3, maximum: Vector3): void {
         for (let index = indexStart; index < indexStart + indexCount; index++) {
@@ -18,7 +17,7 @@ class MathHelpers {
         }
     }
 
-    @nativeOverride.filter((...[positions]: Parameters<typeof MathHelpers.extractMinAndMax>) => !Array.isArray(positions))
+    @nativeOverride.filter((...args: Parameters<typeof MathHelpers.extractMinAndMax>) => !Array.isArray(args[0]))
     // eslint-disable-next-line @typescript-eslint/naming-convention
     public static extractMinAndMax(positions: FloatArray, start: number, count: number, stride: number, minimum: Vector3, maximum: Vector3): void {
         for (let index = start, offset = start * stride; index < start + count; index++, offset += stride) {
@@ -40,6 +39,7 @@ class MathHelpers {
  * @param bias defines bias value to add to the result
  * @returns minimum and maximum values
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function extractMinAndMaxIndexed(
     positions: FloatArray,
     indices: IndicesArray,
@@ -76,6 +76,7 @@ export function extractMinAndMaxIndexed(
  * @param stride defines the stride size to use (distance between two positions in the positions array)
  * @returns minimum and maximum values
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function extractMinAndMax(positions: FloatArray, start: number, count: number, bias: Nullable<Vector2> = null, stride?: number): { minimum: Vector3; maximum: Vector3 } {
     const minimum = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
     const maximum = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
@@ -99,4 +100,56 @@ export function extractMinAndMax(positions: FloatArray, start: number, count: nu
         minimum: minimum,
         maximum: maximum,
     };
+}
+
+/**
+ * Flip flipped faces
+ * @param positions defines the positions to use
+ * @param indices defines the indices to use and update
+ */
+export function FixFlippedFaces(positions: FloatArray, indices: IndicesArray): void {
+    const boundingInfo = extractMinAndMax(positions, 0, positions.length / 3);
+
+    const inside = boundingInfo.maximum.subtract(boundingInfo.minimum).scale(0.5).add(boundingInfo.minimum);
+    const tmpVectorA = new Vector3();
+    const tmpVectorB = new Vector3();
+    const tmpVectorC = new Vector3();
+    const tmpVectorAB = new Vector3();
+    const tmpVectorAC = new Vector3();
+    const tmpVectorNormal = new Vector3();
+    const tmpVectorAvgNormal = new Vector3();
+
+    // Clean indices
+    for (let index = 0; index < indices.length; index += 3) {
+        const a = indices[index];
+        const b = indices[index + 1];
+        const c = indices[index + 2];
+
+        // Evaluate face normal
+        tmpVectorA.fromArray(positions, a * 3);
+        tmpVectorB.fromArray(positions, b * 3);
+        tmpVectorC.fromArray(positions, c * 3);
+
+        tmpVectorB.subtractToRef(tmpVectorA, tmpVectorAB);
+        tmpVectorC.subtractToRef(tmpVectorA, tmpVectorAC);
+
+        Vector3.CrossToRef(tmpVectorAB, tmpVectorAC, tmpVectorNormal);
+
+        tmpVectorNormal.normalize();
+
+        // Calculate normal from face center to the inside of the geometry
+        const avgX = tmpVectorA.x + tmpVectorB.x + tmpVectorC.x;
+        const avgY = tmpVectorA.y + tmpVectorB.y + tmpVectorC.y;
+        const avgZ = tmpVectorA.z + tmpVectorB.z + tmpVectorC.z;
+
+        tmpVectorAvgNormal.set(avgX / 3, avgY / 3, avgZ / 3);
+        tmpVectorAvgNormal.subtractInPlace(inside);
+        tmpVectorAvgNormal.normalize();
+
+        if (Vector3.Dot(tmpVectorNormal, tmpVectorAvgNormal) >= 0) {
+            // Flip!
+            indices[index] = c;
+            indices[index + 2] = a;
+        }
+    }
 }

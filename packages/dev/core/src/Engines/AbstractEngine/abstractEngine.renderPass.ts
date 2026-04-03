@@ -1,6 +1,7 @@
 import { AbstractEngine } from "../abstractEngine";
 
 declare module "../../Engines/abstractEngine" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractEngine {
         /**
          * Gets the names of the render passes that are currently created
@@ -51,6 +52,7 @@ AbstractEngine.prototype.releaseRenderPassId = function (id: number): void {
         const scene = this.scenes[s];
         for (let m = 0; m < scene.meshes.length; ++m) {
             const mesh = scene.meshes[m];
+            mesh._releaseRenderPassId(id);
             if (mesh.subMeshes) {
                 for (let b = 0; b < mesh.subMeshes.length; ++b) {
                     const subMesh = mesh.subMeshes[b];

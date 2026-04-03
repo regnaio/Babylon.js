@@ -1,10 +1,11 @@
-import type { IMaterial, IKHRMaterialsVolume } from "babylonjs-gltf2interface";
-import type { IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
-import { _Exporter } from "../glTFExporter";
-import type { Material } from "core/Materials/material";
+import { type IMaterial, type IKHRMaterialsVolume } from "babylonjs-gltf2interface";
+import { type IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
+import { GLTFExporter } from "../glTFExporter";
+import { type Material } from "core/Materials/material";
 import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 import { Color3 } from "core/Maths/math.color";
+import { OpenPBRMaterial } from "core/Materials/PBR/openpbrMaterial";
 
 const NAME = "KHR_materials_volume";
 
@@ -22,11 +23,11 @@ export class KHR_materials_volume implements IGLTFExporterExtensionV2 {
     /** Defines whether this extension is required */
     public required = false;
 
-    private _exporter: _Exporter;
+    private _exporter: GLTFExporter;
 
     private _wasUsed = false;
 
-    constructor(exporter: _Exporter) {
+    constructor(exporter: GLTFExporter) {
         this._exporter = exporter;
     }
 
@@ -44,7 +45,7 @@ export class KHR_materials_volume implements IGLTFExporterExtensionV2 {
      * @param babylonMaterial corresponding babylon material
      * @returns array of additional textures to export
      */
-    public postExportMaterialAdditionalTextures?(context: string, node: IMaterial, babylonMaterial: Material): BaseTexture[] {
+    public async postExportMaterialAdditionalTexturesAsync?(context: string, node: IMaterial, babylonMaterial: Material): Promise<BaseTexture[]> {
         const additionalTextures: BaseTexture[] = [];
 
         if (babylonMaterial instanceof PBRMaterial) {
@@ -53,6 +54,12 @@ export class KHR_materials_volume implements IGLTFExporterExtensionV2 {
                     additionalTextures.push(babylonMaterial.subSurface.thicknessTexture);
                 }
                 return additionalTextures;
+            }
+        } else if (babylonMaterial instanceof OpenPBRMaterial) {
+            if (babylonMaterial.transmissionWeight > 0) {
+                if (babylonMaterial.geometryThicknessTexture) {
+                    additionalTextures.push(babylonMaterial.geometryThicknessTexture);
+                }
             }
         }
 
@@ -88,6 +95,7 @@ export class KHR_materials_volume implements IGLTFExporterExtensionV2 {
      * @param babylonMaterial corresponding babylon material
      * @returns promise that resolves with the updated node
      */
+    // eslint-disable-next-line no-restricted-syntax
     public postExportMaterialAsync?(context: string, node: IMaterial, babylonMaterial: Material): Promise<IMaterial> {
         return new Promise((resolve) => {
             if (babylonMaterial instanceof PBRMaterial && this._isExtensionEnabled(babylonMaterial)) {
@@ -95,7 +103,7 @@ export class KHR_materials_volume implements IGLTFExporterExtensionV2 {
 
                 const subs = babylonMaterial.subSurface;
                 const thicknessFactor = subs.maximumThickness == 0 ? undefined : subs.maximumThickness;
-                const thicknessTexture = this._exporter._glTFMaterialExporter._getTextureInfo(subs.thicknessTexture) ?? undefined;
+                const thicknessTexture = this._exporter._materialExporter.getTextureInfo(subs.thicknessTexture) ?? undefined;
                 const attenuationDistance = subs.tintColorAtDistance == Number.POSITIVE_INFINITY ? undefined : subs.tintColorAtDistance;
                 const attenuationColor = subs.tintColor.equalsFloats(1.0, 1.0, 1.0) ? undefined : subs.tintColor.asArray();
 
@@ -104,16 +112,36 @@ export class KHR_materials_volume implements IGLTFExporterExtensionV2 {
                     thicknessTexture: thicknessTexture,
                     attenuationDistance: attenuationDistance,
                     attenuationColor: attenuationColor,
-                    hasTextures: () => {
-                        return this._hasTexturesExtension(babylonMaterial);
-                    },
                 };
+
+                if (this._hasTexturesExtension(babylonMaterial)) {
+                    this._exporter._materialNeedsUVsSet.add(babylonMaterial);
+                }
+
                 node.extensions = node.extensions || {};
                 node.extensions[NAME] = volumeInfo;
+            } else if (babylonMaterial instanceof OpenPBRMaterial) {
+                if (babylonMaterial.transmissionWeight > 0) {
+                    this._wasUsed = true;
+
+                    const thicknessFactor = babylonMaterial.geometryThickness;
+                    const thicknessTexture = this._exporter._materialExporter.getTextureInfo(babylonMaterial.geometryThicknessTexture) ?? undefined;
+                    const attenuationDistance = babylonMaterial.transmissionDepth;
+                    const attenuationColor = babylonMaterial.transmissionColor.equalsFloats(1.0, 1.0, 1.0) ? undefined : babylonMaterial.transmissionColor.asArray();
+
+                    const volumeInfo: IKHRMaterialsVolume = {
+                        thicknessFactor: thicknessFactor,
+                        thicknessTexture: thicknessTexture,
+                        attenuationDistance: attenuationDistance,
+                        attenuationColor: attenuationColor,
+                    };
+                    node.extensions = node.extensions || {};
+                    node.extensions[NAME] = volumeInfo;
+                }
             }
             resolve(node);
         });
     }
 }
 
-_Exporter.RegisterExtension(NAME, (exporter) => new KHR_materials_volume(exporter));
+GLTFExporter.RegisterExtension(NAME, (exporter) => new KHR_materials_volume(exporter));

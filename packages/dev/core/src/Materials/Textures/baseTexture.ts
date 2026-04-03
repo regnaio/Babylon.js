@@ -1,24 +1,21 @@
 import { serialize, serializeAsTexture } from "../../Misc/decorators";
-import type { Observer } from "../../Misc/observable";
-import { Observable } from "../../Misc/observable";
-import type { Nullable } from "../../types";
-import type { Scene } from "../../scene";
-import { Matrix } from "../../Maths/math.vector";
+import { type Observer, Observable } from "../../Misc/observable";
+import { type Nullable } from "../../types";
+import { type Scene } from "../../scene";
+import { Matrix, type Vector3 } from "../../Maths/math.vector";
 import { EngineStore } from "../../Engines/engineStore";
-import type { InternalTexture } from "../../Materials/Textures/internalTexture";
+import { type InternalTexture } from "../../Materials/Textures/internalTexture";
 import { Constants } from "../../Engines/constants";
-import type { IAnimatable } from "../../Animations/animatable.interface";
+import { type IAnimatable } from "../../Animations/animatable.interface";
 import { RandomGUID } from "../../Misc/guid";
 
 import "../../Misc/fileTools";
-import type { AbstractEngine } from "../../Engines/abstractEngine";
+import { type AbstractEngine } from "../../Engines/abstractEngine";
 import { ThinTexture } from "./thinTexture";
-import type { AbstractScene } from "../../abstractScene";
 
-import type { Animation } from "../../Animations/animation";
+import { type Animation } from "../../Animations/animation";
 import { SerializationHelper } from "../../Misc/decorators.serialization";
-
-import "../../Engines/Extensions/engine.readTexture";
+import { type IAssetContainer } from "core/IAssetContainer";
 
 /**
  * Base class of all the textures in babylon.
@@ -43,6 +40,12 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      */
     @serialize()
     public name: string;
+
+    /**
+     * Define the display name of the texture, which is used as tree item name of the dedicated node in the inspector
+     */
+    @serialize()
+    public displayName: string;
 
     /**
      * Gets or sets an object used to store user defined information.
@@ -433,6 +436,14 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     }
 
     /**
+     * Indicates the average direction of light in an environment map. This
+     * can be treated as the most dominant direction but it's magnitude also
+     * tells you something about how dominant that direction is.
+     */
+    /** @internal */
+    public _dominantDirection: Nullable<Vector3> = null;
+
+    /**
      * Define if the texture is a render target.
      */
     @serialize()
@@ -505,7 +516,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
     }
 
     /** @internal */
-    public _parentContainer: Nullable<AbstractScene> = null;
+    public _parentContainer: Nullable<IAssetContainer> = null;
 
     protected _loadingError: boolean = false;
     protected _errorObject?: {
@@ -672,10 +683,10 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
      */
     public get textureType(): number {
         if (!this._texture) {
-            return Constants.TEXTURETYPE_UNSIGNED_INT;
+            return Constants.TEXTURETYPE_UNSIGNED_BYTE;
         }
 
-        return this._texture.type !== undefined ? this._texture.type : Constants.TEXTURETYPE_UNSIGNED_INT;
+        return this._texture.type !== undefined ? this._texture.type : Constants.TEXTURETYPE_UNSIGNED_BYTE;
     }
 
     /**
@@ -751,7 +762,7 @@ export class BaseTexture extends ThinTexture implements IAnimatable {
         height = Math.min(maxHeight, height);
 
         try {
-            if (this._texture.isCube) {
+            if (this._texture.isCube || this._texture.is2DArray) {
                 return engine._readTexturePixels(this._texture, width, height, faceIndex, level, buffer, flushRenderer, noDataConversion, x, y);
             }
 

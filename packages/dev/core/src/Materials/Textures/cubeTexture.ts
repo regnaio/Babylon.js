@@ -1,19 +1,17 @@
 import { serialize, serializeAsMatrix, serializeAsVector3 } from "../../Misc/decorators";
 import { Tools } from "../../Misc/tools";
-import type { Nullable } from "../../types";
-import type { Scene } from "../../scene";
+import { type Nullable } from "../../types";
+import { type Scene } from "../../scene";
 import { Matrix, TmpVectors, Vector3 } from "../../Maths/math.vector";
 import { BaseTexture } from "../../Materials/Textures/baseTexture";
 import { Texture } from "../../Materials/Textures/texture";
 import { Constants } from "../../Engines/constants";
 import { GetClass, RegisterClass } from "../../Misc/typeStore";
-import type { AbstractEngine } from "../../Engines/abstractEngine";
+import { type AbstractEngine } from "../../Engines/abstractEngine";
 import { Observable } from "../../Misc/observable";
 import { SerializationHelper } from "../../Misc/decorators.serialization";
 
 import "../../Engines/AbstractEngine/abstractEngine.cubeTexture";
-import "../../Engines/Extensions/engine.cubeTexture";
-import "../../Engines/Extensions/engine.prefilteredCubeTexture";
 
 /**
  * Defines the available options when creating a cube texture
@@ -60,10 +58,13 @@ export interface ICubeTextureCreationOptions {
 
     /** useSRGBBuffer Defines if the texture must be loaded in a sRGB GPU buffer (if supported by the GPU) (default: false) */
     useSRGBBuffer?: boolean;
+
+    /** Target face size for spherical polynomial computation. 0 = full resolution (default). */
+    sphericalPolynomialTargetSize?: number;
 }
 
 // The default scale applied to environment texture. This manages the range of LOD level used for IBL according to the roughness
-const defaultLodScale = 0.8;
+const DefaultLodScale = 0.8;
 
 /**
  * Class for creating a cube texture
@@ -185,7 +186,9 @@ export class CubeTexture extends BaseTexture {
     public static CreateFromImages(files: string[], scene: Scene, noMipmap?: boolean): CubeTexture {
         let rootUrlKey = "";
 
-        files.forEach((url) => (rootUrlKey += url));
+        for (const url of files) {
+            rootUrlKey += url;
+        }
 
         return new CubeTexture(rootUrlKey, scene, null, noMipmap, files);
     }
@@ -241,7 +244,7 @@ export class CubeTexture extends BaseTexture {
         prefiltered = false,
         forcedExtension: any = null,
         createPolynomials: boolean = false,
-        lodScale: number = defaultLodScale,
+        lodScale: number = DefaultLodScale,
         lodOffset: number = 0,
         loaderOptions?: any,
         useSRGBBuffer?: boolean
@@ -256,7 +259,7 @@ export class CubeTexture extends BaseTexture {
         this._textureMatrix = Matrix.Identity();
         this.coordinatesMode = Texture.CUBIC_MODE;
 
-        let extensions: Nullable<string[]> = null;
+        let extensions: Nullable<string[]>;
         let buffer: Nullable<ArrayBufferView> = null;
 
         if (extensionsOrOptions !== null && !Array.isArray(extensionsOrOptions)) {
@@ -268,10 +271,11 @@ export class CubeTexture extends BaseTexture {
             prefiltered = extensionsOrOptions.prefiltered ?? false;
             forcedExtension = extensionsOrOptions.forcedExtension ?? null;
             this._createPolynomials = extensionsOrOptions.createPolynomials ?? false;
-            this._lodScale = extensionsOrOptions.lodScale ?? defaultLodScale;
+            this._lodScale = extensionsOrOptions.lodScale ?? DefaultLodScale;
             this._lodOffset = extensionsOrOptions.lodOffset ?? 0;
             this._loaderOptions = extensionsOrOptions.loaderOptions;
             this._useSRGBBuffer = extensionsOrOptions.useSRGBBuffer;
+            this._sphericalPolynomialTargetSize = extensionsOrOptions.sphericalPolynomialTargetSize ?? 0;
             onLoad = extensionsOrOptions.onLoad ?? null;
             onError = extensionsOrOptions.onError ?? null;
         } else {

@@ -1,10 +1,13 @@
 import * as React from "react";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { CheckBoxLineComponent } from "../../sharedComponents/checkBoxLineComponent";
-import type { StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
+import { type StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
-import type { NodePort } from "shared-ui-components/nodeGraphSystem/nodePort";
+import { type NodePort } from "shared-ui-components/nodeGraphSystem/nodePort";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
+import { type NodeMaterialConnectionPoint, NodeMaterialBlockConnectionPointTypes } from "core/Materials";
+import { GetListOfAcceptedTypes } from "shared-ui-components/nodeGraphSystem/tools";
+import { PropertyTabComponentBase } from "shared-ui-components/components/propertyTabComponentBase";
 
 export interface IFrameNodePortPropertyTabComponentProps {
     stateManager: StateManager;
@@ -22,11 +25,22 @@ export class NodePortPropertyTabComponent extends React.Component<IFrameNodePort
     }
 
     override render() {
+        const port = this.props.nodePort.portData.data as NodeMaterialConnectionPoint;
+        const acceptedConnectionPointTypes = GetListOfAcceptedTypes(
+            NodeMaterialBlockConnectionPointTypes,
+            NodeMaterialBlockConnectionPointTypes.All,
+            NodeMaterialBlockConnectionPointTypes.AutoDetect,
+            port,
+            [NodeMaterialBlockConnectionPointTypes.BasedOnInput]
+        );
+
         const info = this.props.nodePort.hasLabel() ? (
             <>
                 {this.props.nodePort.hasLabel() && (
                     <TextInputLineComponent lockObject={this.props.stateManager.lockObject} label="Port Label" propertyName="portName" target={this.props.nodePort} />
                 )}
+                <TextLineComponent label="Type" value={NodeMaterialBlockConnectionPointTypes[port.type]} />
+                {acceptedConnectionPointTypes.length > 0 && acceptedConnectionPointTypes.map((t, i) => <TextLineComponent label={i === 0 ? "Accepted Types" : ""} value={t} />)}
                 {this.props.nodePort.node.enclosingFrameId !== -1 && (
                     <CheckBoxLineComponent
                         label="Expose Port on Frame"
@@ -43,15 +57,9 @@ export class NodePortPropertyTabComponent extends React.Component<IFrameNodePort
         );
 
         return (
-            <div id="propertyTab">
-                <div id="header">
-                    <img id="logo" src="https://www.babylonjs.com/Assets/logo-babylonjs-social-twitter.png" />
-                    <div id="title">NODE MATERIAL EDITOR</div>
-                </div>
-                <div>
-                    <LineContainerComponent title="GENERAL">{info}</LineContainerComponent>
-                </div>
-            </div>
+            <PropertyTabComponentBase>
+                <LineContainerComponent title="GENERAL">{info}</LineContainerComponent>
+            </PropertyTabComponentBase>
         );
     }
 }

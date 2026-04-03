@@ -1,17 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
 import { Vector3 } from "core/Maths/math.vector";
-import type { TransformNode } from "core/Meshes/transformNode";
-import type { Scene } from "core/scene";
+import { type TransformNode } from "core/Meshes/transformNode";
+import { type Scene } from "core/scene";
 import { Control3D } from "./control3D";
 import { CreateBox } from "core/Meshes/Builders/boxBuilder";
 import { PointerDragBehavior } from "core/Behaviors/Meshes/pointerDragBehavior";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
 import { SceneLoader } from "core/Loading/sceneLoader";
 import { MRDLSliderBarMaterial } from "../materials/mrdl/mrdlSliderBarMaterial";
 import { MRDLSliderThumbMaterial } from "../materials/mrdl/mrdlSliderThumbMaterial";
 import { MRDLBackplateMaterial } from "../materials/mrdl/mrdlBackplateMaterial";
+import { Tools } from "core/Misc/tools";
 
 const SLIDER_MIN: number = 0;
 const SLIDER_MAX: number = 100;
@@ -27,7 +28,7 @@ export class Slider3D extends Control3D {
     /**
      * Base Url for the models.
      */
-    public static MODEL_BASE_URL: string = "https://assets.babylonjs.com/meshes/MRTK/";
+    public static MODEL_BASE_URL: string = "https://assets.babylonjs.com/core/MRTK/";
 
     /**
      * File name for the 8x4 model.
@@ -219,12 +220,13 @@ export class Slider3D extends Control3D {
         sliderBackplate.isPickable = false;
         sliderBackplate.visibility = 0;
         sliderBackplate.scaling = new Vector3(1, 0.5, 0.8);
-
-        SceneLoader.ImportMeshAsync(undefined, Slider3D.MODEL_BASE_URL, Slider3D.MODEL_FILENAME, scene).then((result) => {
+        const baseUrl = Tools.GetAssetUrl(Slider3D.MODEL_BASE_URL);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+        SceneLoader.ImportMeshAsync(undefined, baseUrl, Slider3D.MODEL_FILENAME, scene).then((result) => {
             // make all meshes not pickable. Required meshes' pickable state will be set later.
-            result.meshes.forEach((m) => {
+            for (const m of result.meshes) {
                 m.isPickable = false;
-            });
+            }
             const sliderBackplateModel = result.meshes[1];
             const sliderBarModel = result.meshes[1].clone(`${this.name}_sliderbar`, sliderBackplate);
             const sliderThumbModel = result.meshes[1].clone(`${this.name}_sliderthumb`, sliderBackplate);
@@ -266,9 +268,10 @@ export class Slider3D extends Control3D {
             }
 
             this._injectGUI3DReservedDataStore(sliderBackplate).control = this;
-            sliderBackplate.getChildMeshes().forEach((mesh) => {
+            const meshes = sliderBackplate.getChildMeshes();
+            for (const mesh of meshes) {
                 this._injectGUI3DReservedDataStore(mesh).control = this;
-            });
+            }
         });
 
         this._affectMaterial(sliderBackplate);

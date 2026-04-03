@@ -1,11 +1,12 @@
-import { DeepCopier } from "../../Misc/deepCopier";
-import type { Matrix } from "../../Maths/math.vector";
-import { Vector3, TmpVectors } from "../../Maths/math.vector";
-import { Scalar } from "../../Maths/math.scalar";
-import type { Particle } from "../../Particles/particle";
-import type { IParticleEmitterType } from "./IParticleEmitterType";
-import type { UniformBufferEffectCommonAccessor } from "../../Materials/uniformBufferEffectCommonAccessor";
-import type { UniformBuffer } from "../../Materials/uniformBuffer";
+import { type Matrix, Vector3 } from "core/Maths/math.vector";
+import { type Particle } from "core/Particles/particle";
+import { type UniformBufferEffectCommonAccessor } from "core/Materials/uniformBufferEffectCommonAccessor";
+import { type UniformBuffer } from "core/Materials/uniformBuffer";
+import { type IParticleEmitterType } from "./IParticleEmitterType";
+
+import { DeepCopier } from "core/Misc/deepCopier";
+import { RandomRange } from "core/Maths/math.scalar.functions";
+
 /**
  * Particle emitter emitting particles from the inside of a cone.
  * It emits the particles alongside the cone volume from the base to the particle.
@@ -87,19 +88,21 @@ export class ConeParticleEmitter implements IParticleEmitterType {
      * @param isLocal defines if the direction should be set in local space
      */
     public startDirectionFunction(worldMatrix: Matrix, directionToUpdate: Vector3, particle: Particle, isLocal: boolean): void {
+        const direction = particle.position.subtract(worldMatrix.getTranslation()).normalize();
+        const randX = RandomRange(0, this.directionRandomizer);
+        const randY = RandomRange(0, this.directionRandomizer);
+        const randZ = RandomRange(0, this.directionRandomizer);
+        direction.x += randX;
+        direction.y += randY;
+        direction.z += randZ;
+        direction.normalize();
+
         if (isLocal) {
-            TmpVectors.Vector3[0].copyFrom(particle._localPosition!).normalize();
-        } else {
-            particle.position.subtractToRef(worldMatrix.getTranslation(), TmpVectors.Vector3[0]).normalize();
+            directionToUpdate.copyFrom(direction);
+            return;
         }
 
-        const randX = Scalar.RandomRange(0, this.directionRandomizer);
-        const randY = Scalar.RandomRange(0, this.directionRandomizer);
-        const randZ = Scalar.RandomRange(0, this.directionRandomizer);
-        directionToUpdate.x = TmpVectors.Vector3[0].x + randX;
-        directionToUpdate.y = TmpVectors.Vector3[0].y + randY;
-        directionToUpdate.z = TmpVectors.Vector3[0].z + randZ;
-        directionToUpdate.normalize();
+        Vector3.TransformNormalFromFloatsToRef(direction.x, direction.y, direction.z, worldMatrix, directionToUpdate);
     }
 
     /**
@@ -110,17 +113,17 @@ export class ConeParticleEmitter implements IParticleEmitterType {
      * @param isLocal defines if the position should be set in local space
      */
     startPositionFunction(worldMatrix: Matrix, positionToUpdate: Vector3, particle: Particle, isLocal: boolean): void {
-        const s = Scalar.RandomRange(0, Math.PI * 2);
+        const s = RandomRange(0, Math.PI * 2);
         let h: number;
 
         if (!this.emitFromSpawnPointOnly) {
-            h = Scalar.RandomRange(0, this.heightRange);
+            h = RandomRange(0, this.heightRange);
             // Better distribution in a cone at normal angles.
             h = 1 - h * h;
         } else {
             h = 0.0001;
         }
-        let radius = this._radius - Scalar.RandomRange(0, this._radius * this.radiusRange);
+        let radius = this._radius - RandomRange(0, this._radius * this.radiusRange);
         radius = radius * h;
 
         const randX = radius * Math.sin(s);
@@ -221,7 +224,7 @@ export class ConeParticleEmitter implements IParticleEmitterType {
         this.directionRandomizer = serializationObject.directionRandomizer;
 
         this.radiusRange = serializationObject.radiusRange !== undefined ? serializationObject.radiusRange : 1;
-        this.heightRange = serializationObject.radiusRange !== undefined ? serializationObject.heightRange : 1;
+        this.heightRange = serializationObject.heightRange !== undefined ? serializationObject.heightRange : 1;
         this.emitFromSpawnPointOnly = serializationObject.emitFromSpawnPointOnly !== undefined ? serializationObject.emitFromSpawnPointOnly : false;
     }
 }
@@ -245,11 +248,19 @@ export class ConeDirectedParticleEmitter extends ConeParticleEmitter {
      * Called by the particle System when the direction is computed for the created particle.
      * @param worldMatrix is the world matrix of the particle system
      * @param directionToUpdate is the direction vector to update with the result
+     * @param particle is the particle we are computed the position for
+     * @param isLocal defines if the direction should be set in local space
      */
-    public override startDirectionFunction(worldMatrix: Matrix, directionToUpdate: Vector3): void {
-        const randX = Scalar.RandomRange(this.direction1.x, this.direction2.x);
-        const randY = Scalar.RandomRange(this.direction1.y, this.direction2.y);
-        const randZ = Scalar.RandomRange(this.direction1.z, this.direction2.z);
+    public override startDirectionFunction(worldMatrix: Matrix, directionToUpdate: Vector3, particle: Particle, isLocal: boolean): void {
+        const randX = RandomRange(this.direction1.x, this.direction2.x);
+        const randY = RandomRange(this.direction1.y, this.direction2.y);
+        const randZ = RandomRange(this.direction1.z, this.direction2.z);
+
+        if (isLocal) {
+            directionToUpdate.copyFromFloats(randX, randY, randZ);
+            return;
+        }
+
         Vector3.TransformNormalFromFloatsToRef(randX, randY, randZ, worldMatrix, directionToUpdate);
     }
 
@@ -322,7 +333,7 @@ export class ConeDirectedParticleEmitter extends ConeParticleEmitter {
      */
     public override parse(serializationObject: any): void {
         super.parse(serializationObject);
-        this.direction1.copyFrom(serializationObject.direction1);
-        this.direction2.copyFrom(serializationObject.direction2);
+        Vector3.FromArrayToRef(serializationObject.direction1, 0, this.direction1);
+        Vector3.FromArrayToRef(serializationObject.direction2, 0, this.direction2);
     }
 }

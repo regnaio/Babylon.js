@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "../types";
-import type { Scene } from "../scene";
-import type { IAudioEngine } from "./Interfaces/IAudioEngine";
+import { type Nullable } from "../types";
+import { type Scene } from "../scene";
+import { type IAudioEngine } from "./Interfaces/IAudioEngine";
 import { Tools } from "../Misc/tools";
 import { EngineStore } from "../Engines/engineStore";
 import { AbstractEngine } from "core/Engines/abstractEngine";
@@ -13,33 +13,28 @@ import { AbstractEngine } from "core/Engines/abstractEngine";
 export class Analyser {
     /**
      * Gets or sets the smoothing
-     * @ignorenaming
      */
     public SMOOTHING = 0.75;
     /**
      * Gets or sets the FFT table size
-     * @ignorenaming
      */
     public FFT_SIZE = 512;
     /**
      * Gets or sets the bar graph amplitude
-     * @ignorenaming
      */
     public BARGRAPHAMPLITUDE = 256;
     /**
      * Gets or sets the position of the debug canvas
-     * @ignorenaming
      */
     public DEBUGCANVASPOS = { x: 20, y: 20 };
     /**
      * Gets or sets the debug canvas size
-     * @ignorenaming
      */
     public DEBUGCANVASSIZE = { width: 320, height: 200 };
 
-    private _byteFreqs: Uint8Array;
-    private _byteTime: Uint8Array;
-    private _floatFreqs: Float32Array;
+    private _byteFreqs: Uint8Array<ArrayBuffer>;
+    private _byteTime: Uint8Array<ArrayBuffer>;
+    private _floatFreqs: Float32Array<ArrayBuffer>;
     private _webAudioAnalyser: AnalyserNode;
     private _debugCanvas: Nullable<HTMLCanvasElement>;
     private _debugCanvasContext: Nullable<CanvasRenderingContext2D>;

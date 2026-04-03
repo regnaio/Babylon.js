@@ -1,11 +1,11 @@
-import type { Nullable } from "../../types";
-import type { Effect } from "../../Materials/effect";
-import type { IMatrixLike, IVector2Like, IVector3Like, IVector4Like, IColor3Like, IColor4Like, IQuaternionLike } from "../../Maths/math.like";
-import type { IPipelineContext } from "../IPipelineContext";
-import type { NativeEngine } from "../nativeEngine";
-import type { NativeProgram } from "./nativeInterfaces";
-import type { AbstractEngine } from "../abstractEngine";
-import type { NativeShaderProcessingContext } from "./nativeShaderProcessingContext";
+import { type Nullable } from "../../types";
+import { type Effect } from "../../Materials/effect";
+import { type IMatrixLike, type IVector2Like, type IVector3Like, type IVector4Like, type IColor3Like, type IColor4Like, type IQuaternionLike } from "../../Maths/math.like";
+import { type IPipelineContext } from "../IPipelineContext";
+import { type NativeProgram } from "./nativeInterfaces";
+import { type AbstractEngine } from "../abstractEngine";
+import { type NativeShaderProcessingContext } from "./nativeShaderProcessingContext";
+import { type ThinNativeEngine } from "../thinNativeEngine";
 
 export class NativePipelineContext implements IPipelineContext {
     public isCompiled: boolean = false;
@@ -36,11 +36,11 @@ export class NativePipelineContext implements IPipelineContext {
         return null;
     }
 
-    private _engine: NativeEngine;
+    private _engine: ThinNativeEngine;
     private _valueCache: { [key: string]: any } = {};
     private _uniforms: { [key: string]: Nullable<WebGLUniformLocation> };
 
-    constructor(engine: NativeEngine, isAsync: boolean, shaderProcessingContext: Nullable<NativeShaderProcessingContext>) {
+    constructor(engine: ThinNativeEngine, isAsync: boolean, shaderProcessingContext: Nullable<NativeShaderProcessingContext>) {
         this._engine = engine;
         this.isAsync = isAsync;
         this.shaderProcessingContext = shaderProcessingContext;
@@ -86,7 +86,7 @@ export class NativePipelineContext implements IPipelineContext {
     }
 
     public setEngine(engine: AbstractEngine): void {
-        this._engine = engine as NativeEngine;
+        this._engine = engine as ThinNativeEngine;
     }
 
     /**
@@ -307,7 +307,7 @@ export class NativePipelineContext implements IPipelineContext {
             return;
         }
 
-        if (this._engine.setUInt(this._uniforms[uniformName]!, value)) {
+        if (this._engine.setUInt(this._uniforms[uniformName], value)) {
             this._valueCache[uniformName] = value;
         }
     }
@@ -364,7 +364,7 @@ export class NativePipelineContext implements IPipelineContext {
      */
     public setUIntArray(uniformName: string, array: Uint32Array): void {
         this._valueCache[uniformName] = null;
-        this._engine.setUIntArray(this._uniforms[uniformName]!, array);
+        this._engine.setUIntArray(this._uniforms[uniformName], array);
     }
 
     /**
@@ -374,7 +374,7 @@ export class NativePipelineContext implements IPipelineContext {
      */
     public setUIntArray2(uniformName: string, array: Uint32Array): void {
         this._valueCache[uniformName] = null;
-        this._engine.setUIntArray2(this._uniforms[uniformName]!, array);
+        this._engine.setUIntArray2(this._uniforms[uniformName], array);
     }
 
     /**
@@ -384,7 +384,7 @@ export class NativePipelineContext implements IPipelineContext {
      */
     public setUIntArray3(uniformName: string, array: Uint32Array): void {
         this._valueCache[uniformName] = null;
-        this._engine.setUIntArray3(this._uniforms[uniformName]!, array);
+        this._engine.setUIntArray3(this._uniforms[uniformName], array);
     }
 
     /**
@@ -394,7 +394,7 @@ export class NativePipelineContext implements IPipelineContext {
      */
     public setUIntArray4(uniformName: string, array: Uint32Array): void {
         this._valueCache[uniformName] = null;
-        this._engine.setUIntArray4(this._uniforms[uniformName]!, array);
+        this._engine.setUIntArray4(this._uniforms[uniformName], array);
     }
 
     /**

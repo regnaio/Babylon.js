@@ -1,9 +1,8 @@
 import { NodeGeometryBlock } from "../../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryBuildState } from "../../nodeGeometryBuildState";
-import { GeometryInputBlock } from "../geometryInputBlock";
+import { type NodeGeometryBuildState } from "../../nodeGeometryBuildState";
 import { Matrix } from "../../../../Maths/math.vector";
 
 /**
@@ -17,7 +16,7 @@ export class RotationXBlock extends NodeGeometryBlock {
     public constructor(name: string) {
         super(name);
 
-        this.registerInput("angle", NodeGeometryBlockConnectionPointTypes.Float, false, 0);
+        this.registerInput("angle", NodeGeometryBlockConnectionPointTypes.Float, true, 0);
         this.registerOutput("matrix", NodeGeometryBlockConnectionPointTypes.Matrix);
     }
 
@@ -41,14 +40,6 @@ export class RotationXBlock extends NodeGeometryBlock {
      */
     public get matrix(): NodeGeometryConnectionPoint {
         return this._outputs[0];
-    }
-
-    public override autoConfigure() {
-        if (!this.angle.isConnected) {
-            const angleInput = new GeometryInputBlock("Angle");
-            angleInput.value = 0;
-            angleInput.output.connectTo(this.angle);
-        }
     }
 
     protected override _buildBlock(state: NodeGeometryBuildState) {

@@ -1,20 +1,16 @@
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
-import { Observable } from "core/Misc/observable";
-import type { Matrix } from "core/Maths/math.vector";
-import { Vector2, Vector3, TmpVectors } from "core/Maths/math.vector";
+import { type Nullable } from "core/types";
+import { type Observer, Observable } from "core/Misc/observable";
+import { type Matrix, Vector2, Vector3, TmpVectors } from "core/Maths/math.vector";
 import { Tools } from "core/Misc/tools";
-import type { PointerInfoPre, PointerInfo, PointerInfoBase } from "core/Events/pointerEvents";
-import { PointerEventTypes } from "core/Events/pointerEvents";
+import { type PointerInfoPre, type PointerInfo, type PointerInfoBase, PointerEventTypes } from "core/Events/pointerEvents";
 import { ClipboardEventTypes, ClipboardInfo } from "core/Events/clipboardEvents";
-import type { KeyboardInfoPre } from "core/Events/keyboardEvents";
-import { KeyboardEventTypes } from "core/Events/keyboardEvents";
-import type { Camera } from "core/Cameras/camera";
+import { type KeyboardInfoPre, KeyboardEventTypes } from "core/Events/keyboardEvents";
+import { type Camera } from "core/Cameras/camera";
 import { Texture } from "core/Materials/Textures/texture";
-import { DynamicTexture } from "core/Materials/Textures/dynamicTexture";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
+import { type IDynamicTextureOptions, DynamicTexture } from "core/Materials/Textures/dynamicTexture";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
 import { Layer } from "core/Layers/layer";
-import type { Scene } from "core/scene";
+import { type Scene } from "core/scene";
 
 import { Container } from "./controls/container";
 import { Control } from "./controls/control";
@@ -24,13 +20,26 @@ import { Constants } from "core/Engines/constants";
 import { Viewport } from "core/Maths/math.viewport";
 import { Color3 } from "core/Maths/math.color";
 import { WebRequest } from "core/Misc/webRequest";
-import type { IPointerEvent, IWheelEvent } from "core/Events/deviceInputEvents";
+import { type IPointerEvent, type IWheelEvent } from "core/Events/deviceInputEvents";
 import { RandomGUID } from "core/Misc/guid";
 import { GetClass } from "core/Misc/typeStore";
 import { DecodeBase64ToBinary } from "core/Misc/stringTools";
 
-import type { StandardMaterial } from "core/Materials/standardMaterial";
-import type { AbstractEngine } from "core/Engines/abstractEngine";
+import { type StandardMaterial } from "core/Materials/standardMaterial";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+
+/**
+ * Interface used to define options to create an AdvancedDynamicTexture
+ */
+export interface IAdvancedDynamicTextureOptions extends IDynamicTextureOptions {
+    /**
+     * Indicates whether the ADT will be used autonomously. In this mode:
+     * - _checkUpdate() is not called
+     * - the layer is not rendered (so, the ADT is not visible)
+     * It's up to the user to perform the required calls manually to update the ADT.
+     */
+    useStandalone?: boolean;
+}
 
 /**
  * Class used to create texture to support 2D GUI elements
@@ -42,6 +51,9 @@ export class AdvancedDynamicTexture extends DynamicTexture {
 
     /** Indicates if some optimizations can be performed in GUI GPU management (the downside is additional memory/GPU texture memory used) */
     public static AllowGPUOptimizations = true;
+
+    /** Indicates whether the ADT is used autonomously */
+    public readonly useStandalone: boolean = false;
 
     /** Snippet ID if the content was created from the snippet server */
     public snippetId: string;
@@ -91,6 +103,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
     private _cursorChanged = false;
     private _defaultMousePointerId = 0;
     private _rootChildrenHaveChanged: boolean = false;
+    private _adjustToEngineHardwareScalingLevel = false;
 
     /** @internal */
     public _capturedPointerIds = new Set<number>();
@@ -145,6 +158,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
     /**
      * Gets or sets a boolean indicating that the canvas must be reverted on Y when updating the texture
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public applyYInversionOnUpdate = true;
 
     /**
@@ -154,9 +168,31 @@ export class AdvancedDynamicTexture extends DynamicTexture {
     public disableTabNavigation = false;
 
     /**
+     * A boolean indicating whether controls can be picked/clicked on or not. Defaults to false.
+     */
+    public disablePicking = false;
+
+    /**
      * If set to true, the POINTERTAP event type will be used for "click", instead of POINTERUP
      */
     public usePointerTapForClickEvent = false;
+
+    /**
+     * If set to true, the renderScale will be adjusted automatically to the engine's hardware scaling
+     * If this is set to true, manually setting the renderScale will be ignored
+     * This is useful when the engine's hardware scaling is set to a value other than 1
+     */
+    public get adjustToEngineHardwareScalingLevel(): boolean {
+        return this._adjustToEngineHardwareScalingLevel;
+    }
+
+    public set adjustToEngineHardwareScalingLevel(value: boolean) {
+        if (this._adjustToEngineHardwareScalingLevel === value) {
+            return;
+        }
+        this._adjustToEngineHardwareScalingLevel = value;
+        this._onResize();
+    }
     /**
      * Gets or sets a number used to scale rendering size (2 means that the texture will be twice bigger).
      * Useful when you want more antialiasing
@@ -389,25 +425,55 @@ export class AdvancedDynamicTexture extends DynamicTexture {
      * but it has a performance cost.
      */
     public checkPointerEveryFrame = false;
+
     /**
      * Creates a new AdvancedDynamicTexture
      * @param name defines the name of the texture
-     * @param width defines the width of the texture
-     * @param height defines the height of the texture
-     * @param scene defines the hosting scene
-     * @param generateMipMaps defines a boolean indicating if mipmaps must be generated (false by default)
-     * @param samplingMode defines the texture sampling mode (Texture.NEAREST_SAMPLINGMODE by default)
-     * @param invertY defines if the texture needs to be inverted on the y axis during loading (true by default)
+     * @param options The options to be used when constructing the ADT
      */
-    constructor(name: string, width = 0, height = 0, scene?: Nullable<Scene>, generateMipMaps = false, samplingMode = Texture.NEAREST_SAMPLINGMODE, invertY = true) {
-        super(name, { width: width, height: height }, scene, generateMipMaps, samplingMode, Constants.TEXTUREFORMAT_RGBA, invertY);
+    constructor(name: string, options?: IAdvancedDynamicTextureOptions);
+
+    constructor(name: string, width?: number, height?: number, scene?: Nullable<Scene>, generateMipMaps?: boolean, samplingMode?: number, invertY?: boolean);
+
+    /** @internal */
+    constructor(
+        name: string,
+        widthOrOptions?: number | IAdvancedDynamicTextureOptions,
+        _height = 0,
+        scene?: Nullable<Scene>,
+        generateMipMaps = false,
+        samplingMode = Texture.NEAREST_SAMPLINGMODE,
+        invertY = true
+    ) {
+        widthOrOptions = widthOrOptions ?? 0;
+
+        const width = typeof widthOrOptions === "object" && widthOrOptions !== undefined ? (widthOrOptions.width ?? 0) : (widthOrOptions ?? 0);
+        const height = typeof widthOrOptions === "object" && widthOrOptions !== undefined ? (widthOrOptions.height ?? 0) : _height;
+
+        super(
+            name,
+            { width, height },
+            typeof widthOrOptions === "object" && widthOrOptions !== undefined ? widthOrOptions : scene,
+            generateMipMaps,
+            samplingMode,
+            Constants.TEXTUREFORMAT_RGBA,
+            invertY
+        );
+
         scene = this.getScene();
         if (!scene || !this._texture) {
             return;
         }
         this.applyYInversionOnUpdate = invertY;
         this._rootElement = scene.getEngine().getInputElement();
-        this._renderObserver = scene.onBeforeCameraRenderObservable.add((camera: Camera) => this._checkUpdate(camera));
+
+        const adtOptions = widthOrOptions as IAdvancedDynamicTextureOptions;
+
+        this.useStandalone = !!adtOptions?.useStandalone;
+
+        if (!this.useStandalone) {
+            this._renderObserver = scene.onBeforeCameraRenderObservable.add((camera: Camera) => this._checkUpdate(camera));
+        }
 
         /** Whenever a control is added or removed to the root, we have to recheck the camera projection as it can have changed  */
         this._controlAddedObserver = this._rootContainer.onControlAddedObservable.add((control) => {
@@ -567,11 +633,11 @@ export class AdvancedDynamicTexture extends DynamicTexture {
             controlsForGroup = overlapGroup === undefined ? descendants.filter((c) => c.overlapGroup !== undefined) : descendants.filter((c) => c.overlapGroup === overlapGroup);
         }
 
-        controlsForGroup.forEach((control1) => {
+        for (const control1 of controlsForGroup) {
             let velocity = Vector2.Zero();
             const center = new Vector2(control1.centerX, control1.centerY);
 
-            controlsForGroup.forEach((control2) => {
+            for (const control2 of controlsForGroup) {
                 if (control1 !== control2 && AdvancedDynamicTexture._Overlaps(control1, control2)) {
                     // if the two controls overlaps get a direction vector from one control's center to another control's center
                     const diff = center.subtract(new Vector2(control2.centerX, control2.centerY));
@@ -582,7 +648,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
                         velocity = velocity.add(diff.normalize().scale(repelFactor / diffLength));
                     }
                 }
-            });
+            }
 
             if (velocity.length() > 0) {
                 // move the control along the direction vector away from the overlapping control
@@ -590,7 +656,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
                 control1.linkOffsetXInPixels += velocity.x;
                 control1.linkOffsetYInPixels += velocity.y;
             }
-        });
+        }
     }
     /**
      * Release all resources
@@ -644,6 +710,8 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         this.onGuiReadyObservable.clear();
         super.dispose();
     }
+
+    private _alreadyRegisteredForRender = false;
     private _onResize(): void {
         const scene = this.getScene();
         if (!scene) {
@@ -651,6 +719,13 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         }
         // Check size
         const engine = scene.getEngine();
+        if (this.adjustToEngineHardwareScalingLevel) {
+            // force the renderScale to the engine's hardware scaling level
+            this._renderScale = engine.getHardwareScalingLevel();
+            // calculate the max renderScale, based on the max texture size of engine.getCaps().maxTextureSize (enforced by some mobile devices)
+            this._renderScale =
+                1 / Math.max(this._renderScale, engine.getRenderWidth() / engine.getCaps().maxTextureSize, engine.getRenderHeight() / engine.getCaps().maxTextureSize);
+        }
         const textureSize = this.getSize();
         let renderWidth = engine.getRenderWidth() * this._renderScale;
         let renderHeight = engine.getRenderHeight() * this._renderScale;
@@ -666,9 +741,25 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         }
         if (textureSize.width !== renderWidth || textureSize.height !== renderHeight) {
             this.scaleTo(renderWidth, renderHeight);
+            if (this.adjustToEngineHardwareScalingLevel) {
+                const engineRenderScale = 1 / engine.getHardwareScalingLevel();
+                const scale = this._renderScale * engineRenderScale;
+                this._rootContainer.scaleX = scale;
+                this._rootContainer.scaleY = scale;
+                this._rootContainer.widthInPixels = renderWidth / scale;
+                this._rootContainer.heightInPixels = renderHeight / scale;
+            }
             this.markAsDirty();
             if (this._idealWidth || this._idealHeight) {
                 this._rootContainer._markAllAsDirty();
+            }
+            if (!this._alreadyRegisteredForRender) {
+                this._alreadyRegisteredForRender = true;
+                Tools.SetImmediate(() => {
+                    // We want to force an update so the texture can be set as ready
+                    this.update(this.applyYInversionOnUpdate, this.premulAlpha, AdvancedDynamicTexture.AllowGPUOptimizations);
+                    this._alreadyRegisteredForRender = false;
+                });
             }
         }
         this.invalidateRect(0, 0, textureSize.width - 1, textureSize.height - 1);
@@ -678,11 +769,13 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         const size = this.getSize();
         const globalViewPort = this._fullscreenViewport.toGlobal(size.width, size.height);
 
-        const targetX = Math.round(globalViewPort.width * (1 / this.rootContainer.scaleX));
-        const targetY = Math.round(globalViewPort.height * (1 / this.rootContainer.scaleY));
+        const targetX = Math.round(globalViewPort.width / this._rootContainer.scaleX);
+        const targetY = Math.round(globalViewPort.height / this._rootContainer.scaleY);
 
-        globalViewPort.x += (globalViewPort.width - targetX) / 2;
-        globalViewPort.y += (globalViewPort.height - targetY) / 2;
+        const scale = this._adjustToEngineHardwareScalingLevel ? this._renderScale / (this.getScene()?.getEngine().getHardwareScalingLevel() || 1) : 1;
+
+        globalViewPort.x += (globalViewPort.width / scale - targetX) / 2;
+        globalViewPort.y += (globalViewPort.height / scale - targetY) / 2;
 
         globalViewPort.width = targetX;
         globalViewPort.height = targetY;
@@ -716,8 +809,9 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         return new Vector3(projectedPosition.x, projectedPosition.y, projectedPosition.z);
     }
 
-    private _checkUpdate(camera: Camera, skipUpdate?: boolean): void {
-        if (this._layerToDispose) {
+    /** @internal */
+    public _checkUpdate(camera: Nullable<Camera>, skipUpdate?: boolean): void {
+        if (this._layerToDispose && camera) {
             if ((camera.layerMask & this._layerToDispose.layerMask) === 0) {
                 return;
             }
@@ -838,7 +932,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
     }
     private _doPicking(x: number, y: number, pi: Nullable<PointerInfoBase>, type: number, pointerId: number, buttonIndex: number, deltaX?: number, deltaY?: number): void {
         const scene = this.getScene();
-        if (!scene) {
+        if (!scene || this.disablePicking) {
             return;
         }
         const engine = scene.getEngine();
@@ -927,13 +1021,13 @@ export class AdvancedDynamicTexture extends DynamicTexture {
             if (camera.rigCameras.length) {
                 // rig camera - we need to find the camera to use for this event
                 const rigViewport = new Viewport(0, 0, 1, 1);
-                camera.rigCameras.forEach((rigCamera) => {
+                for (const rigCamera of camera.rigCameras) {
                     // generate the viewport of this camera
                     rigCamera.viewport.toGlobalToRef(engine.getRenderWidth(), engine.getRenderHeight(), rigViewport);
                     const transformedX = x / engine.getHardwareScalingLevel() - rigViewport.x;
                     const transformedY = y / engine.getHardwareScalingLevel() - (engine.getRenderHeight() - rigViewport.y - rigViewport.height);
                     // check if the pointer is in the camera's viewport
-                    if (transformedX < 0 || transformedY < 0 || x > rigViewport.width || y > rigViewport.height) {
+                    if (transformedX < 0 || transformedY < 0 || transformedX > rigViewport.width || transformedY > rigViewport.height) {
                         // out of viewport - don't use this camera
                         return;
                     }
@@ -944,7 +1038,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
                     tempViewport.y = rigViewport.y;
                     tempViewport.width = rigViewport.width;
                     tempViewport.height = rigViewport.height;
-                });
+                }
             } else {
                 camera.viewport.toGlobalToRef(engine.getRenderWidth(), engine.getRenderHeight(), tempViewport);
             }
@@ -1032,7 +1126,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         });
         this._focusProperties.total = sortedTabbableControls.length;
         // if no control is focused, focus the first one
-        let nextIndex = -1;
+        let nextIndex: number;
         if (!this._focusedControl) {
             nextIndex = forward ? 0 : sortedTabbableControls.length - 1;
         } else {
@@ -1137,7 +1231,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         if (this.wrapV === Texture.WRAP_ADDRESSMODE || this.wrapV === Texture.MIRROR_ADDRESSMODE) {
             if (result.y > 1) {
                 let fY = result.y - Math.trunc(result.y);
-                if (this.wrapV === Texture.MIRROR_ADDRESSMODE && Math.trunc(result.x) % 2 === 1) {
+                if (this.wrapV === Texture.MIRROR_ADDRESSMODE && Math.trunc(result.y) % 2 === 1) {
                     fY = 1 - fY;
                 }
                 result.y = fY;
@@ -1412,8 +1506,8 @@ export class AdvancedDynamicTexture extends DynamicTexture {
      * @param urlRewriter defines an url rewriter to update urls before sending them to the controls
      * @returns a promise that will resolve on success
      */
-    public parseFromSnippetAsync(snippetId: string, scaleToSize?: boolean, urlRewriter?: (url: string) => string): Promise<AdvancedDynamicTexture> {
-        return AdvancedDynamicTexture.ParseFromSnippetAsync(snippetId, scaleToSize, this, urlRewriter);
+    public async parseFromSnippetAsync(snippetId: string, scaleToSize?: boolean, urlRewriter?: (url: string) => string): Promise<AdvancedDynamicTexture> {
+        return await AdvancedDynamicTexture.ParseFromSnippetAsync(snippetId, scaleToSize, this, urlRewriter);
     }
 
     /**
@@ -1443,16 +1537,16 @@ export class AdvancedDynamicTexture extends DynamicTexture {
      * @param urlRewriter defines an url rewriter to update urls before sending them to the controls
      * @returns a promise that will resolve on success
      */
-    public parseFromURLAsync(url: string, scaleToSize?: boolean, urlRewriter?: (url: string) => string): Promise<AdvancedDynamicTexture> {
-        return AdvancedDynamicTexture.ParseFromFileAsync(url, scaleToSize, this, urlRewriter);
+    public async parseFromURLAsync(url: string, scaleToSize?: boolean, urlRewriter?: (url: string) => string): Promise<AdvancedDynamicTexture> {
+        return await AdvancedDynamicTexture.ParseFromFileAsync(url, scaleToSize, this, urlRewriter);
     }
 
-    private static _LoadURLContentAsync(url: string, snippet: boolean = false): Promise<any> {
+    private static async _LoadURLContentAsync(url: string, snippet: boolean = false): Promise<any> {
         if (url === "") {
-            return Promise.reject("No URL provided");
+            throw new Error("No URL provided");
         }
 
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             const request = new WebRequest();
             request.addEventListener("readystatechange", () => {
                 if (request.readyState == 4) {
@@ -1467,6 +1561,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
                         const serializationObject = JSON.parse(gui);
                         resolve(serializationObject);
                     } else {
+                        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                         reject("Unable to load");
                     }
                 }
@@ -1576,7 +1671,7 @@ export class AdvancedDynamicTexture extends DynamicTexture {
      * LayerMask is set through advancedTexture.layer.layerMask
      * @param name defines name for the texture
      * @param foreground defines a boolean indicating if the texture must be rendered in foreground (default is true)
-     * @param scene defines the hosting scene
+     * @param sceneOrOptions defines the hosting scene or options (IAdvancedDynamicTextureOptions)
      * @param sampling defines the texture sampling mode (Texture.BILINEAR_SAMPLINGMODE by default)
      * @param adaptiveScaling defines whether to automatically scale root to match hardwarescaling (false by default)
      * @returns a new AdvancedDynamicTexture
@@ -1584,11 +1679,14 @@ export class AdvancedDynamicTexture extends DynamicTexture {
     public static CreateFullscreenUI(
         name: string,
         foreground: boolean = true,
-        scene: Nullable<Scene> = null,
+        sceneOrOptions: Nullable<Scene> | IAdvancedDynamicTextureOptions = null,
         sampling = Texture.BILINEAR_SAMPLINGMODE,
         adaptiveScaling: boolean = false
     ): AdvancedDynamicTexture {
-        const result = new AdvancedDynamicTexture(name, 0, 0, scene, false, sampling);
+        const isScene = !sceneOrOptions || (sceneOrOptions as Scene)._isScene;
+        const result = isScene
+            ? new AdvancedDynamicTexture(name, 0, 0, sceneOrOptions as Scene, false, sampling)
+            : new AdvancedDynamicTexture(name, sceneOrOptions as IAdvancedDynamicTextureOptions);
         // Display
         const resultScene = result.getScene();
         const layer = new Layer(name + "_layer", null, resultScene, !foreground);
@@ -1596,11 +1694,12 @@ export class AdvancedDynamicTexture extends DynamicTexture {
         result._layerToDispose = layer;
         result._isFullscreen = true;
 
-        if (adaptiveScaling && resultScene) {
-            const newScale = 1 / resultScene.getEngine().getHardwareScalingLevel();
-            result._rootContainer.scaleX = newScale;
-            result._rootContainer.scaleY = newScale;
+        if (result.useStandalone) {
+            // Make sure the layer is not rendered by the layer component!
+            layer.layerMask = 0;
         }
+
+        result.adjustToEngineHardwareScalingLevel = adaptiveScaling;
 
         // Attach
         result.attach();

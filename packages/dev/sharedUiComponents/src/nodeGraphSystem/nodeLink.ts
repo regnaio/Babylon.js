@@ -1,14 +1,13 @@
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
-import { Observable } from "core/Misc/observable";
-import type { FrameNodePort } from "./frameNodePort";
-import type { NodePort } from "./nodePort";
-import type { GraphNode } from "./graphNode";
-import type { GraphCanvasComponent } from "./graphCanvas";
-import type { ISelectionChangedOptions } from "./interfaces/selectionChangedOptions";
+import { type Nullable } from "core/types";
+import { type Observer, Observable } from "core/Misc/observable";
+import { type FrameNodePort } from "./frameNodePort";
+import { type NodePort } from "./nodePort";
+import { type GraphNode } from "./graphNode";
+import { type GraphCanvasComponent } from "./graphCanvas";
+import { type ISelectionChangedOptions } from "./interfaces/selectionChangedOptions";
 import { RefreshNode } from "./tools";
-import commonStyles from "./common.modules.scss";
-import styles from "./nodeLink.modules.scss";
+import * as commonStyles from "./common.module.scss";
+import * as styles from "./nodeLink.module.scss";
 
 export class NodeLink {
     private _graphCanvas: GraphCanvasComponent;
@@ -21,6 +20,8 @@ export class NodeLink {
     private _onSelectionChangedObserver: Nullable<Observer<Nullable<ISelectionChangedOptions>>>;
     private _isVisible = true;
     private _isTargetCandidate = false;
+    private _gradient: Nullable<SVGLinearGradientElement>;
+    private _flowAnimationActive = false;
 
     public onDisposedObservable = new Observable<NodeLink>();
 
@@ -119,6 +120,11 @@ export class NodeLink {
             endY = (rectB.top - yOffset + 0.5 * rectB.height) / zoom;
         }
 
+        // We need a volume to allow gradient to work
+        if (startY === endY) {
+            endY += 0.01;
+        }
+
         if (straight) {
             this._path.setAttribute("d", `M${startX},${startY} L${endX},${endY}`);
             this._path.setAttribute("stroke-dasharray", "10, 10");
@@ -130,7 +136,62 @@ export class NodeLink {
             this._path.setAttribute("d", `M${startX},${startY} C${startX + tangentLength},${startY} ${endX - tangentLength},${endY} ${endX},${endY}`);
             this._selectionPath.setAttribute("d", `M${startX},${startY} C${startX + tangentLength},${startY} ${endX - tangentLength},${endY} ${endX},${endY}`);
         }
-        this._path.setAttribute("stroke", this._portA.element.style.backgroundColor!);
+
+        // No red as it means no type yet
+        let extractedColorB = "";
+        const extractedColorA = this._graphCanvas.stateManager.getPortColor(this._portA.portData);
+
+        if (this._portB) {
+            extractedColorB = this._graphCanvas.stateManager.getPortColor(this._portB.portData);
+            const splitComponents = extractedColorB.split("_").map((v) => parseInt(v));
+            if (splitComponents[0] > 0 && splitComponents[1] === 0 && splitComponents[2] === 0) {
+                extractedColorB = "";
+            }
+        }
+
+        if (extractedColorB && extractedColorA !== extractedColorB) {
+            // Gradient
+            const svg = this._graphCanvas.svgCanvas;
+            const defs = svg.querySelector("defs") || svg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "defs"));
+
+            if (!this._gradient) {
+                this._gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+                defs.appendChild(this._gradient);
+                const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+                this._gradient.appendChild(stop1);
+                const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+                this._gradient.appendChild(stop2);
+            }
+
+            const stop1 = this._gradient.children[0] as SVGStopElement;
+            const stop2 = this._gradient.children[1] as SVGStopElement;
+
+            const gradientId = `linkGradient_${extractedColorA}_${extractedColorB}`;
+            this._gradient.id = gradientId;
+
+            this._gradient.setAttribute("x1", startX < endX ? "0" : "1");
+            this._gradient.setAttribute("y1", "0");
+            this._gradient.setAttribute("x2", startX < endX ? "1" : "0");
+            this._gradient.setAttribute("y2", "0");
+
+            stop1.setAttribute("offset", "0%");
+            stop1.setAttribute("stop-color", extractedColorA);
+
+            stop2.setAttribute("offset", "100%");
+            stop2.setAttribute("stop-color", extractedColorB);
+
+            this._path.setAttribute("stroke", `url(#${gradientId})`);
+        } else {
+            this._path.setAttribute("stroke", extractedColorA);
+        }
+    }
+
+    public get path() {
+        return this._path;
+    }
+
+    public get selectionPath() {
+        return this._selectionPath;
     }
 
     public constructor(graphCanvas: GraphCanvasComponent, portA: NodePort, nodeA: GraphNode, portB?: NodePort, nodeB?: GraphNode) {
@@ -140,7 +201,7 @@ export class NodeLink {
         this._nodeB = nodeB;
         this._graphCanvas = graphCanvas;
 
-        const document = portA.element.ownerDocument!;
+        const document = portA.element.ownerDocument;
         const svg = graphCanvas.svgCanvas;
 
         // Create path
@@ -183,7 +244,7 @@ export class NodeLink {
         const pointB = this._portB!.portData;
 
         const reconnect = (newNode: GraphNode) => {
-            const newBlock = newNode.content.data as any;
+            const newBlock = newNode.content.data;
 
             // Delete previous link
             this.dispose();
@@ -209,6 +270,10 @@ export class NodeLink {
                 targetY: evt.clientY,
                 needRepositioning: true,
             });
+
+            // Make sure the undo/redo stack is reverted as we did 2 actions (create and connect)
+            stateManager.historyStack.collapseLastTwo();
+
             return;
         }
 
@@ -226,10 +291,96 @@ export class NodeLink {
                 targetY: evt.clientY,
                 needRepositioning: true,
             });
+
+            // Make sure the undo/redo stack is reverted as we did 2 actions (create and connect)
+            stateManager.historyStack.collapseLastTwo();
             return;
         }
 
         stateManager.onSelectionChangedObservable.notifyObservers({ selection: this });
+    }
+
+    /** Ensure the shared SVG glow filter exists, return its id
+     * @param svg the SVG element to check for the filter and add it to if not present
+     * @returns the id of the glow filter to use in this SVG
+     */
+    private static _EnsureGlowFilter(svg: Element): string {
+        const filterId = "flowDotGlow";
+        if (!svg.querySelector(`#${filterId}`)) {
+            const ns = "http://www.w3.org/2000/svg";
+            const doc = svg.ownerDocument;
+            let defs = svg.querySelector("defs");
+            if (!defs) {
+                defs = doc.createElementNS(ns, "defs");
+                svg.prepend(defs);
+            }
+            const filter = doc.createElementNS(ns, "filter");
+            filter.setAttribute("id", filterId);
+            filter.setAttribute("x", "-50%");
+            filter.setAttribute("y", "-50%");
+            filter.setAttribute("width", "200%");
+            filter.setAttribute("height", "200%");
+            const blur = doc.createElementNS(ns, "feGaussianBlur");
+            blur.setAttribute("stdDeviation", "3");
+            blur.setAttribute("result", "blur");
+            const merge = doc.createElementNS(ns, "feMerge");
+            const n1 = doc.createElementNS(ns, "feMergeNode");
+            n1.setAttribute("in", "blur");
+            const n2 = doc.createElementNS(ns, "feMergeNode");
+            n2.setAttribute("in", "SourceGraphic");
+            merge.appendChild(n1);
+            merge.appendChild(n2);
+            filter.appendChild(blur);
+            filter.appendChild(merge);
+            defs.appendChild(filter);
+        }
+        return filterId;
+    }
+
+    /**
+     * Triggers a brief animated dot traveling along the link path from port A to port B.
+     * @param durationMs how long the animation takes (default 600ms)
+     * @param color the color of the dot (default green)
+     */
+    public triggerFlowAnimation(durationMs = 600, color = "#33B766"): void {
+        if (this._flowAnimationActive || !this._path.parentElement) {
+            return;
+        }
+
+        const totalLength = this._path.getTotalLength();
+        if (totalLength === 0) {
+            return;
+        }
+
+        this._flowAnimationActive = true;
+
+        const svg = this._path.parentElement;
+        const ns = "http://www.w3.org/2000/svg";
+        const doc = this._path.ownerDocument;
+        const filterId = NodeLink._EnsureGlowFilter(svg);
+
+        const dot = doc.createElementNS(ns, "circle");
+        dot.setAttribute("r", "6");
+        dot.setAttribute("fill", color);
+        dot.setAttribute("filter", `url(#${filterId})`);
+        dot.style.pointerEvents = "none";
+        svg.appendChild(dot);
+
+        const startTime = performance.now();
+        const animate = (now: number) => {
+            const t = Math.min((now - startTime) / durationMs, 1);
+            const pt = this._path.getPointAtLength(t * totalLength);
+            dot.setAttribute("cx", String(pt.x));
+            dot.setAttribute("cy", String(pt.y));
+
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                dot.remove();
+                this._flowAnimationActive = false;
+            }
+        };
+        requestAnimationFrame(animate);
     }
 
     public dispose(notify = true) {
@@ -241,6 +392,12 @@ export class NodeLink {
 
         if (this._selectionPath.parentElement) {
             this._selectionPath.parentElement.removeChild(this._selectionPath);
+        }
+
+        if (this._gradient) {
+            if (this._gradient.parentElement) {
+                this._gradient.parentElement.removeChild(this._gradient);
+            }
         }
 
         if (this._nodeB) {

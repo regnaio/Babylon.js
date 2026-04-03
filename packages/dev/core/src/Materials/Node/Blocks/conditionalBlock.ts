@@ -1,10 +1,13 @@
 import { NodeMaterialBlock } from "../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../nodeMaterialBuildState";
-import type { NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialBuildState } from "../nodeMaterialBuildState";
+import { type NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
 import { NodeMaterialBlockTargets } from "../Enums/nodeMaterialBlockTargets";
 import { RegisterClass } from "../../../Misc/typeStore";
-import type { Scene } from "../../../scene";
+import { type Scene } from "../../../scene";
+import { editableInPropertyPage, PropertyTypeForEdition } from "core/Decorators/nodeDecorator";
+import { type NodeMaterial } from "../nodeMaterial";
+import { InputBlock } from "./Input/inputBlock";
 
 /**
  * Operations supported by the ConditionalBlock block
@@ -38,6 +41,21 @@ export class ConditionalBlock extends NodeMaterialBlock {
     /**
      * Gets or sets the condition applied by the block
      */
+    @editableInPropertyPage("Condition", PropertyTypeForEdition.List, "ADVANCED", {
+        notifiers: { rebuild: true },
+        embedded: true,
+        options: [
+            { label: "Equal", value: ConditionalBlockConditions.Equal },
+            { label: "NotEqual", value: ConditionalBlockConditions.NotEqual },
+            { label: "LessThan", value: ConditionalBlockConditions.LessThan },
+            { label: "GreaterThan", value: ConditionalBlockConditions.GreaterThan },
+            { label: "LessOrEqual", value: ConditionalBlockConditions.LessOrEqual },
+            { label: "GreaterOrEqual", value: ConditionalBlockConditions.GreaterOrEqual },
+            { label: "Xor", value: ConditionalBlockConditions.Xor },
+            { label: "And", value: ConditionalBlockConditions.And },
+            { label: "Or", value: ConditionalBlockConditions.Or },
+        ],
+    })
     public condition = ConditionalBlockConditions.LessThan;
 
     /**
@@ -99,6 +117,24 @@ export class ConditionalBlock extends NodeMaterialBlock {
      */
     public get output(): NodeMaterialConnectionPoint {
         return this._outputs[0];
+    }
+
+    /**
+     * Auto configure the block based on the material
+     * @param nodeMaterial - the node material
+     */
+    public override autoConfigure(nodeMaterial: NodeMaterial) {
+        if (!this.true.isConnected) {
+            const minInput = (nodeMaterial.getBlockByPredicate((b) => b.isInput && (b as InputBlock).value === 1 && b.name === "True") as InputBlock) || new InputBlock("True");
+            minInput.value = 1;
+            minInput.output.connectTo(this.true);
+        }
+
+        if (!this.false.isConnected) {
+            const maxInput = (nodeMaterial.getBlockByPredicate((b) => b.isInput && (b as InputBlock).value === 0 && b.name === "False") as InputBlock) || new InputBlock("False");
+            maxInput.value = 0;
+            maxInput.output.connectTo(this.false);
+        }
     }
 
     protected override _buildBlock(state: NodeMaterialBuildState) {
@@ -169,6 +205,10 @@ export class ConditionalBlock extends NodeMaterialBlock {
         return this;
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -177,6 +217,12 @@ export class ConditionalBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - the serialization object
+     * @param scene - the scene
+     * @param rootUrl - the root URL
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         super._deserialize(serializationObject, scene, rootUrl);
 

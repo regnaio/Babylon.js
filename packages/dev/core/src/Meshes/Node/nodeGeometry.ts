@@ -1,10 +1,10 @@
 import { Observable } from "../../Misc/observable";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { Mesh } from "../mesh";
-import type { VertexData } from "../mesh.vertexData";
-import type { Scene } from "../../scene";
+import { type VertexData } from "../mesh.vertexData";
+import { type Scene } from "../../scene";
 import { GeometryOutputBlock } from "./Blocks/geometryOutputBlock";
-import type { NodeGeometryBlock } from "./nodeGeometryBlock";
+import { type NodeGeometryBlock } from "./nodeGeometryBlock";
 import { NodeGeometryBuildState } from "./nodeGeometryBuildState";
 import { GetClass } from "../../Misc/typeStore";
 import { serialize } from "../../Misc/decorators";
@@ -12,12 +12,12 @@ import { SerializationHelper } from "../../Misc/decorators.serialization";
 import { Constants } from "../../Engines/constants";
 import { WebRequest } from "../../Misc/webRequest";
 import { BoxBlock } from "./Blocks/Sources/boxBlock";
-import type { GeometryInputBlock } from "./Blocks/geometryInputBlock";
+import { type GeometryInputBlock } from "./Blocks/geometryInputBlock";
 import { PrecisionDate } from "../../Misc/precisionDate";
-import type { TeleportOutBlock } from "./Blocks/Teleport/teleportOutBlock";
-import type { TeleportInBlock } from "./Blocks/Teleport/teleportInBlock";
+import { type TeleportOutBlock } from "./Blocks/Teleport/teleportOutBlock";
+import { type TeleportInBlock } from "./Blocks/Teleport/teleportInBlock";
 import { Tools } from "../../Misc/tools";
-import type { Color4 } from "../../Maths/math.color";
+import { type Color4 } from "../../Maths/math.color";
 import { AbstractEngine } from "core/Engines/abstractEngine";
 
 // declare NODEGEOMETRYEDITOR namespace for compilation issue
@@ -55,7 +55,6 @@ export class NodeGeometry {
     /** Define the Url to load snippets */
     public static SnippetUrl = Constants.SnippetUrl;
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     private BJSNODEGEOMETRYEDITOR = this._getGlobalNodeGeometryEditor();
 
     /** @returns the inspector from bundle or global */
@@ -196,8 +195,9 @@ export class NodeGeometry {
      * @param config Define the configuration of the editor
      * @returns a promise fulfilled when the node editor is visible
      */
-    public edit(config?: INodeGeometryEditorOptions): Promise<void> {
-        return new Promise((resolve) => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    public async edit(config?: INodeGeometryEditorOptions): Promise<void> {
+        return await new Promise((resolve) => {
             this.BJSNODEGEOMETRYEDITOR = this.BJSNODEGEOMETRYEDITOR || this._getGlobalNodeGeometryEditor();
             if (typeof this.BJSNODEGEOMETRYEDITOR == "undefined") {
                 const editorUrl = config && config.editorURL ? config.editorURL : NodeGeometry.EditorURL;
@@ -229,7 +229,7 @@ export class NodeGeometry {
     }
 
     /**
-     * Build the final geometry
+     * Build the final geometry. Please note that the geometry MAY not be ready until the onBuildObservable is raised.
      * @param verbose defines if the build should log activity
      * @param updateBuildId defines if the internal build Id should be updated (default is true)
      * @param autoConfigure defines if the autoConfigure method should be called when initializing blocks (default is false)
@@ -238,12 +238,27 @@ export class NodeGeometry {
         this._buildWasSuccessful = false;
 
         if (!this.outputBlock) {
-            // eslint-disable-next-line no-throw-literal
             throw "You must define the outputBlock property before building the geometry";
         }
         const now = PrecisionDate.Now;
         // Initialize blocks
         this._initializeBlock(this.outputBlock, autoConfigure);
+
+        // Check async states
+        const promises: Promise<void>[] = [];
+        for (const block of this.attachedBlocks) {
+            if (block._isReadyState) {
+                promises.push(block._isReadyState);
+            }
+        }
+
+        if (promises.length) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+            Promise.all(promises).then(() => {
+                this.build(verbose, updateBuildId, autoConfigure);
+            });
+            return;
+        }
 
         // Build
         const state = new NodeGeometryBuildState();
@@ -251,10 +266,12 @@ export class NodeGeometry {
         state.buildId = this._buildId;
         state.verbose = verbose;
 
-        this.outputBlock.build(state);
-
-        if (updateBuildId) {
-            this._buildId = NodeGeometry._BuildIdGenerator++;
+        try {
+            this.outputBlock.build(state);
+        } finally {
+            if (updateBuildId) {
+                this._buildId = NodeGeometry._BuildIdGenerator++;
+            }
         }
 
         this._buildExecutionTime = PrecisionDate.Now - now;
@@ -316,7 +333,7 @@ export class NodeGeometry {
     private _initializeBlock(node: NodeGeometryBlock, autoConfigure = true) {
         node.initialize();
         if (autoConfigure) {
-            node.autoConfigure();
+            node.autoConfigure(this);
         }
         node._preparationId = this._buildId;
 
@@ -422,6 +439,7 @@ export class NodeGeometry {
                 blockId: number;
                 x: number;
                 y: number;
+                isCollapsed: boolean;
             }[] = source.locations || source.editorData.locations;
 
             for (const location of locations) {
@@ -443,7 +461,7 @@ export class NodeGeometry {
                 this.editorData.locations = locations;
             }
 
-            const blockMap: number[] = [];
+            const blockMap: { [key: number]: number } = {};
 
             for (const key in map) {
                 blockMap[key] = map[key].uniqueId;
@@ -618,7 +636,7 @@ export class NodeGeometry {
     }
 
     /**
-     * Disposes the ressources
+     * Disposes the resources
      */
     public dispose(): void {
         for (const block of this.attachedBlocks) {
@@ -664,6 +682,7 @@ export class NodeGeometry {
      * @param skipBuild defines whether to build the node geometry
      * @returns a promise that will resolve to the new node geometry
      */
+    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
     public static ParseFromSnippetAsync(snippetId: string, nodeGeometry?: NodeGeometry, skipBuild: boolean = false): Promise<NodeGeometry> {
         if (snippetId === "_BLANK") {
             return Promise.resolve(NodeGeometry.CreateDefault("blank"));
@@ -690,9 +709,11 @@ export class NodeGeometry {
                             }
                             resolve(nodeGeometry);
                         } catch (err) {
+                            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                             reject(err);
                         }
                     } else {
+                        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                         reject("Unable to load the snippet " + snippetId);
                     }
                 }

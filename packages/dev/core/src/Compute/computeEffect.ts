@@ -1,15 +1,16 @@
 import { Logger } from "../Misc/logger";
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 import { Observable } from "../Misc/observable";
-import type { IComputePipelineContext } from "./IComputePipelineContext";
+import { type IComputePipelineContext } from "./IComputePipelineContext";
 import { GetDOMTextContent, IsWindowObjectExist } from "../Misc/domManagement";
 import { Finalize, Initialize, PreProcess } from "../Engines/Processors/shaderProcessor";
-import type { ProcessingOptions } from "../Engines/Processors/shaderProcessingOptions";
+import { type _IProcessingOptions } from "../Engines/Processors/shaderProcessingOptions";
 import { ShaderStore } from "../Engines/shaderStore";
 import { ShaderLanguage } from "../Materials/shaderLanguage";
 
-import type { AbstractEngine } from "../Engines/abstractEngine";
-import type { ComputeCompilationMessages } from "../Engines/Extensions/engine.computeShader";
+import { type AbstractEngine } from "../Engines/abstractEngine";
+import { type ComputeCompilationMessages } from "../Engines/Extensions/engine.computeShader";
+import { _RetryWithInterval } from "core/Misc/timingTools";
 
 /**
  * Defines the route to the shader code. The priority is as follows:
@@ -18,6 +19,7 @@ import type { ComputeCompilationMessages } from "../Engines/Extensions/engine.co
  *  * object: `{ compute: "custom" }`, used with `Effect.ShadersStore["customVertexShader"]` and `Effect.ShadersStore["customFragmentShader"]`
  *  * string: `"./COMMON_NAME"`, used with external files COMMON_NAME.vertex.fx and COMMON_NAME.fragment.fx in index.html folder.
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export type IComputeShaderPath = {
     /**
      * Directly pass the shader code
@@ -164,7 +166,7 @@ export class ComputeEffect {
             computeSource = baseName.compute || baseName;
         }
 
-        const processorOptions: ProcessingOptions = {
+        const processorOptions: _IProcessingOptions = {
             defines: this.defines.split("\n"),
             indexParameters: undefined,
             isFragment: false,
@@ -295,25 +297,23 @@ export class ComputeEffect {
         });
 
         if (!this._pipelineContext || this._pipelineContext.isAsync) {
-            setTimeout(() => {
-                this._checkIsReady(null);
-            }, 16);
+            this._checkIsReady(null);
         }
     }
 
     private _checkIsReady(previousPipelineContext: Nullable<IComputePipelineContext>) {
-        try {
-            if (this._isReadyInternal()) {
-                return;
-            }
-        } catch (e) {
-            this._processCompilationErrors(e, previousPipelineContext);
-            return;
-        }
-
-        setTimeout(() => {
-            this._checkIsReady(previousPipelineContext);
-        }, 16);
+        _RetryWithInterval(
+            () => this._isReadyInternal(),
+            () => {
+                // no-op, all work is done in _isReadyInternal
+            },
+            (e) => {
+                this._processCompilationErrors(e, previousPipelineContext);
+            },
+            undefined,
+            undefined,
+            false
+        );
     }
 
     private _loadShader(shader: any, key: string, optionalKey: string, callback: (data: any) => void): void {
@@ -327,14 +327,14 @@ export class ComputeEffect {
         }
 
         // Direct source ?
-        if (shader.substr(0, 7) === "source:") {
-            callback(shader.substr(7));
+        if (shader.substring(0, 7) === "source:") {
+            callback(shader.substring(7));
             return;
         }
 
         // Base64 encoded ?
-        if (shader.substr(0, 7) === "base64:") {
-            const shaderBinary = window.atob(shader.substr(7));
+        if (shader.substring(0, 7) === "base64:") {
+            const shaderBinary = window.atob(shader.substring(7));
             callback(shaderBinary);
             return;
         }
@@ -422,7 +422,11 @@ export class ComputeEffect {
                 this._checkIsReady(previousPipelineContext);
             }
         } catch (e) {
-            this._processCompilationErrors(e, previousPipelineContext);
+            let err = "" + e;
+            if (e instanceof Error && e.stack) {
+                err = e.stack;
+            }
+            this._processCompilationErrors(err, previousPipelineContext);
         }
     }
 

@@ -1,7 +1,7 @@
 import { NodeMaterialBlock } from "../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../nodeMaterialBuildState";
-import type { NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialBuildState } from "../nodeMaterialBuildState";
+import { type NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
 import { NodeMaterialBlockTargets } from "../Enums/nodeMaterialBlockTargets";
 import { RegisterClass } from "../../../Misc/typeStore";
 /**
@@ -57,7 +57,7 @@ export class PowBlock extends NodeMaterialBlock {
 
         const output = this._outputs[0];
 
-        state.compilationString += state._declareOutput(output) + ` = pow(${this.value.associatedVariableName}, ${this.power.associatedVariableName});\n`;
+        state.compilationString += state._declareOutput(output) + ` = pow(max(${this.value.associatedVariableName}, 0.), ${this.power.associatedVariableName});\n`;
 
         return this;
     }

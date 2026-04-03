@@ -1,23 +1,25 @@
 /**
- * @jest-environment jsdom
+ * @vitest-environment jsdom
  */
 
-import { ArcRotateCamera, FreeCamera } from "core/Cameras";
-import type { PickingInfo } from "core/Collisions/pickingInfo";
+import { ArcRotateCamera } from "core/Cameras/arcRotateCamera";
+import { FreeCamera } from "core/Cameras/freeCamera";
+import { PickingInfo } from "core/Collisions/pickingInfo";
+import "core/Culling/ray";
 import { DeviceType, PointerInput } from "core/DeviceInput";
 import { InternalDeviceSourceManager } from "core/DeviceInput/internalDeviceSourceManager";
-import { NullEngine } from "core/Engines";
-import type { Engine } from "core/Engines/engine";
-import type { IPointerEvent, IUIEvent } from "core/Events";
-import { PointerEventTypes } from "core/Events";
+import { NullEngine } from "core/Engines/nullEngine";
+import { type Engine } from "core/Engines/engine";
+import { type IPointerEvent, type IUIEvent, PointerEventTypes } from "core/Events";
 import { Vector3 } from "core/Maths/math.vector";
 import { MeshBuilder } from "core/Meshes/meshBuilder";
 import { UtilityLayerRenderer } from "core/Rendering/utilityLayerRenderer";
 import { Scene } from "core/scene";
-import type { Nullable } from "core/types";
-import type { ITestDeviceInputSystem } from "./testDeviceInputSystem";
-import { TestDeviceInputSystem } from "./testDeviceInputSystem";
+import { type Nullable } from "core/types";
+import { type ITestDeviceInputSystem, TestDeviceInputSystem } from "./testDeviceInputSystem";
 import { SpriteManager } from "core/Sprites";
+import { Mesh } from "core/Meshes/mesh";
+import { ActionEvent, ActionManager, ExecuteCodeAction } from "core/Actions";
 
 // Add function to NullEngine to allow for getting the canvas rect properties
 NullEngine.prototype.getInputElementClientRect = function (): Nullable<DOMRect> {
@@ -36,22 +38,18 @@ NullEngine.prototype.getInputElementClientRect = function (): Nullable<DOMRect> 
 };
 
 // Required for timers (eg. setTimeout) to work
-jest.useFakeTimers();
-jest.mock("core/DeviceInput/webDeviceInputSystem", () => {
+vi.useFakeTimers();
+vi.mock("core/DeviceInput/webDeviceInputSystem", () => {
     return {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        WebDeviceInputSystem: jest
-            .fn()
-            .mockImplementation(
-                (
-                    engine: Engine,
-                    onDeviceConnected: (deviceType: DeviceType, deviceSlot: number) => void,
-                    onDeviceDisconnected: (deviceType: DeviceType, deviceSlot: number) => void,
-                    onInputChanged: (deviceType: DeviceType, deviceSlot: number, eventData: IUIEvent) => void
-                ) => {
-                    return new TestDeviceInputSystem(engine, onDeviceConnected, onDeviceDisconnected, onInputChanged);
-                }
-            ),
+        WebDeviceInputSystem: function (
+            engine: Engine,
+            onDeviceConnected: (deviceType: DeviceType, deviceSlot: number) => void,
+            onDeviceDisconnected: (deviceType: DeviceType, deviceSlot: number) => void,
+            onInputChanged: (deviceType: DeviceType, deviceSlot: number, eventData: IUIEvent) => void
+        ) {
+            return new TestDeviceInputSystem(engine, onDeviceConnected, onDeviceDisconnected, onInputChanged);
+        },
     };
 });
 
@@ -62,6 +60,9 @@ describe("InputManager", () => {
     let deviceInputSystem: Nullable<ITestDeviceInputSystem> = null;
 
     beforeEach(() => {
+        // So that GetPointerPrefix knows we are going to simulate pointer events
+        window.PointerEvent = vi.fn() as any;
+
         engine = new NullEngine({
             renderHeight: 256,
             renderWidth: 256,
@@ -83,6 +84,91 @@ describe("InputManager", () => {
         camera?.dispose();
         scene?.dispose();
         engine?.dispose();
+    });
+
+    describe("when a OnPickDownTrigger is used in a touch device", () => {
+        // Note: touch devices raise down then move (see webDeviceInputSystem _pointerDownEvent)
+
+        let meshA: Nullable<Mesh>;
+        let meshB: Nullable<Mesh>;
+        let onPickDownCallback: Mock;
+
+        beforeEach(() => {
+            onPickDownCallback = vi.fn();
+
+            meshA = MeshBuilder.CreateSphere("meshA", { diameter: 2, segments: 32 }, scene);
+            meshA.isPickable = true;
+            meshA.actionManager = new ActionManager(scene);
+            meshA.actionManager.registerAction(
+                new ExecuteCodeAction(
+                    {
+                        trigger: ActionManager.OnPickDownTrigger,
+                    },
+                    onPickDownCallback
+                )
+            );
+
+            meshB = MeshBuilder.CreateSphere("meshB", { diameter: 2, segments: 32 }, scene);
+            meshB.isPickable = true;
+            meshB.actionManager = new ActionManager(scene);
+            meshB.actionManager.registerAction(
+                new ExecuteCodeAction(
+                    {
+                        trigger: ActionManager.OnPickDownTrigger,
+                    },
+                    onPickDownCallback
+                )
+            );
+        });
+
+        afterEach(() => {
+            meshA?.dispose();
+            meshB?.dispose();
+        });
+
+        it("should set the evt source and meshUnderPointer values correctly", () => {
+            // Arrange
+            const pickResult = new PickingInfo();
+            pickResult.pickedMesh = meshA;
+
+            // Act
+            scene?.simulatePointerDown(pickResult);
+            scene?.simulatePointerMove(pickResult);
+
+            // Assert
+            expect(onPickDownCallback).toHaveBeenCalledTimes(1);
+            const evt: ActionEvent = onPickDownCallback.mock.calls[0][0];
+            expect(evt.source).toEqual(meshA);
+            expect(evt.meshUnderPointer).toEqual(meshA);
+        });
+
+        describe("when bouncing back and forth between picking different meshes", () => {
+            it("should set the evt source and meshUnderPointer values correctly", () => {
+                // Arrange
+                let pickResult: PickingInfo;
+                let evt: ActionEvent;
+                function pickMesh(mesh: Mesh) {
+                    // Act
+                    pickResult = new PickingInfo();
+                    pickResult.pickedMesh = mesh;
+                    scene?.simulatePointerDown(pickResult);
+                    scene?.simulatePointerMove(pickResult);
+
+                    // Assert
+                    expect(onPickDownCallback).toHaveBeenCalledTimes(1);
+                    evt = onPickDownCallback.mock.calls[0][0];
+                    expect(evt.source.name).toEqual(mesh.name);
+                    expect(evt.meshUnderPointer).toBeDefined();
+                    expect(evt.meshUnderPointer!.name).toEqual(mesh.name);
+                    onPickDownCallback.mockReset();
+                }
+
+                pickMesh(meshA!);
+                pickMesh(meshB!);
+                pickMesh(meshA!);
+                pickMesh(meshB!);
+            });
+        });
     });
 
     it("callbacks can pick and fire", () => {
@@ -219,7 +305,7 @@ describe("InputManager", () => {
         const box = MeshBuilder.CreateBox("box", { size: 1 }, scene);
         box.enablePointerMoveEvents = true;
 
-        const pickSpy = jest.spyOn(scene!, "pick");
+        const pickSpy = vi.spyOn(scene!, "pick");
 
         const observer = scene?.onPointerObservable.add((eventData) => {
             const gen = eventData._generatePickInfo.bind(eventData);
@@ -272,7 +358,7 @@ describe("InputManager", () => {
             // Clear the observable and try the same actions again
             scene?.onPointerObservable.remove(observer!);
             // Since the remove function uses setTimeout (with a time of 0), we need to force it to run the timer.
-            jest.runOnlyPendingTimers();
+            vi.runOnlyPendingTimers();
 
             // Perform single move over mesh, then click
             deviceInputSystem.changeInput(DeviceType.Mouse, 0, PointerInput.Horizontal, 128, false);
@@ -291,7 +377,7 @@ describe("InputManager", () => {
 
         expect(lazyPickCt).toBe(2);
         expect(lazyPickHitCt).toBe(1);
-        expect(pickSpy).toBeCalledTimes(6);
+        expect(pickSpy).toHaveBeenCalledTimes(6);
     });
 
     it("onPointerObservable returns correct PointerEventTypes", () => {
@@ -559,7 +645,7 @@ describe("InputManager", () => {
 
             // Because the input manager uses the system clock, we need to use real timers
             // and wait for the double click delay to pass so that we can work with a clean slate
-            jest.useRealTimers();
+            vi.useRealTimers();
             await new Promise((resolve) => setTimeout(resolve, t));
 
             // Expect a single tap only
@@ -609,7 +695,7 @@ describe("InputManager", () => {
             await new Promise((resolve) => setTimeout(resolve, t));
 
             // Reset to fake timers
-            jest.useFakeTimers();
+            vi.useFakeTimers();
         }
         // Since this is static, we should reset it to false for other tests
         InputManager.ExclusiveDoubleClickMode = false;
@@ -795,18 +881,19 @@ describe("InputManager", () => {
 
         if (deviceInputSystem && scene && engine) {
             // Create a SpriteManager to test if it affects the picking behavior
-            const spriteManager = new SpriteManager("name", "", 1, 1, scene);
+            new SpriteManager("name", "", 1, 1, scene);
             MeshBuilder.CreateBox("box", { size: 5 }, scene);
 
             // Set flag to constantly update the mesh that's under the pointer (not use lazy picking)
             scene.constantlyUpdateMeshUnderPointer = true;
             scene.onPointerObservable.add((pointerInfo) => {
-                const generateSpy = jest.spyOn(pointerInfo, "_generatePickInfo");
+                const generateSpy = vi.spyOn(pointerInfo, "_generatePickInfo");
                 if (pointerInfo.pickInfo?.hit) {
                     pickedTestMesh = pointerInfo.pickInfo.pickedMesh;
                 }
                 // We expect this to not be called at all as the picking should already be done by this point
-                expect(generateSpy).toBeCalledTimes(0);
+                // eslint-disable-next-line vitest/no-conditional-expect
+                expect(generateSpy).toHaveBeenCalledTimes(0);
             });
 
             // Set initial point

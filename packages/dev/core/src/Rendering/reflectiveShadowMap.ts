@@ -5,24 +5,24 @@
  */
 import { Constants } from "core/Engines/constants";
 import { MultiRenderTarget } from "core/Materials/Textures/multiRenderTarget";
-import type { UniformBuffer } from "core/Materials/uniformBuffer";
+import { type UniformBuffer } from "core/Materials/uniformBuffer";
 import { Color3, Color4 } from "core/Maths/math.color";
 import { Matrix, TmpVectors } from "core/Maths/math.vector";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { Scene } from "core/scene";
-import type { WebGPURenderTargetWrapper } from "core/Engines/WebGPU/webgpuRenderTargetWrapper";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type Scene } from "core/scene";
+import { type WebGPURenderTargetWrapper } from "core/Engines/WebGPU/webgpuRenderTargetWrapper";
 import { MaterialPluginBase } from "core/Materials/materialPluginBase";
-import type { Material } from "core/Materials/material";
-import type { StandardMaterial } from "core/Materials/standardMaterial";
+import { type Material } from "core/Materials/material";
+import { type StandardMaterial } from "core/Materials/standardMaterial";
 import { MaterialDefines } from "core/Materials/materialDefines";
-import type { SpotLight } from "core/Lights/spotLight";
+import { type SpotLight } from "core/Lights/spotLight";
 import { PBRBaseMaterial } from "core/Materials/PBR/pbrBaseMaterial";
 import { expandToProperty, serialize } from "core/Misc/decorators";
 import { RegisterClass } from "core/Misc/typeStore";
 import { Light } from "core/Lights/light";
-import type { DirectionalLight } from "core/Lights/directionalLight";
+import { type DirectionalLight } from "core/Lights/directionalLight";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 
 /**
  * Class used to generate the RSM (Reflective Shadow Map) textures for a given light.
@@ -127,9 +127,11 @@ export class ReflectiveShadowMap {
         this._disposeMultiRenderTarget();
         this._createMultiRenderTarget();
 
-        renderList?.forEach((mesh) => {
-            this._addMeshToMRT(mesh);
-        });
+        if (renderList) {
+            for (const mesh of renderList) {
+                this._addMeshToMRT(mesh);
+            }
+        }
     }
 
     /**
@@ -140,9 +142,9 @@ export class ReflectiveShadowMap {
         if (mesh) {
             this._addMeshToMRT(mesh);
         } else {
-            this._scene.meshes.forEach((mesh) => {
+            for (const mesh of this._scene.meshes) {
                 this._addMeshToMRT(mesh);
-            });
+            }
         }
         this._recomputeLightTransformationMatrix();
     }
@@ -212,7 +214,7 @@ export class ReflectiveShadowMap {
         const useUBO = this._scene.getEngine().supportsUniformBuffers;
 
         if (useUBO) {
-            sceneUBO = this._scene.createSceneUniformBuffer(`Scene for RSM (light "${name}")`);
+            sceneUBO = this._scene.createSceneUniformBuffer(`Scene for RSM (light "${name}")`, { forceMono: true });
         }
 
         let shadowEnabled: boolean;

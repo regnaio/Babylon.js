@@ -2,28 +2,28 @@ import { serialize, serializeAsVector3 } from "../Misc/decorators";
 import { SmartArray } from "../Misc/smartArray";
 import { Tools } from "../Misc/tools";
 import { Observable } from "../Misc/observable";
-import type { DeepImmutable, Nullable } from "../types";
-import type { CameraInputsManager } from "./cameraInputsManager";
-import type { Scene } from "../scene";
+import { type DeepImmutable, type Nullable } from "../types";
+import { type CameraInputsManager } from "./cameraInputsManager";
+import { type Scene } from "../scene";
 import { Matrix, Vector3, Quaternion } from "../Maths/math.vector";
 import { Node } from "../node";
-import type { Mesh } from "../Meshes/mesh";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
-import type { ICullable } from "../Culling/boundingInfo";
+import { type Mesh } from "../Meshes/mesh";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
+import { type ICullable } from "../Culling/boundingInfo";
 import { Logger } from "../Misc/logger";
 import { GetClass } from "../Misc/typeStore";
 import { _WarnImport } from "../Misc/devTools";
 import { Viewport } from "../Maths/math.viewport";
 import { Frustum } from "../Maths/math.frustum";
-import type { Plane } from "../Maths/math.plane";
+import { type Plane } from "../Maths/math.plane";
 import { Constants } from "../Engines/constants";
 
-import type { PostProcess } from "../PostProcesses/postProcess";
-import type { RenderTargetTexture } from "../Materials/Textures/renderTargetTexture";
-import type { FreeCamera } from "./freeCamera";
-import type { TargetCamera } from "./targetCamera";
-import type { Ray } from "../Culling/ray";
-import type { ArcRotateCamera } from "./arcRotateCamera";
+import { type PostProcess } from "../PostProcesses/postProcess";
+import { type RenderTargetTexture } from "../Materials/Textures/renderTargetTexture";
+import { type FreeCamera } from "./freeCamera";
+import { type TargetCamera } from "./targetCamera";
+import { type Ray } from "../Culling/ray";
+import { type ArcRotateCamera } from "./arcRotateCamera";
 import { SerializationHelper } from "../Misc/decorators.serialization";
 
 /**
@@ -102,6 +102,7 @@ export class Camera extends Node {
     /**
      * Defines that both eyes of the camera should be renderered in a VR mode (carbox).
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public static readonly RIG_MODE_VR = Constants.RIG_MODE_VR;
     /**
      * Custom rig mode allowing rig cameras to be populated manually with any number of cameras
@@ -157,8 +158,8 @@ export class Camera extends Node {
      * The screen area in scene units squared
      */
     public get screenArea(): number {
-        let x = 0;
-        let y = 0;
+        let x: number;
+        let y: number;
         if (this.mode === Camera.PERSPECTIVE_CAMERA) {
             if (this.fovMode === Camera.FOVMODE_VERTICAL_FIXED) {
                 y = this.minZ * 2 * Math.tan(this.fov / 2);
@@ -261,6 +262,15 @@ export class Camera extends Node {
     public fov = 0.8;
 
     /**
+     * Sets the camera's field of view in radians based on the focal length and sensor size.
+     * @param value the focal length of the camera in mm.
+     * @param sensorSize the sensor width size of the camera in mm. (default is 36mm, which is a full frame sensor)
+     */
+    public setFocalLength(value: number, sensorSize: number = 36) {
+        this.fov = 2 * Math.atan(sensorSize / (2 * value));
+    }
+
+    /**
      * Projection plane tilt around the X axis (horizontal), set in Radians. (default is 0)
      * Can be used to make vertical lines in world space actually vertical on the screen.
      * See https://forum.babylonjs.com/t/add-vertical-shift-to-3ds-max-exporter-babylon-cameras/17480
@@ -277,7 +287,7 @@ export class Camera extends Node {
     public minZ = 1;
 
     /**
-     * Define the maximum distance the camera can see to.
+     * Define the maximum distance the camera can see to.  (default is 10000)
      * This is important to note that the depth buffer are not infinite and the further it end
      * the more your scene might encounter depth fighting issue.
      */
@@ -356,6 +366,12 @@ export class Camera extends Node {
     public isStereoscopicSideBySide: boolean;
 
     /**
+     * Ignores camera maxZ when computing the projection matrix (ie. use 0 instead of maxZ), meaning objects won't be culled by the far plane
+     */
+    @serialize()
+    public ignoreCameraMaxZ = false;
+
+    /**
      * Defines the list of custom render target which are rendered to and then used as the input to this camera's render. Eg. display another camera view on a TV in the main scene
      * This is pretty helpful if you wish to make a camera render to a texture you could reuse somewhere
      * else in the scene. (Eg. security camera)
@@ -372,6 +388,8 @@ export class Camera extends Node {
 
     /**
      * Observable triggered when the camera view matrix has changed.
+     * Beware of reentrance! Some methods like Camera.getViewMatrix and Camera.getWorldMatrix can trigger the onViewMatrixChangedObservable
+     * observable, so using them inside an observer will require additional logic to avoid a stack overflow error.
      */
     public onViewMatrixChangedObservable = new Observable<Camera>();
     /**
@@ -437,7 +455,8 @@ export class Camera extends Node {
     public _computedViewMatrix = Matrix.Identity();
     private _doNotComputeProjectionMatrix = false;
     private _transformMatrix = Matrix.Zero();
-    private _frustumPlanes: Plane[];
+    /** @internal */
+    public _frustumPlanes: Plane[];
     private _refreshFrustumPlanes = true;
     private _storedFov: number;
     private _stateStored: boolean;
@@ -640,7 +659,9 @@ export class Camera extends Node {
 
     /** @internal */
     public _isSynchronizedProjectionMatrix(): boolean {
-        let isSynchronized = this._cache.mode === this.mode && this._cache.minZ === this.minZ && this._cache.maxZ === this.maxZ;
+        const maxZ = this.ignoreCameraMaxZ ? 0 : this.maxZ;
+
+        let isSynchronized = this._cache.mode === this.mode && this._cache.minZ === this.minZ && this._cache.maxZ === maxZ;
 
         if (!isSynchronized) {
             return false;
@@ -886,6 +907,7 @@ export class Camera extends Node {
         this.onViewMatrixChangedObservable.notifyObservers(this);
 
         this._computedViewMatrix.invertToRef(this._worldMatrix);
+        this._worldMatrix.getTranslationToRef(this._globalPosition);
 
         return this._computedViewMatrix;
     }
@@ -920,10 +942,12 @@ export class Camera extends Node {
             return this._projectionMatrix;
         }
 
+        const maxZ = this.ignoreCameraMaxZ ? 0 : this.maxZ;
+
         // Cache
         this._cache.mode = this.mode;
         this._cache.minZ = this.minZ;
-        this._cache.maxZ = this.maxZ;
+        this._cache.maxZ = maxZ;
 
         // Matrix
         this._refreshFrustumPlanes = true;
@@ -961,8 +985,8 @@ export class Camera extends Node {
             getProjectionMatrix(
                 this.fov,
                 engine.getAspectRatio(this),
-                reverseDepth ? this.maxZ : this.minZ,
-                reverseDepth ? this.minZ : this.maxZ,
+                reverseDepth ? maxZ : this.minZ,
+                reverseDepth ? this.minZ : maxZ,
                 this._projectionMatrix,
                 this.fovMode === Camera.FOVMODE_VERTICAL_FIXED,
                 engine.isNDCHalfZRange,
@@ -979,8 +1003,8 @@ export class Camera extends Node {
                         this.orthoRight ?? halfWidth,
                         this.orthoBottom ?? -halfHeight,
                         this.orthoTop ?? halfHeight,
-                        reverseDepth ? this.maxZ : this.minZ,
-                        reverseDepth ? this.minZ : this.maxZ,
+                        reverseDepth ? maxZ : this.minZ,
+                        reverseDepth ? this.minZ : maxZ,
                         this.oblique.length,
                         this.oblique.angle,
                         this._computeObliqueDistance(this.oblique.offset),
@@ -993,8 +1017,8 @@ export class Camera extends Node {
                         this.orthoRight ?? halfWidth,
                         this.orthoBottom ?? -halfHeight,
                         this.orthoTop ?? halfHeight,
-                        reverseDepth ? this.maxZ : this.minZ,
-                        reverseDepth ? this.minZ : this.maxZ,
+                        reverseDepth ? maxZ : this.minZ,
+                        reverseDepth ? this.minZ : maxZ,
                         this._projectionMatrix,
                         engine.isNDCHalfZRange
                     );
@@ -1006,8 +1030,8 @@ export class Camera extends Node {
                         this.orthoRight ?? halfWidth,
                         this.orthoBottom ?? -halfHeight,
                         this.orthoTop ?? halfHeight,
-                        reverseDepth ? this.maxZ : this.minZ,
-                        reverseDepth ? this.minZ : this.maxZ,
+                        reverseDepth ? maxZ : this.minZ,
+                        reverseDepth ? this.minZ : maxZ,
                         this.oblique.length,
                         this.oblique.angle,
                         this._computeObliqueDistance(this.oblique.offset),
@@ -1020,8 +1044,8 @@ export class Camera extends Node {
                         this.orthoRight ?? halfWidth,
                         this.orthoBottom ?? -halfHeight,
                         this.orthoTop ?? halfHeight,
-                        reverseDepth ? this.maxZ : this.minZ,
-                        reverseDepth ? this.minZ : this.maxZ,
+                        reverseDepth ? maxZ : this.minZ,
+                        reverseDepth ? this.minZ : maxZ,
                         this._projectionMatrix,
                         engine.isNDCHalfZRange
                     );
@@ -1059,7 +1083,8 @@ export class Camera extends Node {
         return (arcRotateCamera.radius || (targetCamera.target ? Vector3.Distance(this.position, targetCamera.target) : this.position.length())) + offset;
     }
 
-    private _updateFrustumPlanes(): void {
+    /** @internal */
+    public _updateFrustumPlanes(): void {
         if (!this._refreshFrustumPlanes) {
             return;
         }
@@ -1087,10 +1112,10 @@ export class Camera extends Node {
 
         if (checkRigCameras && this.rigCameras.length > 0) {
             let result = false;
-            this.rigCameras.forEach((cam) => {
+            for (const cam of this.rigCameras) {
                 cam._updateFrustumPlanes();
                 result = result || target.isInFrustum(cam._frustumPlanes);
-            });
+            }
             return result;
         } else {
             return target.isInFrustum(this._frustumPlanes);
@@ -1113,7 +1138,7 @@ export class Camera extends Node {
     /**
      * Gets a ray in the forward direction from the camera.
      * @param length Defines the length of the ray to create
-     * @param transform Defines the transform to apply to the ray, by default the world matrix is used to create a workd space ray
+     * @param transform Defines the transform to apply to the ray, by default the world matrix is used to create a world space ray
      * @param origin Defines the start point of the ray which defaults to the camera position
      * @returns the forward ray
      */
@@ -1127,7 +1152,7 @@ export class Camera extends Node {
      * Gets a ray in the forward direction from the camera.
      * @param refRay the ray to (re)use when setting the values
      * @param length Defines the length of the ray to create
-     * @param transform Defines the transform to apply to the ray, by default the world matrx is used to create a workd space ray
+     * @param transform Defines the transform to apply to the ray, by default the world matrix is used to create a world space ray
      * @param origin Defines the start point of the ray which defaults to the camera position
      * @returns the forward ray
      */
@@ -1321,7 +1346,7 @@ export class Camera extends Node {
             this._cameraRigParams.vrMetrics.aspectRatioFov,
             this._cameraRigParams.vrMetrics.aspectRatio,
             this.minZ,
-            this.maxZ,
+            this.ignoreCameraMaxZ ? 0 : this.maxZ,
             this._cameraRigParams.vrWorkMatrix,
             true,
             this.getEngine().isNDCHalfZRange
@@ -1360,7 +1385,7 @@ export class Camera extends Node {
     public _updateRigCameras() {
         for (let i = 0; i < this._rigCameras.length; i++) {
             this._rigCameras[i].minZ = this.minZ;
-            this._rigCameras[i].maxZ = this.maxZ;
+            this._rigCameras[i].maxZ = this.ignoreCameraMaxZ ? 0 : this.maxZ;
             this._rigCameras[i].fov = this.fov;
             this._rigCameras[i].upVector.copyFrom(this.upVector);
         }

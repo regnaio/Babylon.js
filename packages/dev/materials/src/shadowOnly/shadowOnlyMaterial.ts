@@ -1,25 +1,25 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { SerializationHelper } from "core/Misc/decorators.serialization";
-import type { Matrix } from "core/Maths/math.vector";
+import { type Matrix } from "core/Maths/math.vector";
 import { Color3 } from "core/Maths/math.color";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
-import type { IShadowLight } from "core/Lights/shadowLight";
-import type { IEffectCreationOptions } from "core/Materials/effect";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type IShadowLight } from "core/Lights/shadowLight";
+import { type IEffectCreationOptions } from "core/Materials/effect";
 import { MaterialDefines } from "core/Materials/materialDefines";
 import { PushMaterial } from "core/Materials/pushMaterial";
 import { VertexBuffer } from "core/Buffers/buffer";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { SubMesh } from "core/Meshes/subMesh";
-import type { Mesh } from "core/Meshes/mesh";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type SubMesh } from "core/Meshes/subMesh";
+import { type Mesh } from "core/Meshes/mesh";
 import { Scene } from "core/scene";
 import { RegisterClass } from "core/Misc/typeStore";
 
 import "./shadowOnly.fragment";
 import "./shadowOnly.vertex";
 import { EffectFallbacks } from "core/Materials/effectFallbacks";
-import type { CascadedShadowGenerator } from "core/Lights/Shadows/cascadedShadowGenerator";
-import { addClipPlaneUniforms, bindClipPlane } from "core/Materials/clipPlaneMaterialHelper";
+import { type CascadedShadowGenerator } from "core/Lights/Shadows/cascadedShadowGenerator";
+import { AddClipPlaneUniforms, BindClipPlane } from "core/Materials/clipPlaneMaterialHelper";
 import {
     BindBonesParameters,
     BindFogParameters,
@@ -141,7 +141,19 @@ export class ShadowOnlyMaterial extends PushMaterial {
 
         PrepareDefinesForFrameBoundValues(scene, engine, this, defines, useInstances ? true : false);
 
-        PrepareDefinesForMisc(mesh, scene, this._useLogarithmicDepth, this.pointsCloud, this.fogEnabled, this._shouldTurnAlphaTestOn(mesh), defines);
+        PrepareDefinesForMisc(
+            mesh,
+            scene,
+            this._useLogarithmicDepth,
+            this.pointsCloud,
+            this.fogEnabled,
+            this.needAlphaTestingForMesh(mesh),
+            defines,
+            undefined,
+            undefined,
+            undefined,
+            this._isVertexOutputInvariant
+        );
 
         defines._needNormals = PrepareDefinesForLights(scene, mesh, defines, false, 1);
 
@@ -206,9 +218,9 @@ export class ShadowOnlyMaterial extends PushMaterial {
             ];
             const samplers: string[] = [];
 
-            const uniformBuffers: string[] = [];
+            const uniformBuffers: string[] = ["Scene"];
 
-            addClipPlaneUniforms(uniforms);
+            AddClipPlaneUniforms(uniforms);
             PrepareUniformsAndSamplersList(<IEffectCreationOptions>{
                 uniformsNames: uniforms,
                 uniformBuffersNames: uniformBuffers,
@@ -220,7 +232,7 @@ export class ShadowOnlyMaterial extends PushMaterial {
             subMesh.setEffect(
                 scene.getEngine().createEffect(
                     shaderName,
-                    <IEffectCreationOptions>{
+                    {
                         attributes: attribs,
                         uniformsNames: uniforms,
                         uniformBuffersNames: uniformBuffers,
@@ -264,14 +276,14 @@ export class ShadowOnlyMaterial extends PushMaterial {
 
         // Matrices
         this.bindOnlyWorldMatrix(world);
-        this._activeEffect.setMatrix("viewProjection", scene.getTransformMatrix());
+        this.bindViewProjection(effect);
 
         // Bones
         BindBonesParameters(mesh, this._activeEffect);
 
         if (this._mustRebind(scene, effect, subMesh)) {
             // Clip plane
-            bindClipPlane(effect, this, scene);
+            BindClipPlane(effect, this, scene);
 
             // Point size
             if (this.pointsCloud) {
@@ -307,7 +319,7 @@ export class ShadowOnlyMaterial extends PushMaterial {
 
         // View
         if ((scene.fogEnabled && mesh.applyFog && scene.fogMode !== Scene.FOGMODE_NONE) || defines["SHADOWCSM0"]) {
-            this._activeEffect.setMatrix("view", scene.getViewMatrix());
+            this.bindView(effect);
         }
 
         // Fog

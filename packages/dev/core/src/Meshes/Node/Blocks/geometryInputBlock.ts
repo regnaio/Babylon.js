@@ -1,10 +1,10 @@
 import { Observable } from "../../../Misc/observable";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
 import { GetClass, RegisterClass } from "../../../Misc/typeStore";
 import { Matrix, Vector2, Vector3, Vector4 } from "../../../Maths/math.vector";
-import type { NodeGeometryBuildState } from "../nodeGeometryBuildState";
+import { type NodeGeometryBuildState } from "../nodeGeometryBuildState";
 import { NodeGeometryContextualSources } from "../Enums/nodeGeometryContextualSources";
 
 /**
@@ -24,6 +24,11 @@ export class GeometryInputBlock extends NodeGeometryBlock {
 
     /** Gets or sets the group to use to display this block in the Inspector */
     public groupInInspector = "";
+
+    /**
+     * Gets or sets a boolean indicating that this input is displayed in the Inspector
+     */
+    public displayInInspector = true;
 
     /** Gets an observable raised when the value is changed */
     public onValueChangedObservable = new Observable<GeometryInputBlock>();
@@ -79,6 +84,8 @@ export class GeometryInputBlock extends NodeGeometryBlock {
         switch (value) {
             case NodeGeometryContextualSources.Positions:
             case NodeGeometryContextualSources.Normals:
+            case NodeGeometryContextualSources.LatticeID:
+            case NodeGeometryContextualSources.LatticeControl:
                 this._type = NodeGeometryBlockConnectionPointTypes.Vector3;
                 break;
             case NodeGeometryContextualSources.Colors:
@@ -211,6 +218,7 @@ export class GeometryInputBlock extends NodeGeometryBlock {
         }
     }
 
+    /** @internal */
     public override dispose() {
         this.onValueChangedObservable.clear();
 
@@ -258,6 +266,7 @@ export class GeometryInputBlock extends NodeGeometryBlock {
         return super._dumpPropertiesCode() + codes.join(";\n");
     }
 
+    /** @internal */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -266,6 +275,7 @@ export class GeometryInputBlock extends NodeGeometryBlock {
         serializationObject.min = this.min;
         serializationObject.max = this.max;
         serializationObject.groupInInspector = this.groupInInspector;
+        serializationObject.displayInInspector = this.displayInInspector;
 
         if (this._storedValue !== null && !this.isContextual) {
             if (this._storedValue.asArray) {
@@ -280,6 +290,7 @@ export class GeometryInputBlock extends NodeGeometryBlock {
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 
@@ -289,6 +300,9 @@ export class GeometryInputBlock extends NodeGeometryBlock {
         this.min = serializationObject.min || 0;
         this.max = serializationObject.max || 0;
         this.groupInInspector = serializationObject.groupInInspector || "";
+        if (serializationObject.displayInInspector !== undefined) {
+            this.displayInInspector = serializationObject.displayInInspector;
+        }
 
         if (!serializationObject.valueType) {
             return;

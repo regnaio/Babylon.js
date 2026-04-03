@@ -1,21 +1,22 @@
 import { NodeMaterialBlockConnectionPointTypes } from "./Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "./nodeMaterialBuildState";
-import type { Nullable } from "../../types";
+import { type NodeMaterialBuildState } from "./nodeMaterialBuildState";
+import { type Nullable } from "../../types";
 import { NodeMaterialConnectionPoint, NodeMaterialConnectionPointDirection } from "./nodeMaterialBlockConnectionPoint";
 import { NodeMaterialBlockTargets } from "./Enums/nodeMaterialBlockTargets";
-import type { Effect } from "../effect";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
-import type { Mesh } from "../../Meshes/mesh";
-import type { SubMesh } from "../../Meshes/subMesh";
-import type { NodeMaterial, NodeMaterialDefines } from "./nodeMaterial";
-import type { InputBlock } from "./Blocks/Input/inputBlock";
+import { type Effect } from "../effect";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
+import { type Mesh } from "../../Meshes/mesh";
+import { type SubMesh } from "../../Meshes/subMesh";
+import { type NodeMaterial, type NodeMaterialDefines } from "./nodeMaterial";
+import { type InputBlock } from "./Blocks/Input/inputBlock";
 import { UniqueIdGenerator } from "../../Misc/uniqueIdGenerator";
-import type { Scene } from "../../scene";
+import { type Scene } from "../../scene";
 import { GetClass } from "../../Misc/typeStore";
-import type { EffectFallbacks } from "../effectFallbacks";
+import { type EffectFallbacks } from "../effectFallbacks";
 import { Logger } from "core/Misc/logger";
 import { ShaderLanguage } from "../shaderLanguage";
 import { Observable } from "core/Misc/observable";
+import { type NodeMaterialTeleportOutBlock } from "./Blocks/Teleport/teleportOutBlock";
 
 /**
  * Defines a block that can be used inside a node based material
@@ -26,11 +27,24 @@ export class NodeMaterialBlock {
     protected _target: NodeMaterialBlockTargets;
     private _isFinalMerger = false;
     private _isInput = false;
+    private _isLoop = false;
     private _isTeleportOut = false;
     private _isTeleportIn = false;
     private _name = "";
     protected _isUnique = false;
     protected _codeIsReady = true;
+    /** @internal */
+    public _isFinalOutput = false;
+
+    /** @internal */
+    public get _isFinalOutputAndActive() {
+        return this._isFinalOutput;
+    }
+
+    /** @internal */
+    public get _hasPrecedence() {
+        return false;
+    }
 
     /**
      * Observable raised when the block code is ready (if the code loading is async)
@@ -125,6 +139,13 @@ export class NodeMaterialBlock {
     }
 
     /**
+     * Gets a boolean indicating if this block is a loop
+     */
+    public get isLoop(): boolean {
+        return this._isLoop;
+    }
+
+    /**
      * Gets or sets the build Id
      */
     public get buildId(): number {
@@ -202,14 +223,28 @@ export class NodeMaterialBlock {
      * @param name defines the block name
      * @param target defines the target of that block (Vertex by default)
      * @param isFinalMerger defines a boolean indicating that this block is an end block (e.g. it is generating a system value). Default is false
+     * @param isFinalOutput defines a boolean indicating that this block is generating a final output and no other block should be generated after
      */
-    public constructor(name: string, target = NodeMaterialBlockTargets.Vertex, isFinalMerger = false) {
+    public constructor(name: string, target = NodeMaterialBlockTargets.Vertex, isFinalMerger = false, isFinalOutput = false) {
         this._target = target;
         this._originalTargetIsNeutral = target === NodeMaterialBlockTargets.Neutral;
         this._isFinalMerger = isFinalMerger;
-        this._isInput = this.getClassName() === "InputBlock";
-        this._isTeleportOut = this.getClassName() === "NodeMaterialTeleportOutBlock";
-        this._isTeleportIn = this.getClassName() === "NodeMaterialTeleportInBlock";
+        this._isFinalOutput = isFinalOutput;
+        switch (this.getClassName()) {
+            case "InputBlock":
+                this._isInput = true;
+                break;
+            case "NodeMaterialTeleportOutBlock":
+                this._isTeleportOut = true;
+                break;
+            case "NodeMaterialTeleportInBlock":
+                this._isTeleportIn = true;
+                break;
+            case "LoopBlock":
+                this._isLoop = true;
+                break;
+        }
+
         this._name = name;
         this.uniqueId = UniqueIdGenerator.UniqueId;
     }
@@ -217,6 +252,7 @@ export class NodeMaterialBlock {
     /** @internal */
     public _setInitialTarget(target: NodeMaterialBlockTargets): void {
         this._target = target;
+        // marked as read only
         (this._originalTargetIsNeutral as boolean) = target === NodeMaterialBlockTargets.Neutral;
     }
 
@@ -331,7 +367,12 @@ export class NodeMaterialBlock {
     public getFirstAvailableInput(forOutput: Nullable<NodeMaterialConnectionPoint> = null) {
         for (const input of this._inputs) {
             if (!input.connectedPoint) {
-                if (!forOutput || forOutput.type === input.type || input.type === NodeMaterialBlockConnectionPointTypes.AutoDetect) {
+                if (
+                    !forOutput ||
+                    forOutput.type === input.type ||
+                    input.type === NodeMaterialBlockConnectionPointTypes.AutoDetect ||
+                    input.acceptedConnectionPointTypes.indexOf(forOutput.type) !== -1
+                ) {
                     return input;
                 }
             }
@@ -398,9 +439,6 @@ export class NodeMaterialBlock {
      * Connect current block with another block
      * @param other defines the block to connect with
      * @param options define the various options to help pick the right connections
-     * @param options.input
-     * @param options.output
-     * @param options.outputSwizzle
      * @returns the current block
      */
     public connectTo(
@@ -425,8 +463,7 @@ export class NodeMaterialBlock {
                 output.connectTo(input);
                 notFound = false;
             } else if (!output) {
-                // eslint-disable-next-line no-throw-literal
-                throw "Unable to find a compatible match";
+                throw new Error("Unable to find a compatible match");
             } else {
                 output = this.getSiblingOutput(output);
             }
@@ -437,6 +474,11 @@ export class NodeMaterialBlock {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected _buildBlock(state: NodeMaterialBuildState) {
+        // Empty. Must be defined by child nodes
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    protected _postBuildBlock(state: NodeMaterialBuildState) {
         // Empty. Must be defined by child nodes
     }
 
@@ -454,34 +496,33 @@ export class NodeMaterialBlock {
 
     /**
      * Add potential fallbacks if shader compilation fails
-     * @param mesh defines the mesh to be rendered
      * @param fallbacks defines the current prioritized list of fallbacks
+     * @param mesh defines the mesh to be rendered
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public provideFallbacks(mesh: AbstractMesh, fallbacks: EffectFallbacks) {
+    public provideFallbacks(fallbacks: EffectFallbacks, mesh?: AbstractMesh) {
         // Do nothing
     }
 
     /**
      * Initialize defines for shader compilation
-     * @param mesh defines the mesh to be rendered
-     * @param nodeMaterial defines the node material requesting the update
      * @param defines defines the material defines to update
-     * @param useInstances specifies that instances should be used
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public initializeDefines(mesh: AbstractMesh, nodeMaterial: NodeMaterial, defines: NodeMaterialDefines, useInstances: boolean = false) {}
+    public initializeDefines(defines: NodeMaterialDefines) {
+        // Do nothing
+    }
 
     /**
      * Update defines for shader compilation
-     * @param mesh defines the mesh to be rendered
-     * @param nodeMaterial defines the node material requesting the update
      * @param defines defines the material defines to update
+     * @param nodeMaterial defines the node material requesting the update
+     * @param mesh defines the mesh to be rendered
      * @param useInstances specifies that instances should be used
      * @param subMesh defines which submesh to render
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public prepareDefines(mesh: AbstractMesh, nodeMaterial: NodeMaterial, defines: NodeMaterialDefines, useInstances: boolean = false, subMesh?: SubMesh) {
+    public prepareDefines(defines: NodeMaterialDefines, nodeMaterial: NodeMaterial, mesh?: AbstractMesh, useInstances: boolean = false, subMesh?: SubMesh) {
         // Do nothing
     }
 
@@ -498,12 +539,11 @@ export class NodeMaterialBlock {
     /**
      * Function called when a block is declared as repeatable content generator
      * @param vertexShaderState defines the current compilation state for the vertex shader
-     * @param fragmentShaderState defines the current compilation state for the fragment shader
-     * @param mesh defines the mesh to be rendered
      * @param defines defines the material defines to update
+     * @param mesh defines the mesh to be rendered
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public replaceRepeatableContent(vertexShaderState: NodeMaterialBuildState, fragmentShaderState: NodeMaterialBuildState, mesh: AbstractMesh, defines: NodeMaterialDefines) {
+    public replaceRepeatableContent(vertexShaderState: NodeMaterialBuildState, defines: NodeMaterialDefines, mesh?: AbstractMesh) {
         // Do nothing
     }
 
@@ -548,6 +588,7 @@ export class NodeMaterialBlock {
             this._inputs[inputIndex1]._acceptedConnectionPointType = this._inputs[inputIndex0];
         } else {
             this._inputs[inputIndex0]._linkedConnectionSource = this._inputs[inputIndex1];
+            this._inputs[inputIndex0]._isMainLinkSource = true;
         }
         this._inputs[inputIndex1]._linkedConnectionSource = this._inputs[inputIndex0];
     }
@@ -557,6 +598,11 @@ export class NodeMaterialBlock {
 
         const localBlockIsFragment = state._vertexState != null;
         const otherBlockWasGeneratedInVertexShader = block._buildTarget === NodeMaterialBlockTargets.Vertex && block.target !== NodeMaterialBlockTargets.VertexAndFragment;
+
+        if (block.isTeleportOut && (block as NodeMaterialTeleportOutBlock).entryPoint?.isConnectedToUniform) {
+            // In that case, we skip the context switch as the teleport out block is connected to a uniform
+            return;
+        }
 
         if (
             localBlockIsFragment &&
@@ -572,9 +618,17 @@ export class NodeMaterialBlock {
                 const connectedPoint = input.connectedPoint!;
                 if (state._vertexState._emitVaryingFromString("v_" + connectedPoint.declarationVariableName, connectedPoint.type)) {
                     const prefix = state.shaderLanguage === ShaderLanguage.WGSL ? "vertexOutputs." : "";
-                    state._vertexState.compilationString += `${prefix}${"v_" + connectedPoint.declarationVariableName} = ${connectedPoint.associatedVariableName};\n`;
+                    if (state.shaderLanguage === ShaderLanguage.WGSL && connectedPoint.type === NodeMaterialBlockConnectionPointTypes.Matrix) {
+                        // We can't pass a matrix as a varying in WGSL, so we need to split it into 4 vectors
+                        state._vertexState.compilationString += `${prefix}${"v_" + connectedPoint.declarationVariableName}_r0 = ${connectedPoint.associatedVariableName}[0];\n`;
+                        state._vertexState.compilationString += `${prefix}${"v_" + connectedPoint.declarationVariableName}_r1 = ${connectedPoint.associatedVariableName}[1];\n`;
+                        state._vertexState.compilationString += `${prefix}${"v_" + connectedPoint.declarationVariableName}_r2 = ${connectedPoint.associatedVariableName}[2];\n`;
+                        state._vertexState.compilationString += `${prefix}${"v_" + connectedPoint.declarationVariableName}_r3 = ${connectedPoint.associatedVariableName}[3];\n`;
+                    } else {
+                        state._vertexState.compilationString += `${prefix}${"v_" + connectedPoint.declarationVariableName} = ${connectedPoint.associatedVariableName};\n`;
+                    }
                 }
-                const prefix = state.shaderLanguage === ShaderLanguage.WGSL ? "fragmentInputs." : "";
+                const prefix = state.shaderLanguage === ShaderLanguage.WGSL && connectedPoint.type !== NodeMaterialBlockConnectionPointTypes.Matrix ? "fragmentInputs." : "";
                 input.associatedVariableName = prefix + "v_" + connectedPoint.declarationVariableName;
                 input._enforceAssociatedVariableName = true;
             }
@@ -600,6 +654,7 @@ export class NodeMaterialBlock {
             "uv6",
             "position2d",
             "particle_uv",
+            "postprocess_uv",
             "matricesIndices",
             "matricesWeights",
             "world0",
@@ -653,11 +708,11 @@ export class NodeMaterialBlock {
             }
 
             if (this.target !== NodeMaterialBlockTargets.Neutral) {
-                if ((input.target & this.target!) === 0) {
+                if ((input.target & this.target) === 0) {
                     continue;
                 }
 
-                if ((input.target & state.target!) === 0) {
+                if ((input.target & state.target) === 0) {
                     continue;
                 }
             }
@@ -702,6 +757,31 @@ export class NodeMaterialBlock {
 
         // Compile connected blocks
         for (const output of this._outputs) {
+            if (output._forPostBuild) {
+                continue;
+            }
+            if ((output.target & state.target) === 0) {
+                continue;
+            }
+
+            for (const endpoint of output.endpoints) {
+                const block = endpoint.ownerBlock;
+
+                if (block) {
+                    if (((block.target & state.target) !== 0 && activeBlocks.indexOf(block) !== -1) || state._terminalBlocks.has(block)) {
+                        this._processBuild(block, state, endpoint, activeBlocks);
+                    }
+                }
+            }
+        }
+
+        this._postBuildBlock(state);
+
+        // Compile post build connected blocks
+        for (const output of this._outputs) {
+            if (!output._forPostBuild) {
+                continue;
+            }
             if ((output.target & state.target) === 0) {
                 continue;
             }
@@ -885,7 +965,9 @@ export class NodeMaterialBlock {
         const serializedInputs = serializationObject.inputs;
         const serializedOutputs = serializationObject.outputs;
         if (serializedInputs) {
-            serializedInputs.forEach((port: any, i: number) => {
+            for (let i = 0; i < Math.min(serializedInputs.length, this.inputs.length); i++) {
+                const port = serializedInputs[i];
+
                 if (port.displayName) {
                     this.inputs[i].displayName = port.displayName;
                 }
@@ -893,10 +975,11 @@ export class NodeMaterialBlock {
                     this.inputs[i].isExposedOnFrame = port.isExposedOnFrame;
                     this.inputs[i].exposedPortPosition = port.exposedPortPosition;
                 }
-            });
+            }
         }
         if (serializedOutputs) {
-            serializedOutputs.forEach((port: any, i: number) => {
+            for (let i = 0; i < Math.min(serializedOutputs.length, this.outputs.length); i++) {
+                const port = serializedOutputs[i];
                 if (port.displayName) {
                     this.outputs[i].displayName = port.displayName;
                 }
@@ -904,7 +987,7 @@ export class NodeMaterialBlock {
                     this.outputs[i].isExposedOnFrame = port.isExposedOnFrame;
                     this.outputs[i].exposedPortPosition = port.exposedPortPosition;
                 }
-            });
+            }
         }
     }
 

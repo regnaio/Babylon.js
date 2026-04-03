@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { InternalTexture } from "../Materials/Textures/internalTexture";
+import { type InternalTexture } from "../Materials/Textures/internalTexture";
 import { Logger } from "../Misc/logger";
 
 //private static _TYPE_NO_DATA = 0;
@@ -35,7 +35,7 @@ export function GetTGAHeader(data: Uint8Array): any {
         width: data[offset++] | (data[offset++] << 8),
         height: data[offset++] | (data[offset++] << 8),
         pixel_size: data[offset++],
-        flags: data[offset++],
+        flags: data[offset],
     };
 
     return header;
@@ -144,7 +144,7 @@ export function UploadContent(texture: InternalTexture, data: Uint8Array): void 
     }
     // RAW Pixels
     else {
-        pixel_data = data.subarray(offset, (offset += use_pal ? header.width * header.height : pixel_total));
+        pixel_data = data.subarray(offset, offset + (use_pal ? header.width * header.height : pixel_total));
     }
 
     // Load to texture
@@ -200,7 +200,7 @@ export function UploadContent(texture: InternalTexture, data: Uint8Array): void 
 /**
  * @internal
  */
-function _getImageData8bits(
+function GetImageData8bits(
     header: any,
     palettes: Uint8Array,
     pixel_data: Uint8Array,
@@ -238,7 +238,7 @@ function _getImageData8bits(
 /**
  * @internal
  */
-function _getImageData16bits(
+function GetImageData16bits(
     header: any,
     palettes: Uint8Array,
     pixel_data: Uint8Array,
@@ -279,7 +279,7 @@ function _getImageData16bits(
 /**
  * @internal
  */
-function _getImageData24bits(
+function GetImageData24bits(
     header: any,
     palettes: Uint8Array,
     pixel_data: Uint8Array,
@@ -314,7 +314,7 @@ function _getImageData24bits(
 /**
  * @internal
  */
-function _getImageData32bits(
+function GetImageData32bits(
     header: any,
     palettes: Uint8Array,
     pixel_data: Uint8Array,
@@ -349,7 +349,7 @@ function _getImageData32bits(
 /**
  * @internal
  */
-function _getImageDataGrey8bits(
+function GetImageDataGrey8bits(
     header: any,
     palettes: Uint8Array,
     pixel_data: Uint8Array,
@@ -386,7 +386,7 @@ function _getImageDataGrey8bits(
 /**
  * @internal
  */
-function _getImageDataGrey16bits(
+function GetImageDataGrey16bits(
     header: any,
     palettes: Uint8Array,
     pixel_data: Uint8Array,
@@ -438,18 +438,18 @@ export const TGATools = {
     UploadContent,
 
     /** @internal */
-    _getImageData8bits,
+    _getImageData8bits: GetImageData8bits,
 
     /** @internal */
-    _getImageData16bits,
+    _getImageData16bits: GetImageData16bits,
     /** @internal */
-    _getImageData24bits,
+    _getImageData24bits: GetImageData24bits,
 
     /** @internal */
-    _getImageData32bits,
+    _getImageData32bits: GetImageData32bits,
 
     /** @internal */
-    _getImageDataGrey8bits,
+    _getImageDataGrey8bits: GetImageDataGrey8bits,
     /** @internal */
-    _getImageDataGrey16bits,
+    _getImageDataGrey16bits: GetImageDataGrey16bits,
 };

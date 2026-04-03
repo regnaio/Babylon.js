@@ -1,13 +1,13 @@
 import * as React from "react";
-import type { Observable } from "core/Misc/observable";
-import type { TargetedAnimation, AnimationGroup } from "core/Animations/animationGroup";
-import type { Scene } from "core/scene";
-import type { PropertyChangedEvent } from "../../../../propertyChangedEvent";
+import { type Observable } from "core/Misc/observable";
+import { type TargetedAnimation, type AnimationGroup } from "core/Animations/animationGroup";
+import { type Scene } from "core/scene";
+import { type PropertyChangedEvent } from "../../../../propertyChangedEvent";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { GlobalState } from "../../../../globalState";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type GlobalState } from "../../../../globalState";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
 
 import { AnimationCurveEditorComponent } from "./curveEditor/animationCurveEditorComponent";
@@ -68,7 +68,7 @@ export class TargetedAnimationGridComponent extends React.Component<ITargetedAni
         if (!this._animationCurveEditorContext) {
             this._animationCurveEditorContext = new Context();
         }
-        this._animationCurveEditorContext.title = (this.props.targetedAnimation.target as any).name || "";
+        this._animationCurveEditorContext.title = this.props.targetedAnimation.target.name || "";
         this._animationCurveEditorContext.animations = [this.props.targetedAnimation.animation];
         this._animationCurveEditorContext.target = this.props.targetedAnimation.target;
         this._animationCurveEditorContext.scene = this.props.scene;
@@ -107,7 +107,7 @@ export class TargetedAnimationGridComponent extends React.Component<ITargetedAni
                         <TextLineComponent
                             label="Target"
                             value={targetedAnimation.target.name}
-                            onLink={() => this.props.globalState.onSelectionChangedObservable.notifyObservers(targetedAnimation)}
+                            onLink={() => this.props.globalState.onSelectionChangedObservable.notifyObservers(targetedAnimation.target)}
                         />
                     )}
                     {this._animationCurveEditorContext && <AnimationCurveEditorComponent globalState={this.props.globalState} context={this._animationCurveEditorContext} />}

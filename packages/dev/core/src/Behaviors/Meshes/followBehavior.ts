@@ -1,11 +1,11 @@
-import type { Behavior } from "../behavior";
-import type { Scene } from "../../scene";
-import type { Nullable } from "../../types";
-import type { Observer } from "../../Misc/observable";
-import type { Camera } from "../../Cameras/camera";
+import { type Behavior } from "../behavior";
+import { type Scene } from "../../scene";
+import { type Nullable } from "../../types";
+import { type Observer } from "../../Misc/observable";
+import { type Camera } from "../../Cameras/camera";
 import { Matrix, Quaternion, Vector3 } from "../../Maths/math.vector";
-import { Scalar } from "../../Maths/math.scalar";
-import type { TransformNode } from "../../Meshes/transformNode";
+import { Clamp } from "../../Maths/math.scalar.functions";
+import { type TransformNode } from "../../Meshes/transformNode";
 import { Epsilon } from "../../Maths/math.constants";
 
 /**
@@ -206,12 +206,12 @@ export class FollowBehavior implements Behavior<TransformNode> {
             currentDistance = currentDistance2D;
         }
 
-        let clampedDistance = currentDistance;
+        let clampedDistance: number;
 
         if (moveToDefault) {
             clampedDistance = defaultDistance;
         } else {
-            clampedDistance = Scalar.Clamp(currentDistance, minDistance, maxDistance);
+            clampedDistance = Clamp(currentDistance, minDistance, maxDistance);
         }
 
         currentToTarget.copyFrom(direction).scaleInPlace(clampedDistance);
@@ -221,7 +221,7 @@ export class FollowBehavior implements Behavior<TransformNode> {
 
     private _applyVerticalClamp(currentToTarget: Vector3) {
         if (this.verticalMaxDistance !== 0) {
-            currentToTarget.y = Scalar.Clamp(currentToTarget.y, -this.verticalMaxDistance, this.verticalMaxDistance);
+            currentToTarget.y = Clamp(currentToTarget.y, -this.verticalMaxDistance, this.verticalMaxDistance);
         }
     }
 

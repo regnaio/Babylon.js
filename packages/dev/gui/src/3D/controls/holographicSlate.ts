@@ -1,5 +1,5 @@
 import { ContentDisplay3D } from "./contentDisplay3D";
-import type { Control3D } from "./control3D";
+import { type Control3D } from "./control3D";
 import { TouchHolographicButton } from "./touchHolographicButton";
 import { AdvancedDynamicTexture } from "../../2D/advancedDynamicTexture";
 import { Control } from "../../2D/controls/control";
@@ -9,22 +9,22 @@ import { SlateGizmo } from "../gizmos/slateGizmo";
 import { FluentMaterial } from "../materials/fluent/fluentMaterial";
 import { FluentBackplateMaterial } from "../materials/fluentBackplate/fluentBackplateMaterial";
 import { PointerDragBehavior } from "core/Behaviors/Meshes/pointerDragBehavior";
-import type { Texture } from "core/Materials/Textures/texture";
+import { type Texture } from "core/Materials/Textures/texture";
 import { Vector4 } from "core/Maths/math";
 import { Epsilon } from "core/Maths/math.constants";
 import { Scalar } from "core/Maths/math.scalar";
-import type { Matrix } from "core/Maths/math.vector";
-import { Quaternion, Vector2, Vector3 } from "core/Maths/math.vector";
+import { type Matrix, Quaternion, Vector2, Vector3 } from "core/Maths/math.vector";
 import { Viewport } from "core/Maths/math.viewport";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
 import { CreateBox } from "core/Meshes/Builders/boxBuilder";
 import { CreatePlane } from "core/Meshes/Builders/planeBuilder";
-import type { TransformNode } from "core/Meshes/transformNode";
+import { type TransformNode } from "core/Meshes/transformNode";
 import { Mesh } from "core/Meshes/mesh";
 import { VertexData } from "core/Meshes/mesh.vertexData";
-import type { Observer } from "core/Misc/observable";
-import type { Scene } from "core/scene";
-import type { Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type Scene } from "core/scene";
+import { type Nullable } from "core/types";
+import { Tools } from "core/Misc/tools";
 
 /**
  * Class used to create a holographic slate
@@ -34,7 +34,7 @@ export class HolographicSlate extends ContentDisplay3D {
     /**
      * Base Url for the assets.
      */
-    public static ASSETS_BASE_URL: string = "https://assets.babylonjs.com/meshes/MRTK/";
+    public static ASSETS_BASE_URL: string = "https://assets.babylonjs.com/core/MRTK/";
     /**
      * File name for the close icon.
      */
@@ -72,6 +72,11 @@ export class HolographicSlate extends ContentDisplay3D {
     private _contentDragBehavior: PointerDragBehavior;
 
     private _defaultBehavior: DefaultBehavior;
+
+    /**
+     * If true, the content will be scaled to fit the dimensions of the slate
+     */
+    public fitContentToDimensions = false;
     /**
      * Regroups all mesh behaviors for the slate
      */
@@ -259,7 +264,7 @@ export class HolographicSlate extends ContentDisplay3D {
         if (this._contentPlate?.material && (this._contentPlate.material as FluentMaterial).albedoTexture) {
             const tex = (this._contentPlate.material as FluentMaterial).albedoTexture as Texture;
             tex.uScale = this._contentScaleRatio;
-            tex.vScale = (this._contentScaleRatio / this._contentViewport.width) * this._contentViewport.height;
+            tex.vScale = this.fitContentToDimensions ? this._contentScaleRatio : (this._contentScaleRatio / this._contentViewport.width) * this._contentViewport.height;
             tex.uOffset = this._contentViewport.x;
             tex.vOffset = this._contentViewport.y;
         }
@@ -267,7 +272,7 @@ export class HolographicSlate extends ContentDisplay3D {
 
     private _resetContentPositionAndZoom() {
         this._contentViewport.x = 0;
-        this._contentViewport.y = 1 - this._contentViewport.height / this._contentViewport.width;
+        this._contentViewport.y = 0; // 1 - this._contentViewport.height / this._contentViewport.width;
         this._contentScaleRatio = 1;
     }
 
@@ -337,9 +342,9 @@ export class HolographicSlate extends ContentDisplay3D {
         closeButton.node!.parent = node;
 
         this._positionElements();
-
-        this._followButton.imageUrl = HolographicSlate.ASSETS_BASE_URL + HolographicSlate.FOLLOW_ICON_FILENAME;
-        this._closeButton.imageUrl = HolographicSlate.ASSETS_BASE_URL + HolographicSlate.CLOSE_ICON_FILENAME;
+        const baseUrl = Tools.GetAssetUrl(HolographicSlate.ASSETS_BASE_URL);
+        this._followButton.imageUrl = baseUrl + HolographicSlate.FOLLOW_ICON_FILENAME;
+        this._closeButton.imageUrl = baseUrl + HolographicSlate.CLOSE_ICON_FILENAME;
 
         this._followButton.isBackplateVisible = false;
         this._closeButton.isBackplateVisible = false;
@@ -398,6 +403,9 @@ export class HolographicSlate extends ContentDisplay3D {
 
         const offset = new Vector3();
         this._contentDragBehavior.onDragObservable.add((event) => {
+            if (this.fitContentToDimensions) {
+                return;
+            }
             offset.copyFrom(event.dragPlanePoint);
             offset.subtractInPlace(origin);
             projectedOffset.copyFromFloats(Vector3.Dot(offset, rightWorld), Vector3.Dot(offset, upWorld));
@@ -466,7 +474,10 @@ export class HolographicSlate extends ContentDisplay3D {
             this.origin.setAll(0);
             this._gizmo.updateBoundingBox();
             const pivot = this.node.getAbsolutePivotPoint();
-            this.node.position.copyFrom(camera.position).subtractInPlace(backward).subtractInPlace(pivot);
+            // only if position was not yet set!
+            if (this.node.position.equalsToFloats(0, 0, 0)) {
+                this.node.position.copyFrom(camera.position).subtractInPlace(backward).subtractInPlace(pivot);
+            }
             this.node.rotationQuaternion = Quaternion.FromLookDirectionLH(backward, new Vector3(0, 1, 0));
 
             if (resetAspect) {

@@ -1,9 +1,9 @@
 import * as React from "react";
 import { Color3 } from "core/Maths/math.color";
-import type { GradientBlockColorStep } from "core/Materials/Node/Blocks/gradientBlock";
+import { type GradientBlockColorStep } from "core/Materials/Node/Blocks/gradientBlock";
 import deleteButton from "../../imgs/delete.svg";
-import copyIcon from "../../sharedComponents/copy.svg";
-import type { StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
+import copyIcon from "shared-ui-components/imgs/copyStep.svg";
+import { type StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { ColorPickerLine } from "shared-ui-components/lines/colorPickerComponent";
 
@@ -89,7 +89,9 @@ export class GradientStepComponent extends React.Component<IGradientStepComponen
                 <div
                     className="gradient-copy"
                     onClick={() => {
-                        if (this.props.onCopy) this.props.onCopy();
+                        if (this.props.onCopy) {
+                            this.props.onCopy();
+                        }
                     }}
                     title="Copy Step"
                 >

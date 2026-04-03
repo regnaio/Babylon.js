@@ -1,25 +1,24 @@
-import type { Immutable, Nullable } from "../types";
+import { type Immutable, type Nullable } from "../types";
 import { VertexBuffer } from "../Buffers/buffer";
 import { AbstractMesh } from "../Meshes/abstractMesh";
-import type { Mesh } from "../Meshes/mesh";
+import { type Mesh } from "../Meshes/mesh";
 import { LinesMesh, InstancedLinesMesh } from "../Meshes/linesMesh";
-import type { Matrix } from "../Maths/math.vector";
-import { Vector3, TmpVectors } from "../Maths/math.vector";
-import type { IDisposable, Scene } from "../scene";
-import type { Observer } from "../Misc/observable";
-import type { Effect } from "../Materials/effect";
+import { type Matrix, Vector3, TmpVectors } from "../Maths/math.vector";
+import { type IDisposable, type Scene } from "../scene";
+import { type Observer } from "../Misc/observable";
 import { Material } from "../Materials/material";
 import { ShaderMaterial } from "../Materials/shaderMaterial";
 import { Camera } from "../Cameras/camera";
 import { Constants } from "../Engines/constants";
-import type { Node } from "../node";
+import { type Node } from "../node";
 
-import type { DataBuffer } from "../Buffers/dataBuffer";
+import { type DataBuffer } from "../Buffers/dataBuffer";
 import { SmartArray } from "../Misc/smartArray";
 import { DrawWrapper } from "../Materials/drawWrapper";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
 declare module "../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /** @internal */
         _edgeRenderLineShader: Nullable<ShaderMaterial>;
@@ -27,6 +26,7 @@ declare module "../scene" {
 }
 
 declare module "../Meshes/abstractMesh" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractMesh {
         /**
          * Gets the edgesRenderer associated with the mesh
@@ -57,6 +57,7 @@ Object.defineProperty(AbstractMesh.prototype, "edgesRenderer", {
 });
 
 declare module "../Meshes/linesMesh" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface LinesMesh {
         /**
          * Enables the edge rendering mode on the mesh.
@@ -76,6 +77,7 @@ LinesMesh.prototype.enableEdgesRendering = function (epsilon = 0.95, checkVertic
 };
 
 declare module "../Meshes/linesMesh" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface InstancedLinesMesh {
         /**
          * Enables the edge rendering mode on the mesh.
@@ -91,7 +93,7 @@ declare module "../Meshes/linesMesh" {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 InstancedLinesMesh.prototype.enableEdgesRendering = function (epsilon = 0.95, checkVerticesInsteadOfIndices = false): InstancedLinesMesh {
-    LinesMesh.prototype.enableEdgesRendering.apply(this, arguments);
+    LinesMesh.prototype.enableEdgesRendering.apply(this, [epsilon, checkVerticesInsteadOfIndices]);
     return this;
 };
 
@@ -269,8 +271,14 @@ export class EdgesRenderer implements IEdgesRenderer {
             shader.disableDepthWrite = true;
             shader.backFaceCulling = false;
             shader.checkReadyOnEveryCall = scene.getEngine().isWebGPU;
+            shader.doNotSerialize = true;
 
             scene._edgeRenderLineShader = shader;
+
+            scene.onDisposeObservable.add(() => {
+                scene._edgeRenderLineShader!.dispose();
+                scene._edgeRenderLineShader = null;
+            });
         }
 
         return scene._edgeRenderLineShader;
@@ -307,7 +315,7 @@ export class EdgesRenderer implements IEdgesRenderer {
             this._shaderLanguage = ShaderLanguage.WGSL;
         }
 
-        this._prepareRessources();
+        this._prepareResources();
         if (generateEdgesLines) {
             if (options?.useAlternateEdgeFinder ?? true) {
                 this._generateEdgesLinesAlternate();
@@ -325,7 +333,7 @@ export class EdgesRenderer implements IEdgesRenderer {
         });
     }
 
-    protected _prepareRessources(): void {
+    protected _prepareResources(): void {
         if (this._lineShader) {
             return;
         }
@@ -371,7 +379,6 @@ export class EdgesRenderer implements IEdgesRenderer {
         if (this._ib) {
             this._source.getScene().getEngine()._releaseBuffer(this._ib);
         }
-        this._lineShader.dispose();
 
         this._drawWrapper?.dispose();
     }
@@ -943,6 +950,7 @@ export class EdgesRenderer implements IEdgesRenderer {
      */
     public render(): void {
         const scene = this._source.getScene();
+        const floatingOriginOffset = scene.floatingOriginOffset;
 
         const currentDrawWrapper = this._lineShader._getDrawWrapper();
         if (this._drawWrapper) {
@@ -966,7 +974,8 @@ export class EdgesRenderer implements IEdgesRenderer {
             this._buffersForInstances["world3"] = (this._source as Mesh).getVertexBuffer("world3");
 
             if (hasInstances) {
-                const instanceStorage = (this._source as Mesh)._instanceDataStorage;
+                const instanceStorage = (this._source as Mesh)._getInstanceDataStorage();
+                const isFrozen = (this._source as Mesh)._instanceDataStorage.isFrozen;
 
                 instanceCount = this.customInstances.length;
 
@@ -977,11 +986,17 @@ export class EdgesRenderer implements IEdgesRenderer {
                     return;
                 }
 
-                if (!instanceStorage.isFrozen) {
+                if (!isFrozen) {
                     let offset = 0;
 
                     for (let i = 0; i < instanceCount; ++i) {
-                        this.customInstances.data[i].copyToArray(instanceStorage.instancesData, offset);
+                        const instanceMatrix = this.customInstances.data[i];
+                        instanceMatrix.copyToArray(instanceStorage.instancesData, offset);
+                        // Subtract from Float64 source to preserve precision at large coordinates.
+                        const instanceM = instanceMatrix.asArray();
+                        instanceStorage.instancesData[offset + 12] = instanceM[12] - floatingOriginOffset.x;
+                        instanceStorage.instancesData[offset + 13] = instanceM[13] - floatingOriginOffset.y;
+                        instanceStorage.instancesData[offset + 14] = instanceM[14] - floatingOriginOffset.z;
                         offset += 16;
                     }
 
@@ -1002,7 +1017,7 @@ export class EdgesRenderer implements IEdgesRenderer {
         }
 
         // VBOs
-        engine.bindBuffers(useBuffersWithInstances ? this._buffersForInstances : this._buffers, this._ib, <Effect>this._lineShader.getEffect());
+        engine.bindBuffers(useBuffersWithInstances ? this._buffersForInstances : this._buffers, this._ib, this._lineShader.getEffect());
 
         scene.resetCachedMaterial();
         this._lineShader.setColor4("color", this._source.edgesColor);

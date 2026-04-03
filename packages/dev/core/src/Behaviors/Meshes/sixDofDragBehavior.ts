@@ -1,9 +1,8 @@
-import type { Mesh } from "../../Meshes/mesh";
-import type { Scene } from "../../scene";
-import type { Nullable } from "../../types";
+import { type Mesh } from "../../Meshes/mesh";
+import { type Scene } from "../../scene";
+import { type Nullable } from "../../types";
 import { Vector3, Quaternion, Matrix, TmpVectors } from "../../Maths/math.vector";
-import type { Observer } from "../../Misc/observable";
-import { Observable } from "../../Misc/observable";
+import { type Observer, Observable } from "../../Misc/observable";
 import { BaseSixDofDragBehavior } from "./baseSixDofDragBehavior";
 import { TransformNode } from "../../Meshes/transformNode";
 import { Space } from "../../Maths/math.axis";
@@ -40,6 +39,7 @@ export class SixDofDragBehavior extends BaseSixDofDragBehavior {
     /**
      * If `rotateDraggedObject` is set to `true`, this parameter determines if we are only rotating around the y axis (yaw)
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public rotateAroundYOnly = false;
 
     /**
@@ -74,12 +74,13 @@ export class SixDofDragBehavior extends BaseSixDofDragBehavior {
 
         ownerNode.isNearGrabbable = true;
         // if it has children, make sure they are grabbable too
-        ownerNode.getChildMeshes().forEach((m) => {
+        const children = ownerNode.getChildMeshes();
+        for (const m of children) {
             m.isNearGrabbable = true;
-        });
+        }
 
         // Node that will save the owner's transform
-        this._virtualTransformNode = new TransformNode("virtual_sixDof", BaseSixDofDragBehavior._virtualScene);
+        this._virtualTransformNode = new TransformNode("virtual_sixDof", BaseSixDofDragBehavior._VirtualScene);
         this._virtualTransformNode.rotationQuaternion = Quaternion.Identity();
 
         // On every frame move towards target scaling to avoid jitter caused by vr controllers
@@ -257,8 +258,6 @@ export class SixDofDragBehavior extends BaseSixDofDragBehavior {
      *  Detaches the behavior from the mesh
      */
     public override detach(): void {
-        super.detach();
-
         if (this._ownerNode) {
             this._ownerNode.getScene().onBeforeRenderObservable.remove(this._sceneRenderObserver);
         }
@@ -266,5 +265,7 @@ export class SixDofDragBehavior extends BaseSixDofDragBehavior {
         if (this._virtualTransformNode) {
             this._virtualTransformNode.dispose();
         }
+
+        super.detach();
     }
 }

@@ -6,6 +6,15 @@
     "configurations": [
         {
             /*
+            Attach to Playground
+            */
+            "type": "msedge",
+            "request": "launch",
+            "name": "Attach to Playground (Edge)",
+            "url": "http://localhost:1338"
+        },
+        {
+            /*
             Launch the playground to be use to test changes in dev packages
             */
             "type": "msedge",
@@ -206,15 +215,71 @@
             "type": "msedge",
             "request": "launch",
             "name": "Node Geometry Editor development (Edge)",
-            "url": "http://localhost:1340",
+            "url": "http://localhost:1343",
             "preLaunchTask": "Node Geometry Editor Serve (Dev)"
         },
         {
             "type": "chrome",
             "request": "launch",
             "name": "Node Geometry Editor development (Chrome)",
-            "url": "http://localhost:1340",
+            "url": "http://localhost:1343",
             "preLaunchTask": "Node Geometry Editor Serve (Dev)"
+        },
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Flow Graph Editor development (Edge)",
+            "url": "http://localhost:1345",
+            "preLaunchTask": "Flow Graph Editor Serve (Dev)"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Flow Graph Editor development (Chrome)",
+            "url": "http://localhost:1345",
+            "preLaunchTask": "Flow Graph Editor Serve (Dev)"
+        },
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Node Render Graph Editor development (Edge)",
+            "url": "http://localhost:1344",
+            "preLaunchTask": "Node Render Graph Editor Serve (Dev)"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Node Render Graph Editor development (Chrome)",
+            "url": "http://localhost:1344",
+            "preLaunchTask": "Node Render Graph Editor Serve (Dev)"
+        },
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Node Particle Editor development (Edge)",
+            "url": "http://localhost:1345",
+            "preLaunchTask": "Node Particle Editor Serve (Dev)"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Node Particle Editor development (Chrome)",
+            "url": "http://localhost:1345",
+            "preLaunchTask": "Node Particle Editor Serve (Dev)"
+        },
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Smart Filter Editor development (Edge)",
+            "url": "http://localhost:1346",
+            "preLaunchTask": "Smart Filter Editor Serve (Dev)"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Smart Filter Editor development (Chrome)",
+            "url": "http://localhost:1346",
+            "preLaunchTask": "Smart Filter Editor Serve (Dev)"
         },
         {
             /*
@@ -243,7 +308,7 @@
             "type": "msedge",
             "request": "launch",
             "name": "Launch Node Geometry Editor (Edge)",
-            "url": "http://localhost:1340",
+            "url": "http://localhost:1343",
             "preLaunchTask": "Node Geometry Editor Serve for core (Dev)"
         },
         {
@@ -253,108 +318,75 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Node Geometry Editor (Chrome)",
-            "url": "http://localhost:1340",
+            "url": "http://localhost:1343",
             "preLaunchTask": "Node Geometry Editor Serve for core (Dev)"
         },
         {
             "type": "msedge",
             "request": "launch",
-            "name": "VSM development (Edge)",
-            "url": "http://localhost:1342",
-            "preLaunchTask": "VSM Serve (Dev)"
+            "name": "Launch Flow Graph Editor (Edge)",
+            "url": "http://localhost:1345",
+            "preLaunchTask": "Flow Graph Editor Serve for core (Dev)"
         },
         {
             "type": "chrome",
             "request": "launch",
-            "name": "VSM development (Chrome)",
-            "url": "http://localhost:1342",
-            "preLaunchTask": "VSM Serve (Dev)"
+            "name": "Launch Flow Graph Editor (Chrome)",
+            "url": "http://localhost:1345",
+            "preLaunchTask": "Flow Graph Editor Serve for core (Dev)"
         },
         {
             "type": "msedge",
             "request": "launch",
-            "name": "Launch VSM (Edge)",
-            "url": "http://localhost:1342",
-            "preLaunchTask": "VSM Serve for core (Dev)"
+            "name": "Launch Node Render Graph Editor (Edge)",
+            "url": "http://localhost:1344",
+            "preLaunchTask": "Node Render Graph Editor Serve for core (Dev)"
         },
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Launch VSM (Chrome)",
-            "url": "http://localhost:1342",
-            "preLaunchTask": "VSM Serve for core (Dev)"
+            "name": "Launch Node Render Graph Editor (Chrome)",
+            "url": "http://localhost:1344",
+            "preLaunchTask": "Node Render Graph Editor Serve for core (Dev)"
         },
         {
             /*
-            Launch the playground to be use to test changes in dev packages
-            */
-            "type": "msedge",
-            "request": "launch",
-            "name": "Run and Watch Dev host (ES6-Dev)",
-            "url": "http://localhost:1338",
-            "outFiles": ["!**/node_modules/**"],
-            "preLaunchTask": "Run and Watch Dev host (Dev)"
-        },
-        {
-            /*
-            Launch the playground to be use to test changes in dev packages
-            */
-            "type": "msedge",
-            "request": "launch",
-            "name": "Run and Watch Dev host - SSL (ES6-Dev)",
-            "url": "https://localhost:1338",
-            "outFiles": ["!**/node_modules/**"],
-            "preLaunchTask": "Run and Watch Dev host (Dev)"
-        },
-        {
-            /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Launch unit tests with Vitest
+            https://vitest.dev/guide/debugging
             */
             "type": "node",
             "request": "launch",
             "name": "Run and Debug unit tests (Dev)",
-            "runtimeArgs": ["--inspect-brk", "${workspaceRoot}/node_modules/jest/bin/jest.js", "--runInBand", "--selectProjects", "unit"],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["vitest", "run", "--project=unit", "--no-file-parallelism"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "port": 9229,
-            // "outFiles": ["${workspaceRoot}/**/dist/**/*"], // debugging sources
-            // "envFile": "${workspaceRoot}/.env",
             "preLaunchTask": "Build (Dev)"
         },
         {
             /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Launch current test file with Vitest
+            https://vitest.dev/guide/debugging
             */
             "type": "node",
             "request": "launch",
             "name": "Run and Debug current unit test file (Dev)",
-            "runtimeArgs": [
-                "--inspect-brk",
-                "${workspaceRoot}/node_modules/jest/bin/jest.js",
-                "--runInBand",
-                "--selectProjects",
-                "unit",
-                "--test-path-pattern",
-                "${fileBasenameNoExtension}"
-            ],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["vitest", "run", "--project=unit", "--no-file-parallelism", "${fileBasenameNoExtension}"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "port": 9229,
-            // "outFiles": ["${workspaceRoot}/**/dist/**/*"], // debugging sources
-            // "envFile": "${workspaceRoot}/.env",
             "preLaunchTask": "Build (Dev)"
         },
         {
             /*
             Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Note - the recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
             "name": "Run validation tests - WebGL2 (Dev)",
-            "runtimeArgs": ["--inspect-brk", "${workspaceRoot}/node_modules/jest/bin/jest.js", "--runInBand", "--selectProjects", "visualization", "-i", "webgl2"],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgl2"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -364,23 +396,14 @@
         },
         {
             /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Launch test
+            Note that the recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
             "name": "Run single validation test - WebGL2 (Dev)",
-            "runtimeArgs": [
-                "--inspect-brk",
-                "${workspaceRoot}/node_modules/jest/bin/jest.js",
-                "--runInBand",
-                "--selectProjects",
-                "visualization",
-                "-i",
-                "webgl2",
-                "-t",
-                "${input:testName}"
-            ],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgl2", "-g", "${input:testName}"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -390,24 +413,14 @@
         },
         {
             /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Update test snapshots
+            Note that the recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
+            "runtimeExecutable": "npx",
             "name": "Update single validation test - WebGL2 (Dev)",
-            "runtimeArgs": [
-                "--inspect-brk",
-                "${workspaceRoot}/node_modules/jest/bin/jest.js",
-                "--runInBand",
-                "--selectProjects",
-                "visualization",
-                "-i",
-                "webgl2",
-                "-t",
-                "${input:testName}",
-                "-u"
-            ],
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgl2", "-g", "${input:testName}", "--update-snapshots"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -417,13 +430,14 @@
         },
         {
             /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Launch validation tests - WebGL1
+            Note - the recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
             "name": "Run validation tests - WebGL1 (Dev)",
-            "runtimeArgs": ["--inspect-brk", "${workspaceRoot}/node_modules/jest/bin/jest.js", "--runInBand", "--selectProjects", "visualization", "-i", "webgl1"],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgl1"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -433,23 +447,14 @@
         },
         {
             /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Launch single validation test - WebGL1
+            Note - the recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
             "name": "Run single validation test - WebGL1 (Dev)",
-            "runtimeArgs": [
-                "--inspect-brk",
-                "${workspaceRoot}/node_modules/jest/bin/jest.js",
-                "--runInBand",
-                "--selectProjects",
-                "visualization",
-                "-i",
-                "webgl1",
-                "-t",
-                "${input:testName}"
-            ],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgl1", "-g", "${input:testName}"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -460,12 +465,13 @@
         {
             /*
             Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
             "name": "Run validation tests - WebGPU (Dev)",
-            "runtimeArgs": ["--inspect-brk", "${workspaceRoot}/node_modules/jest/bin/jest.js", "--runInBand", "--selectProjects", "visualization", "-i", "webgpu"],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgpu"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -479,12 +485,30 @@
         {
             /*
             Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Recommended way would be to use the extension in the test tab of vscode.
+            */
+            "type": "node",
+            "request": "launch",
+            "name": "Run single validation test - WebGPU (Dev)",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgpu", "-g", "${input:testName}"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "port": 9229,
+            // "outFiles": ["${workspaceRoot}/**/dist/**/*"], // debugging sources
+            // "envFile": "${workspaceRoot}/.env",
+            "preLaunchTask": "CDN Serve and watch (Dev)"
+        },
+        {
+            /*
+            Launch tests
+            Recommended way would be to use the extension in the test tab of vscode.
             */
             "type": "node",
             "request": "launch",
             "name": "Run interactions tests (Dev)",
-            "runtimeArgs": ["--inspect-brk", "${workspaceRoot}/node_modules/jest/bin/jest.js", "--runInBand", "--selectProjects", "interactions"],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "webgpu", "-g", "${input:testName}", "--update-snapshots"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
@@ -492,19 +516,16 @@
         },
         {
             /*
-            Launch tests
-            https://jestjs.io/docs/troubleshooting#debugging-in-vs-code
+            Launch integration tests with Playwright
             */
             "type": "node",
             "request": "launch",
             "name": "Run and Debug integration tests (Dev)",
-            "runtimeArgs": ["--inspect-brk", "${workspaceRoot}/node_modules/jest/bin/jest.js", "--runInBand", "--selectProjects", "integration"],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["playwright", "test", "-c", "${workspaceRoot}/playwright.config.ts", "--project", "integration"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "port": 9229,
-            "env": {
-                "HEADLESS": "true"
-            },
             // "outFiles": ["${workspaceRoot}/**/dist/**/*"], // debugging sources
             // "envFile": "${workspaceRoot}/.env",
             "preLaunchTask": "CDN Serve Prod (Dev)"
@@ -512,16 +533,37 @@
         {
             "type": "msedge",
             "request": "launch",
-            "name": "Viewer (Alpha) (Web) (Edge)",
-            "url": "http://localhost:1342/packages/tools/viewer-alpha/test/apps/web/index.html",
-            "preLaunchTask": "Viewer (Alpha - Web)"
+            "name": "Viewer Test App (Web) (Edge)",
+            "url": "http://localhost:1342/packages/tools/viewer/test/apps/web/index.html",
+            "preLaunchTask": "Viewer Test App (Web)"
         },
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Viewer (Alpha) (Web) (Chrome)",
-            "url": "http://localhost:1342/packages/tools/viewer-alpha/test/apps/web/index.html",
-            "preLaunchTask": "Viewer (Alpha - Web)"
+            "name": "Viewer Test App (Web) (Chrome)",
+            "url": "http://localhost:1342/packages/tools/viewer/test/apps/web/index.html",
+            "preLaunchTask": "Viewer Test App (Web)"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Viewer Configurator development (Chrome)",
+            "url": "http://localhost:3003",
+            "preLaunchTask": "Viewer Configurator Serve (Dev)"
+        },
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Inspector v2 development (Edge)",
+            "url": "http://localhost:9001",
+            "preLaunchTask": "Inspector v2 Test App"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Inspector v2 development (Chrome)",
+            "url": "http://localhost:9001",
+            "preLaunchTask": "Inspector v2 Test App"
         }
     ],
     "inputs": [

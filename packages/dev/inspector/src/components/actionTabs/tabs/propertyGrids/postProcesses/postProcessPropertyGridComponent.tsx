@@ -1,12 +1,12 @@
 import * as React from "react";
 
-import type { Observable } from "core/Misc/observable";
-import type { PostProcess } from "core/PostProcesses/postProcess";
+import { type Observable } from "core/Misc/observable";
+import { type PostProcess } from "core/PostProcesses/postProcess";
 
-import type { PropertyChangedEvent } from "../../../../propertyChangedEvent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type PropertyChangedEvent } from "../../../../propertyChangedEvent";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { CommonPostProcessPropertyGridComponent } from "./commonPostProcessPropertyGridComponent";
-import type { GlobalState } from "../../../../globalState";
+import { type GlobalState } from "../../../../globalState";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
 
@@ -24,6 +24,7 @@ export class PostProcessPropertyGridComponent extends React.Component<IPostProce
 
     edit() {
         const postProcess = this.props.postProcess;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         postProcess.nodeMaterialSource!.edit();
     }
 

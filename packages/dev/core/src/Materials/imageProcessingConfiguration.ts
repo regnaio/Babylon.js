@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { serialize, serializeAsTexture, serializeAsColorCurves, serializeAsColor4 } from "../Misc/decorators";
 import { Observable } from "../Misc/observable";
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 import { Color4 } from "../Maths/math.color";
 import { ColorCurves } from "../Materials/colorCurves";
 
-import type { BaseTexture } from "../Materials/Textures/baseTexture";
-import type { Effect } from "../Materials/effect";
+import { type BaseTexture } from "../Materials/Textures/baseTexture";
+import { type Effect } from "../Materials/effect";
 import { Mix } from "../Misc/tools.functions";
 import { SerializationHelper } from "../Misc/decorators.serialization";
-import type { IImageProcessingConfigurationDefines } from "./imageProcessingConfiguration.defines";
+import { type IImageProcessingConfigurationDefines } from "./imageProcessingConfiguration.defines";
 import { PrepareSamplersForImageProcessing, PrepareUniformsForImageProcessing } from "./imageProcessingConfiguration.functions";
 import { RegisterClass } from "../Misc/typeStore";
 
@@ -429,6 +429,18 @@ export class ImageProcessingConfiguration {
     }
 
     /**
+     * Width of the output texture used in the post process. If not provided, uses the width of the screen.
+     */
+    @serialize()
+    public outputTextureWidth = 0;
+
+    /**
+     * Height of the output texture used in the post process. If not provided, uses the height of the screen.
+     */
+    @serialize()
+    public outputTextureHeight = 0;
+
+    /**
      * An event triggered when the configuration changes and requires Shader to Update some parameters.
      */
     public onUpdateParameters = new Observable<ImageProcessingConfiguration>();
@@ -543,8 +555,8 @@ export class ImageProcessingConfiguration {
 
         // Vignette and dither handled together due to common uniform.
         if (this._vignetteEnabled || this._ditheringEnabled) {
-            const inverseWidth = 1 / effect.getEngine().getRenderWidth();
-            const inverseHeight = 1 / effect.getEngine().getRenderHeight();
+            const inverseWidth = 1 / (this.outputTextureWidth || effect.getEngine().getRenderWidth());
+            const inverseHeight = 1 / (this.outputTextureHeight || effect.getEngine().getRenderHeight());
             effect.setFloat2("vInverseScreenSize", inverseWidth, inverseHeight);
 
             if (this._ditheringEnabled) {

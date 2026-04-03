@@ -1,20 +1,18 @@
-import type { Observer } from "../Misc/observable";
-import { Observable } from "../Misc/observable";
-import type { Nullable } from "../types";
-import type { PointerInfo } from "../Events/pointerEvents";
+import { type Observer, Observable } from "../Misc/observable";
+import { type Nullable } from "../types";
+import { type PointerInfo } from "../Events/pointerEvents";
 import { TmpVectors, Vector3 } from "../Maths/math.vector";
 import { Color3 } from "../Maths/math.color";
 import { TransformNode } from "../Meshes/transformNode";
-import type { Node } from "../node";
-import type { Mesh } from "../Meshes/mesh";
+import { type Node } from "../node";
+import { type Mesh } from "../Meshes/mesh";
 import { CreatePlane } from "../Meshes/Builders/planeBuilder";
 import { PointerDragBehavior } from "../Behaviors/Meshes/pointerDragBehavior";
-import type { GizmoAxisCache, IGizmo } from "./gizmo";
-import { Gizmo } from "./gizmo";
+import { type GizmoAxisCache, type IGizmo, Gizmo } from "./gizmo";
 import { UtilityLayerRenderer } from "../Rendering/utilityLayerRenderer";
 import { StandardMaterial } from "../Materials/standardMaterial";
-import type { Scene } from "../scene";
-import type { PositionGizmo } from "./positionGizmo";
+import { type Scene } from "../scene";
+import { type PositionGizmo } from "./positionGizmo";
 
 /**
  * Interface for plane drag gizmo
@@ -134,8 +132,9 @@ export class PlaneDragGizmo extends Gizmo implements IPlaneDragGizmo {
         this._gizmoMesh.scaling.scaleInPlace(1 / 3);
         this._gizmoMesh.parent = this._rootMesh;
 
-        let currentSnapDragDistance = 0;
+        const currentSnapDragDistance = new Vector3();
         const tmpVector = new Vector3();
+        const tmpVector2 = new Vector3();
         const tmpSnapEvent = { snapDistance: 0 };
         // Add dragPlaneNormal drag behavior to handle events when the gizmo is dragged
         this.dragBehavior = new PointerDragBehavior({ dragPlaneNormal: dragPlaneNormal });
@@ -148,27 +147,41 @@ export class PlaneDragGizmo extends Gizmo implements IPlaneDragGizmo {
                 // if the node has parent, the local transform properties (position, rotation, scale)
                 // will be recomputed in _matrixChanged function
 
+                // Transform delta by additionalTransformNode inverse world matrix if present
+                let delta = event.delta;
+                if (this._additionalTransformNode) {
+                    this._additionalTransformNode.getWorldMatrix().invertToRef(TmpVectors.Matrix[0]);
+                    Vector3.TransformNormalToRef(event.delta, TmpVectors.Matrix[0], TmpVectors.Vector3[1]);
+                    delta = TmpVectors.Vector3[1];
+                }
                 // Snapping logic
                 if (this.snapDistance == 0) {
                     this.attachedNode.getWorldMatrix().getTranslationToRef(TmpVectors.Vector3[0]);
-                    TmpVectors.Vector3[0].addToRef(event.delta, TmpVectors.Vector3[0]);
+                    TmpVectors.Vector3[0].addToRef(delta, TmpVectors.Vector3[0]);
                     if (this.dragBehavior.validateDrag(TmpVectors.Vector3[0])) {
-                        this.attachedNode.getWorldMatrix().addTranslationFromFloats(event.delta.x, event.delta.y, event.delta.z);
+                        this.attachedNode.getWorldMatrix().addTranslationFromFloats(delta.x, delta.y, delta.z);
                     }
                 } else {
-                    currentSnapDragDistance += event.dragDistance;
-                    if (Math.abs(currentSnapDragDistance) > this.snapDistance) {
-                        const dragSteps = Math.floor(Math.abs(currentSnapDragDistance) / this.snapDistance);
-                        currentSnapDragDistance = currentSnapDragDistance % this.snapDistance;
-                        event.delta.normalizeToRef(tmpVector);
-                        tmpVector.scaleInPlace(this.snapDistance * dragSteps);
-                        this.attachedNode.getWorldMatrix().getTranslationToRef(TmpVectors.Vector3[0]);
-                        TmpVectors.Vector3[0].addToRef(tmpVector, TmpVectors.Vector3[0]);
-                        if (this.dragBehavior.validateDrag(TmpVectors.Vector3[0])) {
-                            this.attachedNode.getWorldMatrix().addTranslationFromFloats(tmpVector.x, tmpVector.y, tmpVector.z);
-                            tmpSnapEvent.snapDistance = this.snapDistance * dragSteps;
-                            this.onSnapObservable.notifyObservers(tmpSnapEvent);
+                    currentSnapDragDistance.addInPlace(delta);
+                    tmpVector2.set(0, 0, 0);
+                    const currentSnapDragDistanceArray = currentSnapDragDistance.asArray();
+                    for (let axis = 0; axis < 3; axis++) {
+                        const axisDistance = currentSnapDragDistanceArray[axis];
+                        if (Math.abs(axisDistance) > this.snapDistance) {
+                            const dragSteps = (axisDistance < 0 ? Math.ceil : Math.floor)(axisDistance / this.snapDistance);
+                            currentSnapDragDistanceArray[axis] = currentSnapDragDistanceArray[axis] % this.snapDistance;
+                            tmpVector.set(axis == 0 ? 1 : 0, axis == 1 ? 1 : 0, axis == 2 ? 1 : 0);
+                            tmpVector.scaleInPlace(this.snapDistance * dragSteps);
+                            tmpVector2.addInPlace(tmpVector);
                         }
+                    }
+                    currentSnapDragDistance.fromArray(currentSnapDragDistanceArray);
+                    this.attachedNode.getWorldMatrix().getTranslationToRef(TmpVectors.Vector3[0]);
+                    TmpVectors.Vector3[0].addToRef(tmpVector2, TmpVectors.Vector3[0]);
+                    if (this.dragBehavior.validateDrag(TmpVectors.Vector3[0])) {
+                        this.attachedNode.getWorldMatrix().addTranslationFromFloats(tmpVector2.x, tmpVector2.y, tmpVector2.z);
+                        tmpSnapEvent.snapDistance = tmpVector2.length();
+                        this.onSnapObservable.notifyObservers(tmpSnapEvent);
                     }
                 }
                 this._matrixChanged();
@@ -185,8 +198,8 @@ export class PlaneDragGizmo extends Gizmo implements IPlaneDragGizmo {
         light.includedOnlyMeshes = light.includedOnlyMeshes.concat(this._rootMesh.getChildMeshes(false));
 
         const cache: GizmoAxisCache = {
-            gizmoMeshes: this._gizmoMesh.getChildMeshes() as Mesh[],
-            colliderMeshes: this._gizmoMesh.getChildMeshes() as Mesh[],
+            gizmoMeshes: this._gizmoMesh.getChildMeshes(),
+            colliderMeshes: this._gizmoMesh.getChildMeshes(),
             material: this._coloredMaterial,
             hoverMaterial: this._hoverMaterial,
             disableMaterial: this._disableMaterial,
@@ -246,10 +259,11 @@ export class PlaneDragGizmo extends Gizmo implements IPlaneDragGizmo {
         if (this._gizmoMesh) {
             this._gizmoMesh.dispose();
         }
-        [this._coloredMaterial, this._hoverMaterial, this._disableMaterial].forEach((matl) => {
+        const materials = [this._coloredMaterial, this._hoverMaterial, this._disableMaterial];
+        for (const matl of materials) {
             if (matl) {
                 matl.dispose();
             }
-        });
+        }
     }
 }

@@ -1,16 +1,16 @@
-import type { Nullable } from "core/types";
-import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { Material } from "core/Materials/material";
+import { type Nullable } from "core/types";
+import { type Material } from "core/Materials/material";
 
-import type { IMaterial } from "../glTFLoaderInterfaces";
-import type { IGLTFLoaderExtension } from "../glTFLoaderExtension";
+import { type IMaterial } from "../glTFLoaderInterfaces";
+import { type IGLTFLoaderExtension } from "../glTFLoaderExtension";
 import { GLTFLoader } from "../glTFLoader";
-import type { IKHRMaterialsEmissiveStrength } from "babylonjs-gltf2interface";
+import { type IKHRMaterialsEmissiveStrength } from "babylonjs-gltf2interface";
+import { registerGLTFExtension, unregisterGLTFExtension } from "../glTFLoaderExtensionRegistry";
 
 const NAME = "KHR_materials_emissive_strength";
 
 declare module "../../glTFFileLoader" {
-    // eslint-disable-next-line jsdoc/require-jsdoc
+    // eslint-disable-next-line jsdoc/require-jsdoc, @typescript-eslint/naming-convention
     export interface GLTFLoaderExtensionOptions {
         /**
          * Defines options for the KHR_materials_emissive_strength extension.
@@ -58,23 +58,22 @@ export class KHR_materials_emissive_strength implements IGLTFLoaderExtension {
     /**
      * @internal
      */
+    // eslint-disable-next-line no-restricted-syntax
     public loadMaterialPropertiesAsync(context: string, material: IMaterial, babylonMaterial: Material): Nullable<Promise<void>> {
-        return GLTFLoader.LoadExtensionAsync<IKHRMaterialsEmissiveStrength>(context, material, this.name, (extensionContext, extension) => {
-            return this._loader.loadMaterialPropertiesAsync(context, material, babylonMaterial).then(() => {
-                this._loadEmissiveProperties(extensionContext, extension, babylonMaterial);
-            });
+        return GLTFLoader.LoadExtensionAsync<IKHRMaterialsEmissiveStrength>(context, material, this.name, async (extensionContext, extension) => {
+            await this._loader.loadMaterialPropertiesAsync(context, material, babylonMaterial);
+            this._loadEmissiveProperties(extensionContext, extension, babylonMaterial);
+            return await Promise.resolve();
         });
     }
 
     private _loadEmissiveProperties(context: string, properties: IKHRMaterialsEmissiveStrength, babylonMaterial: Material): void {
-        if (!(babylonMaterial instanceof PBRMaterial)) {
-            throw new Error(`${context}: Material type not supported`);
-        }
-
         if (properties.emissiveStrength !== undefined) {
-            babylonMaterial.emissiveIntensity = properties.emissiveStrength;
+            const adapter = this._loader._getOrCreateMaterialAdapter(babylonMaterial);
+            adapter.emissionLuminance = properties.emissiveStrength;
         }
     }
 }
 
-GLTFLoader.RegisterExtension(NAME, (loader) => new KHR_materials_emissive_strength(loader));
+unregisterGLTFExtension(NAME);
+registerGLTFExtension(NAME, true, (loader) => new KHR_materials_emissive_strength(loader));

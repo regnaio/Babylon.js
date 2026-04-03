@@ -1,14 +1,14 @@
-import type { Nullable } from "core/types";
-import type { Vector2 } from "core/Maths/math.vector";
+import { type Nullable } from "core/types";
+import { type Vector2 } from "core/Maths/math.vector";
 
 import { Rectangle } from "./rectangle";
 import { Control } from "./control";
 import { TextBlock } from "./textBlock";
 import { Image } from "./image";
 import { RegisterClass } from "core/Misc/typeStore";
-import type { PointerInfoBase } from "core/Events/pointerEvents";
-import type { AdvancedDynamicTexture } from "../advancedDynamicTexture";
-import type { ICanvasRenderingContext } from "core/Engines/ICanvas";
+import { type PointerInfoBase } from "core/Events/pointerEvents";
+import { type AdvancedDynamicTexture } from "../advancedDynamicTexture";
+import { type ICanvasRenderingContext } from "core/Engines/ICanvas";
 
 /**
  * Class used to create 2D buttons
@@ -182,9 +182,10 @@ export class Button extends Rectangle {
      * Serializes the current button
      * @param serializationObject defines the JSON serialized object
      * @param force force serialization even if isSerializable === false
+     * @param allowCanvas defines if the control is allowed to use a Canvas2D object to serialize
      */
-    public override serialize(serializationObject: any, force: boolean) {
-        super.serialize(serializationObject, force);
+    public override serialize(serializationObject: any, force: boolean, allowCanvas: boolean) {
+        super.serialize(serializationObject, force, allowCanvas);
         if (!this.isSerializable && !force) {
             return;
         }

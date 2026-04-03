@@ -1,10 +1,10 @@
 import * as React from "react";
 
 import { Constants } from "core/Engines/constants";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 import { Texture } from "core/Materials/Textures/texture";
 import { RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
-import type { PostProcess } from "core/PostProcesses/postProcess";
+import { type PostProcess } from "core/PostProcesses/postProcess";
 import { PassPostProcess, PassCubePostProcess } from "core/PostProcesses/passPostProcess";
 
 interface ITextureLineComponentProps {
@@ -53,9 +53,11 @@ export class TextureLineComponent extends React.Component<ITextureLineComponentP
     }
 
     public updatePreview() {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         TextureLineComponent.UpdatePreview(this._canvasRef.current as HTMLCanvasElement, this.props.texture, this.props.width, this.state, undefined, this.props.globalState);
     }
 
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public static async UpdatePreview(
         previewCanvas: HTMLCanvasElement,
         texture: BaseTexture,
@@ -66,6 +68,7 @@ export class TextureLineComponent extends React.Component<ITextureLineComponentP
     ) {
         if (!texture.isReady() && texture._texture) {
             texture._texture.onLoadedObservable.addOnce(() => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
                 TextureLineComponent.UpdatePreview(previewCanvas, texture, width, options, onReady, globalState);
             });
         }
@@ -78,9 +81,9 @@ export class TextureLineComponent extends React.Component<ITextureLineComponentP
         let passPostProcess: PostProcess;
 
         if (!texture.isCube) {
-            passPostProcess = new PassPostProcess("pass", 1, null, Texture.NEAREST_SAMPLINGMODE, engine, false, Constants.TEXTURETYPE_UNSIGNED_INT);
+            passPostProcess = new PassPostProcess("pass", 1, null, Texture.NEAREST_SAMPLINGMODE, engine, false, Constants.TEXTURETYPE_UNSIGNED_BYTE);
         } else {
-            const passCubePostProcess = new PassCubePostProcess("pass", 1, null, Texture.NEAREST_SAMPLINGMODE, engine, false, Constants.TEXTURETYPE_UNSIGNED_INT);
+            const passCubePostProcess = new PassCubePostProcess("pass", 1, null, Texture.NEAREST_SAMPLINGMODE, engine, false, Constants.TEXTURETYPE_UNSIGNED_BYTE);
             passCubePostProcess.face = options.face;
 
             passPostProcess = passCubePostProcess;

@@ -1,5 +1,5 @@
-import { SpriteManager } from "./spriteManager";
-import type { Scene } from "../scene";
+import { type SpriteManagerOptions, SpriteManager } from "./spriteManager";
+import { type Scene } from "../scene";
 import { Texture } from "../Materials/Textures/texture";
 
 /**
@@ -18,6 +18,7 @@ export class SpritePackedManager extends SpriteManager {
      * @param epsilon defines the epsilon value to align texture (0.01 by default)
      * @param samplingMode defines the sampling mode to use with spritesheet
      * @param fromPacked set to true; do not alter
+     * @param options options for the sprite manager
      */
 
     constructor(
@@ -28,9 +29,10 @@ export class SpritePackedManager extends SpriteManager {
         scene: Scene,
         spriteJSON: string | null = null,
         epsilon: number = 0.01,
-        samplingMode: number = Texture.TRILINEAR_SAMPLINGMODE
+        samplingMode: number = Texture.TRILINEAR_SAMPLINGMODE,
+        options?: SpriteManagerOptions
     ) {
         //the cellSize parameter is not used when built from JSON which provides individual cell data, defaults to 64 if JSON load fails
-        super(name, imgUrl, capacity, 64, scene, epsilon, samplingMode, true, spriteJSON);
+        super(name, imgUrl, capacity, 64, scene, epsilon, samplingMode, true, spriteJSON, options);
     }
 }

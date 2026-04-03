@@ -68,7 +68,9 @@ uniform float waveCount;
 varying vec3 vRefractionMapTexCoord;
 varying vec3 vReflectionMapTexCoord;
 
-
+#if defined(CLUSTLIGHT_BATCH) && CLUSTLIGHT_BATCH > 0
+varying float vViewDepth;
+#endif
 
 
 #define CUSTOM_VERTEX_DEFINITIONS
@@ -76,6 +78,10 @@ varying vec3 vReflectionMapTexCoord;
 void main(void) {
 
 #define CUSTOM_VERTEX_MAIN_BEGIN
+
+#ifdef VERTEXCOLOR
+    vec4 colorUpdated = color;
+#endif
 
     #include<instancesVertex>
     #include<bonesVertex>

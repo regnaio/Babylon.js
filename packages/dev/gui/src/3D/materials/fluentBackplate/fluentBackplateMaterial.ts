@@ -1,20 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { serialize, serializeAsVector3 } from "core/Misc/decorators";
 import { SerializationHelper } from "core/Misc/decorators.serialization";
-import type { Matrix } from "core/Maths/math.vector";
-import { Vector3, Vector4 } from "core/Maths/math.vector";
-import type { IAnimatable } from "core/Animations/animatable.interface";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type Matrix, Vector3, Vector4 } from "core/Maths/math.vector";
+import { type IAnimatable } from "core/Animations/animatable.interface";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 import { Texture } from "core/Materials/Textures/texture";
 import { MaterialDefines } from "core/Materials/materialDefines";
-import type { IEffectCreationOptions } from "core/Materials/effect";
+import { type IEffectCreationOptions } from "core/Materials/effect";
 import { PushMaterial } from "core/Materials/pushMaterial";
 import { VertexBuffer } from "core/Buffers/buffer";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { SubMesh } from "core/Meshes/subMesh";
-import type { Mesh } from "core/Meshes/mesh";
-import type { Scene } from "core/scene";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type SubMesh } from "core/Meshes/subMesh";
+import { type Mesh } from "core/Meshes/mesh";
+import { type Scene } from "core/scene";
 import { RegisterClass } from "core/Misc/typeStore";
 import { Color4 } from "core/Maths/math.color";
 import { EffectFallbacks } from "core/Materials/effectFallbacks";
@@ -23,6 +22,7 @@ import { Constants } from "core/Engines/constants";
 import "./shaders/fluentBackplate.fragment";
 import "./shaders/fluentBackplate.vertex";
 import { HandleFallbacksForShadows, PrepareAttributesForInstances, PrepareDefinesForAttributes, PrepareUniformsAndSamplersList } from "core/Materials/materialHelper.functions";
+import { Tools } from "core/Misc/tools";
 
 /** @internal */
 class FluentBackplateMaterialDefines extends MaterialDefines {
@@ -45,12 +45,12 @@ export class FluentBackplateMaterial extends PushMaterial {
     /**
      * URL pointing to the texture used to define the coloring for the fluent blob effect.
      */
-    public static BLOB_TEXTURE_URL = "https://assets.babylonjs.com/meshes/MRTK/mrtk-fluent-backplate-blob.png";
+    public static BLOB_TEXTURE_URL = "https://assets.babylonjs.com/core/MRTK/mrtk-fluent-backplate-blob.png";
 
     /**
      * URL pointing to the texture used to define iridescent map.
      */
-    public static IM_TEXTURE_URL = "https://assets.babylonjs.com/meshes/MRTK/mrtk-fluent-backplate-iridescence.png";
+    public static IM_TEXTURE_URL = "https://assets.babylonjs.com/core/MRTK/mrtk-fluent-backplate-iridescence.png";
 
     private _blobTexture: Texture;
     private _iridescentMap: Texture;
@@ -224,9 +224,10 @@ export class FluentBackplateMaterial extends PushMaterial {
         super(name, scene);
         this.alphaMode = Constants.ALPHA_DISABLE;
         this.backFaceCulling = false;
-
-        this._blobTexture = new Texture(FluentBackplateMaterial.BLOB_TEXTURE_URL, this.getScene(), true, false, Texture.NEAREST_SAMPLINGMODE);
-        this._iridescentMap = new Texture(FluentBackplateMaterial.IM_TEXTURE_URL, this.getScene(), true, false, Texture.NEAREST_SAMPLINGMODE);
+        const blobTextureUrl = Tools.GetAssetUrl(FluentBackplateMaterial.BLOB_TEXTURE_URL);
+        const iridescentMapUrl = Tools.GetAssetUrl(FluentBackplateMaterial.IM_TEXTURE_URL);
+        this._blobTexture = new Texture(blobTextureUrl, this.getScene(), true, false, Texture.NEAREST_SAMPLINGMODE);
+        this._iridescentMap = new Texture(iridescentMapUrl, this.getScene(), true, false, Texture.NEAREST_SAMPLINGMODE);
     }
 
     public override needAlphaBlending(): boolean {

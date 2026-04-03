@@ -1,14 +1,14 @@
-import type { Nullable } from "../types";
-import type { SmartArray } from "../Misc/smartArray";
-import type { ISpriteManager } from "../Sprites/spriteManager";
-import type { IParticleSystem } from "../Particles/IParticleSystem";
+import { type Immutable, type Nullable } from "../types";
+import { type SmartArray } from "../Misc/smartArray";
+import { type ISpriteManager } from "../Sprites/spriteManager";
+import { type IParticleSystem } from "../Particles/IParticleSystem";
 import { RenderingGroup } from "./renderingGroup";
 
-import type { Scene } from "../scene";
-import type { Camera } from "../Cameras/camera";
-import type { Material } from "../Materials/material";
-import type { SubMesh } from "../Meshes/subMesh";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
+import { type Scene } from "../scene";
+import { type Camera } from "../Cameras/camera";
+import { type Material } from "../Materials/material";
+import { type SubMesh } from "../Meshes/subMesh";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
 
 /**
  * Interface describing the different options available in the rendering manager
@@ -47,6 +47,11 @@ export class RenderingGroupInfo {
      * The ID of the renderingGroup being processed
      */
     renderingGroupId: number;
+
+    /**
+     * The rendering manager
+     */
+    renderingManager: RenderingManager;
 }
 
 /**
@@ -74,6 +79,21 @@ export class RenderingManager {
      * @internal
      */
     public _useSceneAutoClearSetup = false;
+
+    private _disableDepthPrePass = false;
+    /**
+     * Specifies to disable depth pre-pass if true (default: false)
+     */
+    public get disableDepthPrePass() {
+        return this._disableDepthPrePass;
+    }
+
+    public set disableDepthPrePass(value: boolean) {
+        this._disableDepthPrePass = value;
+        for (const group of this._renderingGroups) {
+            group.disableDepthPrePass = value;
+        }
+    }
 
     private _scene: Scene;
     private _renderingGroups = new Array<RenderingGroup>();
@@ -143,6 +163,13 @@ export class RenderingManager {
     }
 
     /**
+     * @returns the list of rendering groups managed by the manager.
+     */
+    public get renderingGroups(): Immutable<RenderingGroup[]> {
+        return this._renderingGroups;
+    }
+
+    /**
      * @returns the rendering group with the specified id.
      * @param id the id of the rendering group (0 by default)
      */
@@ -178,12 +205,18 @@ export class RenderingManager {
         >,
         activeMeshes: Nullable<AbstractMesh[]>,
         renderParticles: boolean,
-        renderSprites: boolean
+        renderSprites: boolean,
+        renderDepthOnlyMeshes: boolean = true,
+        renderOpaqueMeshes: boolean = true,
+        renderAlphaTestMeshes: boolean = true,
+        renderTransparentMeshes: boolean = true,
+        customRenderTransparentSubMeshes?: (transparentSubMeshes: SmartArray<SubMesh>, renderingGroup?: RenderingGroup) => void
     ): void {
         // Update the observable context (not null as it only goes away on dispose)
         const info = this._renderingGroupInfo!;
         info.scene = this._scene;
         info.camera = this._scene.activeCamera;
+        info.renderingManager = this;
 
         // Dispatch sprites
         if (this._scene.spriteManagers && renderSprites) {
@@ -220,7 +253,17 @@ export class RenderingManager {
             for (const step of this._scene._beforeRenderingGroupDrawStage) {
                 step.action(index);
             }
-            renderingGroup.render(customRenderFunction, renderSprites, renderParticles, activeMeshes);
+            renderingGroup.render(
+                customRenderFunction,
+                renderSprites,
+                renderParticles,
+                activeMeshes,
+                renderDepthOnlyMeshes,
+                renderOpaqueMeshes,
+                renderAlphaTestMeshes,
+                renderTransparentMeshes,
+                customRenderTransparentSubMeshes
+            );
             for (const step of this._scene._afterRenderingGroupDrawStage) {
                 step.action(index);
             }
@@ -295,6 +338,7 @@ export class RenderingManager {
                 this._customAlphaTestSortCompareFn[renderingGroupId],
                 this._customTransparentSortCompareFn[renderingGroupId]
             );
+            this._renderingGroups[renderingGroupId].disableDepthPrePass = this._disableDepthPrePass;
         }
     }
 

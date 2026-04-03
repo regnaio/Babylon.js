@@ -1,22 +1,22 @@
 import { Sound } from "./sound";
 import { SoundTrack } from "./soundTrack";
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 import { Matrix, Vector3 } from "../Maths/math.vector";
-import type { ISceneSerializableComponent } from "../sceneComponent";
-import { SceneComponentConstants } from "../sceneComponent";
+import { type ISceneSerializableComponent, SceneComponentConstants } from "../sceneComponent";
 import { Scene } from "../scene";
-import { AbstractScene } from "../abstractScene";
-import type { AssetContainer } from "../assetContainer";
+import { type AssetContainer } from "../assetContainer";
 
 import "./audioEngine";
 import { PrecisionDate } from "../Misc/precisionDate";
 import { EngineStore } from "../Engines/engineStore";
 import { AbstractEngine } from "core/Engines/abstractEngine";
+import { AddParser } from "core/Loading/Plugins/babylonFileParser.function";
+import { type IAssetContainer } from "core/IAssetContainer";
 
 // Adds the parser to the scene parsers.
-AbstractScene.AddParser(SceneComponentConstants.NAME_AUDIO, (parsedData: any, scene: Scene, container: AssetContainer, rootUrl: string) => {
+AddParser(SceneComponentConstants.NAME_AUDIO, (parsedData: any, scene: Scene, container: AssetContainer, rootUrl: string) => {
     // TODO: add sound
-    let loadedSounds: Sound[] = [];
+    const loadedSounds: Sound[] = [];
     let loadedSound: Sound;
     container.sounds = container.sounds || [];
     if (parsedData.sounds !== undefined && parsedData.sounds !== null) {
@@ -38,20 +38,10 @@ AbstractScene.AddParser(SceneComponentConstants.NAME_AUDIO, (parsedData: any, sc
             }
         }
     }
-
-    loadedSounds = [];
 });
 
-declare module "../abstractScene" {
-    export interface AbstractScene {
-        /**
-         * The list of sounds used in the scene.
-         */
-        sounds: Nullable<Array<Sound>>;
-    }
-}
-
 declare module "../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /**
          * @internal
@@ -61,11 +51,12 @@ declare module "../scene" {
         /**
          * The main sound track played by the scene.
          * It contains your primary collection of sounds.
+         * @deprecated please use AudioEngineV2 instead
          */
         mainSoundTrack: SoundTrack;
         /**
          * The list of sound tracks added to the scene
-         * @see https://doc.babylonjs.com/features/featuresDeepDive/audio/playingSoundsMusic
+         * @deprecated please use AudioEngineV2 instead
          */
         soundTracks: Nullable<Array<SoundTrack>>;
 
@@ -73,35 +64,37 @@ declare module "../scene" {
          * Gets a sound using a given name
          * @param name defines the name to search for
          * @returns the found sound or null if not found at all.
+         * @deprecated please use AudioEngineV2 instead
          */
         getSoundByName(name: string): Nullable<Sound>;
 
         /**
          * Gets or sets if audio support is enabled
-         * @see https://doc.babylonjs.com/features/featuresDeepDive/audio/playingSoundsMusic
+         * @deprecated please use AudioEngineV2 instead
          */
         audioEnabled: boolean;
 
         /**
          * Gets or sets if audio will be output to headphones
-         * @see https://doc.babylonjs.com/features/featuresDeepDive/audio/playingSoundsMusic
+         * @deprecated please use AudioEngineV2 instead
          */
         headphone: boolean;
 
         /**
          * Gets or sets custom audio listener position provider
-         * @see https://doc.babylonjs.com/features/featuresDeepDive/audio/playingSoundsMusic
+         * @deprecated please use AudioEngineV2 instead
          */
         audioListenerPositionProvider: Nullable<() => Vector3>;
 
         /**
          * Gets or sets custom audio listener rotation provider
-         * @see https://doc.babylonjs.com/features/featuresDeepDive/audio/playingSoundsMusic
+         * @deprecated please use AudioEngineV2 instead
          */
         audioListenerRotationProvider: Nullable<() => Vector3>;
 
         /**
          * Gets or sets a refresh rate when using 3D audio positioning
+         * @deprecated please use AudioEngineV2 instead
          */
         audioPositioningRefreshRate: number;
     }
@@ -280,6 +273,7 @@ Object.defineProperty(Scene.prototype, "audioPositioningRefreshRate", {
 /**
  * Defines the sound scene component responsible to manage any sounds
  * in a given scene.
+ * @deprecated please use AudioEngineV2 instead
  */
 export class AudioSceneComponent implements ISceneSerializableComponent {
     private static _CameraDirection = new Vector3(0, 0, -1);
@@ -381,15 +375,15 @@ export class AudioSceneComponent implements ISceneSerializableComponent {
      * Adds all the elements from the container to the scene
      * @param container the container holding the elements
      */
-    public addFromContainer(container: AbstractScene): void {
+    public addFromContainer(container: IAssetContainer): void {
         if (!container.sounds) {
             return;
         }
-        container.sounds.forEach((sound) => {
+        for (const sound of container.sounds) {
             sound.play();
             sound.autoplay = true;
             this.scene.mainSoundTrack.addSound(sound);
-        });
+        }
     }
 
     /**
@@ -397,18 +391,18 @@ export class AudioSceneComponent implements ISceneSerializableComponent {
      * @param container contains the elements to remove
      * @param dispose if the removed element should be disposed (default: false)
      */
-    public removeFromContainer(container: AbstractScene, dispose = false): void {
+    public removeFromContainer(container: IAssetContainer, dispose = false): void {
         if (!container.sounds) {
             return;
         }
-        container.sounds.forEach((sound) => {
+        for (const sound of container.sounds) {
             sound.stop();
             sound.autoplay = false;
             this.scene.mainSoundTrack.removeSound(sound);
             if (dispose) {
                 sound.dispose();
             }
-        });
+        }
     }
 
     /**
@@ -435,6 +429,7 @@ export class AudioSceneComponent implements ISceneSerializableComponent {
         this._audioEnabled = false;
 
         if (AbstractEngine.audioEngine && AbstractEngine.audioEngine.audioContext) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             AbstractEngine.audioEngine.audioContext.suspend();
         }
 
@@ -459,6 +454,7 @@ export class AudioSceneComponent implements ISceneSerializableComponent {
         this._audioEnabled = true;
 
         if (AbstractEngine.audioEngine && AbstractEngine.audioEngine.audioContext) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             AbstractEngine.audioEngine.audioContext.resume();
         }
 

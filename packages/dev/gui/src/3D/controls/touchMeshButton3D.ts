@@ -1,6 +1,6 @@
-import type { TransformNode } from "core/Meshes/transformNode";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { Mesh } from "core/Meshes/mesh";
+import { type TransformNode } from "core/Meshes/transformNode";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type Mesh } from "core/Meshes/mesh";
 
 import { TouchButton3D } from "./touchButton3D";
 
@@ -61,9 +61,11 @@ export class TouchMeshButton3D extends TouchButton3D {
 
     // Mesh association
     protected override _createNode(): TransformNode {
-        this._currentMesh.getChildMeshes().forEach((mesh) => {
+        const meshes = this._currentMesh.getChildMeshes();
+
+        for (const mesh of meshes) {
             this._injectGUI3DReservedDataStore(mesh).control = this;
-        });
+        }
 
         return this._currentMesh;
     }

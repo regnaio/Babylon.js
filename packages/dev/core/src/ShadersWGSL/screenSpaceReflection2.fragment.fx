@@ -35,6 +35,7 @@ uniform invProjectionMatrix: mat4x4f;
 uniform projectionPixel: mat4x4f;
 
 uniform nearPlaneZ: f32;
+uniform farPlaneZ: f32;
 uniform stepSize: f32;
 uniform maxSteps: f32;
 uniform strength: f32;
@@ -67,7 +68,8 @@ fn computeAttenuationForIntersection(ihitPixel: vec2f, hitUV: vec2f, vsRayOrigin
 #endif
 
 #ifdef SSR_ATTENUATE_INTERSECTION_DISTANCE
-    // Attenuation based on the distance between the origin of the reflection ray and the intersection povar attenuation: i32 *= 1.0 - clamp(distance(vsRayOrigin, vsHitPoint) / maxRayDistance, 0.0, 1.0);
+    // Attenuation based on the distance between the origin of the reflection ray and the intersection point
+    attenuation *= 1.0 - clamp(distance(vsRayOrigin, vsHitPoint) / maxRayDistance, 0.0, 1.0);
 #endif
 
 #ifdef SSR_ATTENUATE_INTERSECTION_NUMITERATIONS
@@ -98,7 +100,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Get color and reflectivity
     var colorFull: vec4f = textureSampleLevel(textureSampler, textureSamplerSampler, input.vUV, 0.0);
     var color: vec3f = colorFull.rgb;
-    var reflectivity: vec4f = textureSampleLevel(reflectivitySampler, reflectivitySamplerSampler, input.vUV, 0.0);
+    var reflectivity: vec4f = max(textureSampleLevel(reflectivitySampler, reflectivitySamplerSampler, input.vUV, 0.0), vec4f(0.0));
 #ifndef SSR_DISABLE_REFLECTIVITY_TEST
     if (max(reflectivity.r, max(reflectivity.g, reflectivity.b)) <= uniforms.reflectivityThreshold) {
         #ifdef SSR_USE_BLUR
@@ -125,6 +127,9 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         csNormal = (uniforms.view *  vec4f(csNormal, 0.0)).xyz;
     #endif
     var depth: f32 = textureLoad(depthSampler, vec2<i32>(input.vUV * texSize), 0).r;
+    #ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+        depth = linearizeDepth(depth, uniforms.nearPlaneZ, uniforms.farPlaneZ);
+    #endif
     var csPosition: vec3f = computeViewPosFromUVDepth(input.vUV, depth, uniforms.projection, uniforms.invProjectionMatrix);
     #ifdef ORTHOGRAPHIC_CAMERA
         var csViewDirection: vec3f =  vec3f(0., 0., 1.);
@@ -198,6 +203,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         #endif
             uniforms.thickness,
             uniforms.nearPlaneZ,
+            uniforms.farPlaneZ,
             uniforms.stepSize,
             jitter,
             uniforms.maxSteps,
@@ -236,6 +242,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 #ifndef SSR_BLEND_WITH_FRESNEL
     SSR *= fresnel;
 #endif
+    SSR = clamp(SSR, vec3f(0.0), vec3f(1000.0)); // Sanity check to avoid artifacts on some devices (iPad, mobile)
 
     #ifdef SSR_USE_BLUR
         // from https://github.com/godotengine/godot/blob/master/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl

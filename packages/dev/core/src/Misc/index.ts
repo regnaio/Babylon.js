@@ -1,4 +1,4 @@
-/* eslint-disable import/no-internal-modules */
+/* eslint-disable @typescript-eslint/no-restricted-imports */
 export * from "./andOrNotEvaluator";
 export * from "./assetsManager";
 export * from "./basis";
@@ -19,6 +19,11 @@ export * from "./smartArray";
 export * from "./stringDictionary";
 export * from "./tags";
 export * from "./textureTools";
+// loaded from texture tools
+export * from "../Shaders/lodCube.fragment";
+export * from "../Shaders/lod.fragment";
+export * from "../ShadersWGSL/lodCube.fragment";
+export * from "../ShadersWGSL/lod.fragment";
 export * from "./tga";
 export * from "./tools";
 export * from "./videoRecorder";
@@ -28,6 +33,7 @@ export * from "./logger";
 export * from "./typeStore";
 export * from "./filesInputStore";
 export * from "./deepCopier";
+export * from "./deepMerger";
 export * from "./pivotTools";
 export * from "./precisionDate";
 export * from "./screenshotTools";
@@ -60,15 +66,21 @@ export * from "./PerformanceViewer/index";
 export * from "./coroutine";
 export * from "./guid";
 export * from "./error";
+export * from "./snapshotRenderingHelper";
 // eslint-disable-next-line import/export
 export * from "./observableCoroutine";
 export * from "./copyTextureToTexture";
-/** @deprecated Use individual exports */
-export { DumpTools } from "./dumpTools";
+export * from "./areaLightsTextureTools";
+export { DumpTools, EncodeImageAsync } from "./dumpTools";
 export * from "./greasedLineTools";
 export * from "./equirectangularCapture";
 export * from "./decorators.serialization";
 export * from "./asyncLock";
+export * from "./bitArray";
+export * from "./urlTools";
+export * from "./lazy";
+export * from "./uniqueIdGenerator";
+export { workerFunction as KTX2WorkerFunction, initializeWebWorker as KTX2InitializeWebWorker } from "./khronosTextureContainer2Worker";
 
 // RGBDTextureTools
 export * from "../Shaders/rgbdDecode.fragment";
@@ -79,3 +91,8 @@ export * from "../ShadersWGSL/rgbdEncode.fragment";
 // CopyTextureToTexture
 export * from "../Shaders/copyTextureToTexture.fragment";
 export * from "../ShadersWGSL/copyTextureToTexture.fragment";
+
+// Area Light Texture
+export * from "../Shaders/areaLightTextureProcessing.fragment";
+export * from "../ShadersWGSL/areaLightTextureProcessing.fragment";
+export * from "./tools.internals";

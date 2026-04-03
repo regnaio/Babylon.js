@@ -1,6 +1,6 @@
 import { RGBE_ReadHeader, RGBE_ReadPixels } from "../../../Misc/HighDynamicRange/hdr";
-import type { InternalTexture } from "../../../Materials/Textures/internalTexture";
-import type { IInternalTextureLoader } from "./internalTextureLoader";
+import { type InternalTexture } from "../../../Materials/Textures/internalTexture";
+import { type IInternalTextureLoader } from "./internalTextureLoader";
 import { Constants } from "../../../Engines/constants";
 
 /**
@@ -16,10 +16,11 @@ export class _HDRTextureLoader implements IInternalTextureLoader {
 
     /**
      * Uploads the cube texture data to the WebGL texture. It has already been bound.
+     * Cube texture are not supported by .hdr files
      */
     public loadCubeData(): void {
         // eslint-disable-next-line no-throw-literal
-        throw ".env not supported in Cube.";
+        throw ".hdr not supported in Cube.";
     }
 
     /**

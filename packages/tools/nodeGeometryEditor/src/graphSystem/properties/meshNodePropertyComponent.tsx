@@ -1,17 +1,17 @@
 import * as React from "react";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { GeneralPropertyTabComponent } from "./genericNodePropertyComponent";
-import type { IPropertyComponentProps } from "shared-ui-components/nodeGraphSystem/interfaces/propertyComponentProps";
-import { FileButtonLineComponent } from "../../sharedComponents/fileButtonLineComponent";
+import { type IPropertyComponentProps } from "shared-ui-components/nodeGraphSystem/interfaces/propertyComponentProps";
+import { FileButtonLine } from "shared-ui-components/lines/fileButtonLineComponent";
 import { SceneLoader } from "core/Loading/sceneLoader";
 import { EngineStore } from "core/Engines/engineStore";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
-import type { Scene } from "core/scene";
-import type { Nullable } from "core/types";
+import { type Scene } from "core/scene";
+import { type Nullable } from "core/types";
 import { OptionsLine } from "shared-ui-components/lines/optionsLineComponent";
-import type { MeshBlock } from "core/Meshes/Node/Blocks/Sources/meshBlock";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { Mesh } from "core/Meshes/mesh";
+import { type MeshBlock } from "core/Meshes/Node/Blocks/Sources/meshBlock";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type Mesh } from "core/Meshes/mesh";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
 import { CheckBoxLineComponent } from "../../sharedComponents/checkBoxLineComponent";
 
@@ -22,6 +22,7 @@ export class MeshPropertyTabComponent extends React.Component<IPropertyComponent
         this.state = { isLoading: false };
     }
 
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     async loadMesh(file: File) {
         this.setState({ isLoading: true });
         const scene = await SceneLoader.LoadAsync("file:", file, EngineStore.LastCreatedEngine);
@@ -82,7 +83,7 @@ export class MeshPropertyTabComponent extends React.Component<IPropertyComponent
                 <GeneralPropertyTabComponent stateManager={this.props.stateManager} nodeData={this.props.nodeData} />
                 <LineContainerComponent title="SOURCE">
                     {this.state.isLoading && <TextLineComponent ignoreValue={true} label="Loading..." />}
-                    {!this.state.isLoading && <FileButtonLineComponent label="Load" uploadName={"load-mesh"} onClick={(file) => this.loadMesh(file)} accept=".glb, .babylon" />}
+                    {!this.state.isLoading && <FileButtonLine label="Load" onClick={async (file) => await this.loadMesh(file)} accept=".glb, .babylon" />}
                     {scene && (
                         <OptionsLine
                             label="Mesh"

@@ -1,5 +1,5 @@
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
 import { extractMinAndMax } from "../../../Maths/math.functions";
@@ -58,7 +58,7 @@ export class BoundingBlock extends NodeGeometryBlock {
                 return null;
             }
 
-            const boundingInfo = extractMinAndMax(geometry.positions!, 0, geometry.positions!.length / 3);
+            const boundingInfo = extractMinAndMax(geometry.positions, 0, geometry.positions!.length / 3);
             return boundingInfo.minimum;
         };
 
@@ -69,7 +69,7 @@ export class BoundingBlock extends NodeGeometryBlock {
                 return null;
             }
 
-            const boundingInfo = extractMinAndMax(geometry.positions!, 0, geometry.positions!.length / 3);
+            const boundingInfo = extractMinAndMax(geometry.positions, 0, geometry.positions!.length / 3);
             return boundingInfo.maximum;
         };
     }

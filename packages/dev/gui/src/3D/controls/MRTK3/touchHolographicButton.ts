@@ -1,10 +1,10 @@
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { Control3D } from "../control3D";
-import type { Mesh } from "core/Meshes/mesh";
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
-import type { Scene } from "core/scene";
-import type { Vector3WithInfo } from "../../vector3WithInfo";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type Control3D } from "../control3D";
+import { type Mesh } from "core/Meshes/mesh";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type Scene } from "core/scene";
+import { type Vector3WithInfo } from "../../vector3WithInfo";
 
 import { AdvancedDynamicTexture } from "../../../2D/advancedDynamicTexture";
 import { Animation } from "core/Animations/animation";
@@ -29,6 +29,7 @@ import { TextBlock } from "../../../2D/controls/textBlock";
 import { TouchButton3D } from "../touchButton3D";
 import { TransformNode } from "core/Meshes/transformNode";
 import { Vector3 } from "core/Maths/math.vector";
+import { Tools } from "core/Misc/tools";
 
 /**
  * Class used to create the mrtkv3 button
@@ -37,7 +38,7 @@ export class TouchHolographicButton extends TouchButton3D {
     /**
      * Base Url for the frontplate model.
      */
-    public static MRTK_ASSET_BASE_URL = "https://assets.babylonjs.com/meshes/MRTK/";
+    public static MRTK_ASSET_BASE_URL = "https://assets.babylonjs.com/core/MRTK/";
 
     /**
      * File name for the frontplate model.
@@ -215,7 +216,7 @@ export class TouchHolographicButton extends TouchButton3D {
      * Gets the mesh used to render this control
      */
     public override get mesh(): Nullable<AbstractMesh> {
-        return this._backPlate as AbstractMesh;
+        return this._backPlate;
     }
 
     /**
@@ -614,8 +615,9 @@ export class TouchHolographicButton extends TouchButton3D {
         backPlateMesh.isPickable = false;
         backPlateMesh.visibility = 0;
         backPlateMesh.scaling.z = 0.2;
-
-        SceneLoader.ImportMeshAsync(undefined, TouchHolographicButton.MRTK_ASSET_BASE_URL, TouchHolographicButton.BACKPLATE_MODEL_FILENAME, scene).then((result) => {
+        const baseUrl = Tools.GetAssetUrl(TouchHolographicButton.MRTK_ASSET_BASE_URL);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+        SceneLoader.ImportMeshAsync(undefined, baseUrl, TouchHolographicButton.BACKPLATE_MODEL_FILENAME, scene).then((result) => {
             const backPlateModel = result.meshes[1];
             backPlateModel.visibility = 0;
 
@@ -652,8 +654,9 @@ export class TouchHolographicButton extends TouchButton3D {
         collisionMesh.isNearPickable = true;
         collisionMesh.visibility = 0;
         collisionMesh.position = Vector3.Forward(scene.useRightHandedSystem).scale((this.backPlateDepth - this.frontPlateDepth) / 2);
-
-        SceneLoader.ImportMeshAsync(undefined, TouchHolographicButton.MRTK_ASSET_BASE_URL, TouchHolographicButton.FRONTPLATE_MODEL_FILENAME, scene).then((result) => {
+        const baseUrl = Tools.GetAssetUrl(TouchHolographicButton.MRTK_ASSET_BASE_URL);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+        SceneLoader.ImportMeshAsync(undefined, baseUrl, TouchHolographicButton.FRONTPLATE_MODEL_FILENAME, scene).then((result) => {
             const collisionPlate = CreateBox(
                 `${this.name}_collisionPlate`,
                 {
@@ -699,7 +702,9 @@ export class TouchHolographicButton extends TouchButton3D {
         innerQuadMesh.scaling.z = this.flatPlaneDepth;
         innerQuadMesh.position.z += this.backPlateDepth / 2 - this.flatPlaneDepth;
 
-        SceneLoader.ImportMeshAsync(undefined, TouchHolographicButton.MRTK_ASSET_BASE_URL, TouchHolographicButton.INNERQUAD_MODEL_FILENAME, scene).then((result) => {
+        const baseUrl = Tools.GetAssetUrl(TouchHolographicButton.MRTK_ASSET_BASE_URL);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+        SceneLoader.ImportMeshAsync(undefined, baseUrl, TouchHolographicButton.INNERQUAD_MODEL_FILENAME, scene).then((result) => {
             const innerQuadModel = result.meshes[1];
             innerQuadModel.name = `${this.name}_innerQuad`;
             innerQuadModel.isPickable = false;
@@ -728,7 +733,9 @@ export class TouchHolographicButton extends TouchButton3D {
         backGlowMesh.scaling.z = this.flatPlaneDepth;
         backGlowMesh.position.z += this.backPlateDepth / 2 - this.flatPlaneDepth * 2;
 
-        SceneLoader.ImportMeshAsync(undefined, TouchHolographicButton.MRTK_ASSET_BASE_URL, TouchHolographicButton.BACKGLOW_MODEL_FILENAME, scene).then((result) => {
+        const baseUrl = Tools.GetAssetUrl(TouchHolographicButton.MRTK_ASSET_BASE_URL);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+        SceneLoader.ImportMeshAsync(undefined, baseUrl, TouchHolographicButton.BACKGLOW_MODEL_FILENAME, scene).then((result) => {
             const backGlowModel = result.meshes[1];
             backGlowModel.name = `${this.name}_backGlow`;
             backGlowModel.isPickable = false;

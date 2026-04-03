@@ -3,27 +3,30 @@ import { NodeMaterialBlock } from "../../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../../Enums/nodeMaterialBlockConnectionPointTypes";
 import { NodeMaterialBlockConnectionPointMode } from "../../Enums/nodeMaterialBlockConnectionPointMode";
 import { NodeMaterialSystemValues } from "../../Enums/nodeMaterialSystemValues";
-import type { Nullable } from "../../../../types";
-import type { Effect } from "../../../../Materials/effect";
+import { type Nullable } from "../../../../types";
+import { type Effect } from "../../../../Materials/effect";
 import { Matrix, Vector2, Vector3, Vector4 } from "../../../../Maths/math.vector";
-import type { Scene } from "../../../../scene";
-import type { NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
-import type { NodeMaterialBuildState } from "../../nodeMaterialBuildState";
+import { type Scene } from "../../../../scene";
+import { type NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialBuildState } from "../../nodeMaterialBuildState";
 import { NodeMaterialBlockTargets } from "../../Enums/nodeMaterialBlockTargets";
 import { GetClass, RegisterClass } from "../../../../Misc/typeStore";
-import { Color3, Color4, TmpColors } from "../../../../Maths/math";
+import { Color3, Color4, TmpColors, TmpVectors } from "../../../../Maths/math";
 import { AnimatedInputBlockTypes } from "./animatedInputBlockTypes";
 import { Observable } from "../../../../Misc/observable";
-import type { NodeMaterial } from "../../nodeMaterial";
+import { type NodeMaterial } from "../../nodeMaterial";
 import { PrecisionDate } from "../../../../Misc/precisionDate";
 import { ShaderLanguage } from "../../../../Materials/shaderLanguage";
 
 const remapAttributeName: { [name: string]: string } = {
     position2d: "position",
+    // From particle.vertex:
     particle_uv: "vUV",
     particle_color: "vColor",
     particle_texturemask: "textureMask",
     particle_positionw: "vPositionW",
+    // From postprocess.vertex:
+    postprocess_uv: "vUV",
 };
 
 const attributeInFragmentOnly: { [name: string]: boolean } = {
@@ -31,10 +34,24 @@ const attributeInFragmentOnly: { [name: string]: boolean } = {
     particle_color: true,
     particle_texturemask: true,
     particle_positionw: true,
+    postprocess_uv: true,
 };
 
 const attributeAsUniform: { [name: string]: boolean } = {
     particle_texturemask: true,
+};
+
+const attributeDefine: { [name: string]: string } = {
+    normal: "NORMAL",
+    tangent: "TANGENT",
+    uv: "UV1",
+    uv2: "UV2",
+    uv3: "UV3",
+    uv4: "UV4",
+    uv5: "UV5",
+    uv6: "UV6",
+    uv7: "UV7",
+    uv8: "UV8",
 };
 
 /**
@@ -114,9 +131,13 @@ export class InputBlock extends NodeMaterialBlock {
 
             if (this.isAttribute) {
                 switch (this.name) {
+                    case "splatIndex":
+                        this._type = NodeMaterialBlockConnectionPointTypes.Float;
+                        return this._type;
                     case "position":
                     case "normal":
                     case "particle_positionw":
+                    case "splatPosition":
                         this._type = NodeMaterialBlockConnectionPointTypes.Vector3;
                         return this._type;
                     case "uv":
@@ -127,6 +148,8 @@ export class InputBlock extends NodeMaterialBlock {
                     case "uv6":
                     case "position2d":
                     case "particle_uv":
+                    case "splatScale":
+                    case "postprocess_uv":
                         this._type = NodeMaterialBlockConnectionPointTypes.Vector2;
                         return this._type;
                     case "matricesIndices":
@@ -144,6 +167,7 @@ export class InputBlock extends NodeMaterialBlock {
                     case "instanceColor":
                     case "particle_color":
                     case "particle_texturemask":
+                    case "splatColor":
                         this._type = NodeMaterialBlockConnectionPointTypes.Color4;
                         return this._type;
                 }
@@ -157,9 +181,13 @@ export class InputBlock extends NodeMaterialBlock {
                     case NodeMaterialSystemValues.View:
                     case NodeMaterialSystemValues.ViewProjection:
                     case NodeMaterialSystemValues.Projection:
+                    case NodeMaterialSystemValues.ProjectionInverse:
                         this._type = NodeMaterialBlockConnectionPointTypes.Matrix;
                         return this._type;
                     case NodeMaterialSystemValues.CameraPosition:
+                        this._type = NodeMaterialBlockConnectionPointTypes.Vector3;
+                        return this._type;
+                    case NodeMaterialSystemValues.CameraForward:
                         this._type = NodeMaterialBlockConnectionPointTypes.Vector3;
                         return this._type;
                     case NodeMaterialSystemValues.FogColor:
@@ -413,14 +441,13 @@ export class InputBlock extends NodeMaterialBlock {
         }
     }
 
-    private _emitDefine(define: string): string {
-        if (define[0] === "!") {
-            return `#ifndef ${define.substring(1)}\n`;
-        }
-
-        return `#ifdef ${define}\n`;
+    private _emitDefine(define: string, notDefine = false): string {
+        return `${notDefine ? "#ifndef" : "#ifdef"} ${define}\n`;
     }
 
+    /**
+     * Initialize the block
+     */
     public override initialize() {
         this.associatedVariableName = "";
     }
@@ -492,7 +519,7 @@ export class InputBlock extends NodeMaterialBlock {
         return attributeInFragmentOnly[this.name];
     }
 
-    private _emit(state: NodeMaterialBuildState, define?: string) {
+    private _emit(state: NodeMaterialBuildState) {
         // Uniforms
         if (this.isUniform) {
             if (!this._associatedVariableName) {
@@ -512,19 +539,10 @@ export class InputBlock extends NodeMaterialBlock {
                 return;
             }
 
-            state.uniforms.push(this.associatedVariableName);
-            if (define) {
-                state._uniformDeclaration += this._emitDefine(define);
-            }
-            const shaderType = state._getShaderType(this.type);
+            state._emitUniformFromString(this._associatedVariableName, this.type);
+
             if (state.shaderLanguage === ShaderLanguage.WGSL) {
-                state._uniformDeclaration += `uniform ${this._associatedVariableName}: ${shaderType};\n`;
                 this._prefix = "uniforms.";
-            } else {
-                state._uniformDeclaration += `uniform ${shaderType} ${this.associatedVariableName};\n`;
-            }
-            if (define) {
-                state._uniformDeclaration += `#endif\n`;
             }
 
             // well known
@@ -551,53 +569,76 @@ export class InputBlock extends NodeMaterialBlock {
         if (this.isAttribute) {
             this.associatedVariableName = remapAttributeName[this.name] ?? this.name;
 
+            if (this.name === "particle_positionw") {
+                state.sharedData.defines["POSITIONW_AS_VARYING"] = "true";
+            }
             if (this.target === NodeMaterialBlockTargets.Vertex && state._vertexState) {
                 // Attribute for fragment need to be carried over by varyings
                 if (attributeInFragmentOnly[this.name]) {
                     if (attributeAsUniform[this.name]) {
-                        state._emitUniformFromString(this.declarationVariableName, this.type, define);
+                        state._emitUniformFromString(this.declarationVariableName, this.type);
                         if (state.shaderLanguage === ShaderLanguage.WGSL) {
                             this._prefix = `vertexInputs.`;
                         }
                     } else {
-                        state._emitVaryingFromString(this.declarationVariableName, this.type, define);
+                        state._emitVaryingFromString(this.declarationVariableName, this.type);
                     }
                 } else {
-                    this._emit(state._vertexState, define);
+                    this._emit(state._vertexState);
                 }
                 return;
             }
 
-            if (state.attributes.indexOf(this.declarationVariableName) !== -1) {
-                return;
-            }
+            const alreadyDeclared = state.attributes.indexOf(this.declarationVariableName) !== -1;
 
-            state.attributes.push(this.declarationVariableName);
+            if (!alreadyDeclared) {
+                state.attributes.push(this.declarationVariableName);
+            }
 
             if (attributeInFragmentOnly[this.name]) {
                 if (attributeAsUniform[this.name]) {
-                    state._emitUniformFromString(this.declarationVariableName, this.type, define);
+                    if (!alreadyDeclared) {
+                        state._emitUniformFromString(this.declarationVariableName, this.type);
+                    }
                     if (state.shaderLanguage === ShaderLanguage.WGSL) {
                         this._prefix = `uniforms.`;
                     }
                 } else {
-                    state._emitVaryingFromString(this.declarationVariableName, this.type, define);
+                    if (!alreadyDeclared) {
+                        state._emitVaryingFromString(this.declarationVariableName, this.type);
+                    }
                     if (state.shaderLanguage === ShaderLanguage.WGSL) {
                         this._prefix = `fragmentInputs.`;
                     }
                 }
             } else {
-                if (define) {
-                    state._attributeDeclaration += this._emitDefine(define);
-                }
                 if (state.shaderLanguage === ShaderLanguage.WGSL) {
-                    state._attributeDeclaration += `attribute ${this.declarationVariableName}: ${state._getShaderType(this.type)};\n`;
+                    if (!alreadyDeclared) {
+                        const defineName = attributeDefine[this.name];
+                        if (defineName) {
+                            state._attributeDeclaration += this._emitDefine(defineName);
+                            state._attributeDeclaration += `attribute ${this.declarationVariableName}: ${state._getShaderType(this.type)};\n`;
+                            state._attributeDeclaration += `#else\n`;
+                            state._attributeDeclaration += `var<private> ${this.declarationVariableName}: ${state._getShaderType(this.type)} = ${state._getShaderType(this.type)}(0.);\n`;
+                            state._attributeDeclaration += `#endif\n`;
+                        } else {
+                            state._attributeDeclaration += `attribute ${this.declarationVariableName}: ${state._getShaderType(this.type)};\n`;
+                        }
+                    }
                     this._prefix = `vertexInputs.`;
                 } else {
-                    state._attributeDeclaration += `attribute ${state._getShaderType(this.type)} ${this.declarationVariableName};\n`;
-                }
-                if (define) {
-                    state._attributeDeclaration += `#endif\n`;
+                    if (!alreadyDeclared) {
+                        const defineName = attributeDefine[this.name];
+                        if (defineName) {
+                            state._attributeDeclaration += this._emitDefine(defineName);
+                            state._attributeDeclaration += `attribute ${state._getShaderType(this.type)} ${this.declarationVariableName};\n`;
+                            state._attributeDeclaration += `#else\n`;
+                            state._attributeDeclaration += `${state._getShaderType(this.type)} ${this.declarationVariableName} = ${state._getShaderType(this.type)}(0.);\n`;
+                            state._attributeDeclaration += `#endif\n`;
+                        } else {
+                            state._attributeDeclaration += `attribute ${state._getShaderType(this.type)} ${this.declarationVariableName};\n`;
+                        }
+                    }
                 }
             }
         }
@@ -646,11 +687,29 @@ export class InputBlock extends NodeMaterialBlock {
                 case NodeMaterialSystemValues.Projection:
                     effect.setMatrix(variableName, scene.getProjectionMatrix());
                     break;
+                case NodeMaterialSystemValues.ProjectionInverse: {
+                    const projectionMatrix = scene.getProjectionMatrix();
+                    projectionMatrix.invertToRef(TmpVectors.Matrix[0]);
+                    effect.setMatrix(variableName, TmpVectors.Matrix[0]);
+                    break;
+                }
                 case NodeMaterialSystemValues.ViewProjection:
                     effect.setMatrix(variableName, scene.getTransformMatrix());
                     break;
                 case NodeMaterialSystemValues.CameraPosition:
                     scene.bindEyePosition(effect, variableName, true);
+                    break;
+                case NodeMaterialSystemValues.CameraForward:
+                    if (scene.activeCamera) {
+                        const transform = scene.activeCamera.getWorldMatrix();
+                        const forward = TmpVectors.Vector3[2];
+                        forward.set(0, 0, scene.useRightHandedSystem ? -1 : 1);
+                        const worldForward = new Vector3();
+                        Vector3.TransformNormalToRef(forward, transform, worldForward);
+                        worldForward.normalize();
+
+                        effect.setVector3(variableName, worldForward);
+                    }
                     break;
                 case NodeMaterialSystemValues.FogColor:
                     effect.setColor3(variableName, scene.fogColor);
@@ -780,7 +839,7 @@ export class InputBlock extends NodeMaterialBlock {
                     }
                     break;
                 case NodeMaterialBlockConnectionPointTypes.Matrix:
-                    valueString = `BABYLON.Matrix.FromArray([${(this.value as Matrix).m}])`;
+                    valueString = `BABYLON.Matrix.FromArray([${(this.value as Matrix).m.join(", ")}])`;
                     break;
             }
 
@@ -808,12 +867,19 @@ export class InputBlock extends NodeMaterialBlock {
         return super._dumpPropertiesCode();
     }
 
+    /**
+     * Releases the resources held by the block
+     */
     public override dispose() {
         this.onValueChangedObservable.clear();
 
         super.dispose();
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -843,6 +909,12 @@ export class InputBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - defines the serialized object
+     * @param scene - defines the scene
+     * @param rootUrl - defines the root URL
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         this._mode = serializationObject.mode;
         super._deserialize(serializationObject, scene, rootUrl);

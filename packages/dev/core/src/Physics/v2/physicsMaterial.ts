@@ -16,11 +16,11 @@ export const enum PhysicsMaterialCombineMode {
      * min( valueA , valueB )
      */
     MINIMUM,
-    /* The final value will be the larger of the two:
+    /** The final value will be the larger of the two:
      * max( valueA , valueB )
      */
     MAXIMUM,
-    /* The final value will be the arithmetic mean of the two values:
+    /** The final value will be the arithmetic mean of the two values:
      * (valueA + valueB) / 2
      */
     ARITHMETIC_MEAN,
@@ -35,6 +35,7 @@ export const enum PhysicsMaterialCombineMode {
  * Physics material class
  * Helps setting friction and restitution that are used to compute responding forces in collision response
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface PhysicsMaterial {
     /**
      * Sets the friction used by this material

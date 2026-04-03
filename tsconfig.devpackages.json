@@ -35,13 +35,25 @@
             "path": "packages/dev/proceduralTextures/tsconfig.build.json"
         },
         {
+            "path": "packages/dev/addons/tsconfig.build.json"
+        },
+        {
             "path": "packages/tools/nodeEditor/tsconfig.build.json"
         },
         {
             "path": "packages/tools/nodeGeometryEditor/tsconfig.build.json"
         },
         {
+            "path": "packages/tools/nodeRenderGraphEditor/tsconfig.build.json"
+        },
+        {
+            "path": "packages/tools/nodeParticleEditor/tsconfig.build.json"
+        },
+        {
             "path": "packages/dev/inspector/tsconfig.build.json"
+        },
+        {
+            "path": "packages/dev/inspector-v2/tsconfig.build.json"
         },
         {
             "path": "packages/tools/ktx2Decoder/tsconfig.build.json"

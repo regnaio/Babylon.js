@@ -1,52 +1,52 @@
-import type { GlobalState } from "../../globalState";
+/* eslint-disable github/no-then */
+/* eslint-disable @typescript-eslint/no-floating-promises */
+import { type GlobalState } from "../../globalState";
 import { NodeMaterial } from "core/Materials/Node/nodeMaterial";
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
 import { WebGPUEngine } from "core/Engines/webgpuEngine";
 import { Scene } from "core/scene";
 import { Vector3 } from "core/Maths/math.vector";
 import { HemisphericLight } from "core/Lights/hemisphericLight";
 import { ArcRotateCamera } from "core/Cameras/arcRotateCamera";
 import { PreviewType } from "./previewType";
-import { Animation } from "core/Animations/animation";
 import { SceneLoader } from "core/Loading/sceneLoader";
 import { TransformNode } from "core/Meshes/transformNode";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { Mesh } from "core/Meshes/mesh";
-import type { FramingBehavior } from "core/Behaviors/Cameras/framingBehavior";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type Mesh } from "core/Meshes/mesh";
+import { type FramingBehavior } from "core/Behaviors/Cameras/framingBehavior";
 import { DirectionalLight } from "core/Lights/directionalLight";
 import { LogEntry } from "../log/logComponent";
 import { PointerEventTypes } from "core/Events/pointerEvents";
 import { Color3, Color4 } from "core/Maths/math.color";
-import type { PostProcess } from "core/PostProcesses/postProcess";
+import { type PostProcess } from "core/PostProcesses/postProcess";
 import { Constants } from "core/Engines/constants";
 import { CurrentScreenBlock } from "core/Materials/Node/Blocks/Dual/currentScreenBlock";
 import { NodeMaterialModes } from "core/Materials/Node/Enums/nodeMaterialModes";
 import { ParticleSystem } from "core/Particles/particleSystem";
-import type { IParticleSystem } from "core/Particles/IParticleSystem";
+import { type IParticleSystem } from "core/Particles/IParticleSystem";
 import { ParticleHelper } from "core/Particles/particleHelper";
 import { Texture } from "core/Materials/Textures/texture";
 import { ParticleTextureBlock } from "core/Materials/Node/Blocks/Particle/particleTextureBlock";
 import { ReadFile } from "core/Misc/fileTools";
-import type { ProceduralTexture } from "core/Materials/Textures/Procedurals/proceduralTexture";
-import type { StandardMaterial } from "core/Materials/standardMaterial";
+import { type ProceduralTexture } from "core/Materials/Textures/Procedurals/proceduralTexture";
+import { type StandardMaterial } from "core/Materials/standardMaterial";
 import { CubeTexture } from "core/Materials/Textures/cubeTexture";
 import { Layer } from "core/Layers/layer";
 import { DataStorage } from "core/Misc/dataStorage";
-import type { NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
+import { type NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
 import { CreateTorus } from "core/Meshes/Builders/torusBuilder";
-import type { TextureBlock } from "core/Materials/Node/Blocks/Dual/textureBlock";
+import { type TextureBlock } from "core/Materials/Node/Blocks/Dual/textureBlock";
 import { FilesInput } from "core/Misc/filesInput";
 import "core/Helpers/sceneHelpers";
 import "core/Rendering/depthRendererSceneComponent";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 import { Engine } from "core/Engines/engine";
+import { Animation } from "core/Animations/animation";
+import { RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
+import { SceneLoaderFlags } from "core/Loading/sceneLoaderFlags";
+const DontSerializeTextureContent = true;
 
-const dontSerializeTextureContent = true;
-
-/**
- *
- */
 export class PreviewManager {
     private _nodeMaterial: NodeMaterial;
     private _onBuildObserver: Nullable<Observer<NodeMaterial>>;
@@ -79,7 +79,7 @@ export class PreviewManager {
 
         let fullSerialization = false;
 
-        if (dontSerializeTextureContent) {
+        if (DontSerializeTextureContent) {
             const textureBlocks = nodeMaterial.getAllTextureBlocks();
             for (const block of textureBlocks) {
                 const texture = block.texture;
@@ -102,7 +102,7 @@ export class PreviewManager {
 
         const bufferSerializationState = Texture.SerializeBuffers;
 
-        if (dontSerializeTextureContent) {
+        if (DontSerializeTextureContent) {
             Texture.SerializeBuffers = fullSerialization;
             Texture._SerializeInternalTextureUniqueId = true;
         }
@@ -128,7 +128,7 @@ export class PreviewManager {
             this._updatePreview();
         });
 
-        this._onPreviewCommandActivatedObserver = globalState.onPreviewCommandActivated.add((forceRefresh: boolean) => {
+        this._onPreviewCommandActivatedObserver = globalState.stateManager.onPreviewCommandActivated.add((forceRefresh: boolean) => {
             if (forceRefresh) {
                 this._currentType = -1;
                 this._scene.disableDepthRenderer();
@@ -168,13 +168,12 @@ export class PreviewManager {
 
     public async _initAsync(targetCanvas: HTMLCanvasElement) {
         if (this._nodeMaterial.shaderLanguage === ShaderLanguage.WGSL) {
-            this._engine = new WebGPUEngine(targetCanvas);
-            await (this._engine as WebGPUEngine).initAsync();
+            this._engine = new WebGPUEngine(targetCanvas, { enableAllFeatures: true });
+            await this._engine.initAsync();
         } else {
             this._engine = new Engine(targetCanvas);
         }
         this._scene = new Scene(this._engine);
-        this._scene.clearColor = this._globalState.backgroundColor;
         this._scene.ambientColor = new Color3(1, 1, 1);
         this._camera = new ArcRotateCamera("Camera", 0, 0.8, 4, Vector3.Zero(), this._scene);
 
@@ -219,7 +218,28 @@ export class PreviewManager {
             };
             canvas.addEventListener("drop", onDrop, false);
         }
+
+        // Adding a rtt to read from
+        this._globalState.previewTexture = new RenderTargetTexture("rtt", 256, this._scene, false, false);
+        this._globalState.pickingTexture = new RenderTargetTexture("rtt2", 256, this._scene, false, true, Constants.TEXTURETYPE_FLOAT);
+        this._globalState.previewTexture.renderList = null;
+        this._globalState.pickingTexture.renderList = null;
+        this._globalState.previewTexture.particleSystemList = null;
+        this._globalState.pickingTexture.particleSystemList = null;
+        this._globalState.pickingTexture.useCameraPostProcesses = true;
+        this._globalState.previewTexture.useCameraPostProcesses = true;
+        this._scene.customRenderTargets.push(this._globalState.previewTexture);
+        this._scene.customRenderTargets.push(this._globalState.pickingTexture);
+
+        // Observable
+        this._scene.onAfterRenderObservable.add(() => {
+            this._globalState.onPreviewSceneAfterRenderObservable.notifyObservers();
+        });
+
+        // Preview
         this._refreshPreviewMesh();
+
+        // Render loop
         this._engine.runRenderLoop(() => {
             this._engine.resize();
             this._scene.render();
@@ -256,7 +276,9 @@ export class PreviewManager {
         this._globalState.envType = PreviewType.Room;
         this._globalState.previewType = PreviewType.Box;
         this._globalState.listOfCustomPreviewFiles = [];
-        this._scene.meshes.forEach((m) => m.dispose());
+        for (const m of this._scene.meshes) {
+            m.dispose();
+        }
         this._globalState.onRefreshPreviewMeshControlComponentRequiredObservable.notifyObservers();
         this._refreshPreviewMesh(true);
     }
@@ -357,6 +379,7 @@ export class PreviewManager {
                 this._handleAnimations();
                 break;
             }
+            case NodeMaterialModes.SFE:
             case NodeMaterialModes.PostProcess:
             case NodeMaterialModes.ProceduralTexture: {
                 this._camera.radius = 4;
@@ -367,6 +390,11 @@ export class PreviewManager {
                 this._camera.radius = this._globalState.previewType === PreviewType.Explosion ? 50 : this._globalState.previewType === PreviewType.DefaultParticleSystem ? 6 : 20;
                 this._camera.upperRadiusLimit = 5000;
                 this._globalState.particleSystemBlendMode = this._particleSystem?.blendMode ?? ParticleSystem.BLENDMODE_STANDARD;
+                break;
+            }
+            case NodeMaterialModes.GaussianSplatting: {
+                this._camera.radius = 6;
+                this._camera.upperRadiusLimit = 5000;
                 break;
             }
         }
@@ -381,24 +409,28 @@ export class PreviewManager {
     public static DefaultEnvironmentURL = "https://assets.babylonjs.com/environments/environmentSpecular.env";
 
     private _refreshPreviewMesh(force?: boolean) {
-        switch (this._globalState.envType) {
-            case PreviewType.Room:
-                this._hdrTexture = new CubeTexture(PreviewManager.DefaultEnvironmentURL, this._scene);
-                if (this._hdrTexture) {
-                    this._prepareBackgroundHDR();
+        if (this._globalState.mode === NodeMaterialModes.Material) {
+            switch (this._globalState.envType) {
+                case PreviewType.Room:
+                    this._hdrTexture = new CubeTexture(PreviewManager.DefaultEnvironmentURL, this._scene);
+                    if (this._hdrTexture) {
+                        this._prepareBackgroundHDR();
+                    }
+                    break;
+                case PreviewType.Custom: {
+                    const blob = new Blob([this._globalState.envFile], { type: "octet/stream" });
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        const dataurl = evt.target!.result as string;
+                        this._hdrTexture = new CubeTexture(dataurl, this._scene, undefined, false, undefined, undefined, undefined, undefined, undefined, ".env");
+                        this._prepareBackgroundHDR();
+                    };
+                    reader.readAsDataURL(blob);
+                    break;
                 }
-                break;
-            case PreviewType.Custom: {
-                const blob = new Blob([this._globalState.envFile], { type: "octet/stream" });
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    const dataurl = evt.target!.result as string;
-                    this._hdrTexture = new CubeTexture(dataurl, this._scene, undefined, false, undefined, undefined, undefined, undefined, undefined, ".env");
-                    this._prepareBackgroundHDR();
-                };
-                reader.readAsDataURL(blob);
-                break;
             }
+        } else {
+            this._scene.environmentTexture = null;
         }
         if (this._currentType !== this._globalState.previewType || this._currentType === PreviewType.Custom || force) {
             this._currentType = this._globalState.previewType;
@@ -429,7 +461,7 @@ export class PreviewManager {
                 this._particleSystem = null;
             }
 
-            SceneLoader.ShowLoadingScreen = false;
+            SceneLoaderFlags.ShowLoadingScreen = false;
 
             this._globalState.onIsLoadingChanged.notifyObservers(true);
 
@@ -493,13 +525,17 @@ export class PreviewManager {
                         return;
                 }
             } else if (this._globalState.mode === NodeMaterialModes.ProceduralTexture) {
-                this._layer = new Layer("proceduralLayer", null, this._scene);
+                this._layer = new Layer("proceduralLayer", null, this._scene, false);
+                this._layer.renderTargetTextures.push(this._globalState.previewTexture!);
+                this._layer.renderTargetTextures.push(this._globalState.pickingTexture!);
+                this._prepareScene();
             } else if (this._globalState.mode === NodeMaterialModes.Particle) {
                 switch (this._globalState.previewType) {
                     case PreviewType.DefaultParticleSystem:
                         this._particleSystem = ParticleHelper.CreateDefault(new Vector3(0, 0, 0), 500, this._scene);
                         this._particleSystem.blendMode = DataStorage.ReadNumber("DefaultParticleSystemBlendMode", ParticleSystem.BLENDMODE_ONEONE);
                         this._particleSystem.start();
+                        this._prepareScene();
                         break;
                     case PreviewType.Bubbles:
                         this._particleSystem = new ParticleSystem("particles", 4000, this._scene);
@@ -517,6 +553,7 @@ export class PreviewManager {
                         this._particleSystem.color2 = new Color4(1, 0.5, 0, 1);
                         this._particleSystem.gravity = new Vector3(0, -1.0, 0);
                         this._particleSystem.start();
+                        this._prepareScene();
                         break;
                     case PreviewType.Explosion:
                         this._loadParticleSystem(this._globalState.previewType, 1);
@@ -543,9 +580,33 @@ export class PreviewManager {
                         );
                         return;
                 }
+            } else if (this._globalState.mode === NodeMaterialModes.GaussianSplatting) {
+                switch (this._globalState.previewType) {
+                    case PreviewType.Parrot:
+                        SceneLoader.AppendAsync("https://assets.babylonjs.com/splats/", "gs_Sqwakers_trimed.splat", this._scene).then(() => {
+                            this._meshes.push(...this._scene.meshes);
+                            this._prepareScene();
+                        });
+                        break;
+                    case PreviewType.BricksSkull:
+                        SceneLoader.AppendAsync("https://assets.babylonjs.com/splats/", "gs_Skull.splat", this._scene).then(() => {
+                            this._meshes.push(...this._scene.meshes);
+                            this._prepareScene();
+                        });
+                        break;
+                    case PreviewType.Plants:
+                        SceneLoader.AppendAsync("https://assets.babylonjs.com/splats/", "gs_Plants.splat", this._scene).then(() => {
+                            this._meshes.push(...this._scene.meshes);
+                            this._prepareScene();
+                        });
+                        break;
+                    case PreviewType.Custom:
+                        this._globalState.filesInput.loadFiles({ target: { files: this._globalState.listOfCustomPreviewFiles } });
+                        return;
+                }
+            } else {
+                this._prepareScene();
             }
-
-            this._prepareScene();
         }
     }
 
@@ -588,14 +649,13 @@ export class PreviewManager {
         });
     }
 
-    private _forceCompilationAsync(material: NodeMaterial, mesh: AbstractMesh): Promise<void> {
-        return material.forceCompilationAsync(mesh);
+    private async _forceCompilationAsync(material: NodeMaterial, mesh: AbstractMesh): Promise<void> {
+        return await material.forceCompilationAsync(mesh);
     }
 
     private _updatePreview() {
         try {
             const serializationObject = this._serializeMaterial();
-
             const store = NodeMaterial.IgnoreTexturesAtLoadTime;
             NodeMaterial.IgnoreTexturesAtLoadTime = false;
             const tempMaterial = NodeMaterial.Parse(serializationObject, this._scene, "", this._nodeMaterial.shaderLanguage);
@@ -615,23 +675,29 @@ export class PreviewManager {
             }
 
             switch (this._globalState.mode) {
+                case NodeMaterialModes.SFE:
                 case NodeMaterialModes.PostProcess: {
                     this._globalState.onIsLoadingChanged.notifyObservers(false);
 
                     this._postprocess = tempMaterial.createPostProcess(this._camera, 1.0, Constants.TEXTURE_NEAREST_SAMPLINGMODE, this._engine);
-
-                    const currentScreen = tempMaterial.getBlockByPredicate((block) => block instanceof CurrentScreenBlock);
-                    if (currentScreen && this._postprocess) {
-                        this._postprocess.externalTextureSamplerBinding = true;
-                        this._postprocess.onApplyObservable.add((effect) => {
-                            effect.setTexture("textureSampler", (currentScreen as CurrentScreenBlock).texture);
-                        });
+                    if (this._postprocess) {
+                        for (const block of tempMaterial.getTextureBlocks()) {
+                            if (!(block instanceof CurrentScreenBlock)) {
+                                return;
+                            }
+                            this._postprocess.externalTextureSamplerBinding = true;
+                            this._postprocess.onApplyObservable.add((effect) => {
+                                effect.setTexture(block.samplerName, block.texture);
+                            });
+                        }
                     }
 
                     if (this._material) {
                         this._material.dispose();
                     }
                     this._material = tempMaterial;
+
+                    this._globalState.onPreviewUpdatedObservable.notifyObservers(tempMaterial);
                     break;
                 }
                 case NodeMaterialModes.ProceduralTexture: {
@@ -647,6 +713,7 @@ export class PreviewManager {
                         this._layer.texture = this._proceduralTexture;
                     }
 
+                    this._globalState.onPreviewUpdatedObservable.notifyObservers(tempMaterial);
                     break;
                 }
 
@@ -669,14 +736,16 @@ export class PreviewManager {
                         this._material.dispose();
                     }
                     this._material = tempMaterial;
+
+                    this._globalState.onPreviewUpdatedObservable.notifyObservers(tempMaterial);
                     break;
                 }
 
                 default: {
-                    if (this._meshes.length) {
-                        const tasks = this._meshes.map((m) => {
+                    if (this._meshes && this._meshes.length) {
+                        const tasks = this._meshes.map(async (m) => {
                             m.hasVertexAlpha = false;
-                            return this._forceCompilationAsync(tempMaterial, m);
+                            return await this._forceCompilationAsync(tempMaterial, m);
                         });
 
                         Promise.all(tasks)
@@ -691,13 +760,16 @@ export class PreviewManager {
 
                                 this._material = tempMaterial;
                                 this._globalState.onIsLoadingChanged.notifyObservers(false);
+                                this._globalState.onPreviewUpdatedObservable.notifyObservers(tempMaterial);
                             })
                             .catch((reason) => {
                                 this._globalState.onLogRequiredObservable.notifyObservers(new LogEntry("Shader compilation error:\r\n" + reason, true));
                                 this._globalState.onIsLoadingChanged.notifyObservers(false);
+                                this._globalState.onPreviewUpdatedObservable.notifyObservers(tempMaterial);
                             });
                     } else {
                         this._material = tempMaterial;
+                        this._globalState.onPreviewUpdatedObservable.notifyObservers(tempMaterial);
                     }
                     break;
                 }
@@ -710,7 +782,7 @@ export class PreviewManager {
 
     public dispose() {
         this._nodeMaterial.onBuildObservable.remove(this._onBuildObserver);
-        this._globalState.onPreviewCommandActivated.remove(this._onPreviewCommandActivatedObserver);
+        this._globalState.stateManager.onPreviewCommandActivated.remove(this._onPreviewCommandActivatedObserver);
         this._globalState.stateManager.onUpdateRequiredObservable.remove(this._onUpdateRequiredObserver);
         this._globalState.onAnimationCommandActivated.remove(this._onAnimationCommandActivatedObserver);
         this._globalState.onPreviewBackgroundChanged.remove(this._onPreviewBackgroundChangedObserver);
@@ -718,6 +790,16 @@ export class PreviewManager {
         this._globalState.onDepthPrePassChanged.remove(this._onDepthPrePassChangedObserver);
         this._globalState.onLightUpdated.remove(this._onLightUpdatedObserver);
         this._globalState.onBackgroundHDRUpdated.remove(this._onBackgroundHDRUpdatedObserver);
+
+        if (this._globalState.previewTexture) {
+            this._globalState.previewTexture.dispose();
+            this._globalState.previewTexture = null;
+        }
+
+        if (this._globalState.pickingTexture) {
+            this._globalState.pickingTexture.dispose();
+            this._globalState.pickingTexture = null;
+        }
 
         if (this._material) {
             this._material.dispose(false, true);

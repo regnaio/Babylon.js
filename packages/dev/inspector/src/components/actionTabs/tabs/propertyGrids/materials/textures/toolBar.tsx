@@ -1,7 +1,6 @@
 import * as React from "react";
-import type { IToolData, IToolType, IMetadata } from "./textureEditorComponent";
-import type { Color3 } from "core/Maths/math.color";
-import { Color4 } from "core/Maths/math.color";
+import { type IToolData, type IToolType, type IMetadata } from "./textureEditorComponent";
+import { type Color3, Color4 } from "core/Maths/math.color";
 import { ColorPicker } from "shared-ui-components/colorPicker/colorPicker";
 import { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 
@@ -77,7 +76,9 @@ export class ToolBar extends React.Component<IToolBarProps, IToolBarState> {
                 <div
                     id="color"
                     onClick={() => {
-                        if (!this.props.pickerOpen) this.props.setPickerOpen(true);
+                        if (!this.props.pickerOpen) {
+                            this.props.setPickerOpen(true);
+                        }
                     }}
                     title="Color"
                     className={`icon button${this.props.pickerOpen ? ` active` : ``}`}

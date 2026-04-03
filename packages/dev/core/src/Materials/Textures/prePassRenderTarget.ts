@@ -1,11 +1,10 @@
-import type { IMultiRenderTargetOptions } from "./multiRenderTarget";
-import { MultiRenderTarget } from "./multiRenderTarget";
-import type { Engine } from "../../Engines/engine";
-import type { RenderTargetTexture } from "./renderTargetTexture";
-import type { Scene } from "../../scene";
-import type { PostProcess } from "../../PostProcesses/postProcess";
+import { type IMultiRenderTargetOptions, MultiRenderTarget } from "./multiRenderTarget";
+import { type Engine } from "../../Engines/engine";
+import { type RenderTargetTexture } from "./renderTargetTexture";
+import { type Scene } from "../../scene";
+import { type PostProcess } from "../../PostProcesses/postProcess";
 import { ImageProcessingPostProcess } from "../../PostProcesses/imageProcessingPostProcess";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 
 /**
  * A multi render target designed to render the prepass.
@@ -57,7 +56,7 @@ export class PrePassRenderTarget extends MultiRenderTarget {
      */
     public renderTargetTexture: Nullable<RenderTargetTexture> = null;
 
-    public constructor(name: string, renderTargetTexture: Nullable<RenderTargetTexture>, size: any, count: number, scene?: Scene, options?: IMultiRenderTargetOptions | undefined) {
+    public constructor(name: string, renderTargetTexture: Nullable<RenderTargetTexture>, size: any, count: number, scene?: Scene, options?: IMultiRenderTargetOptions) {
         super(name, size, count, scene, options);
 
         this.renderTargetTexture = renderTargetTexture;

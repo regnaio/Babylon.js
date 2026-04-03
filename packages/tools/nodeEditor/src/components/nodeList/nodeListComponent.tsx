@@ -1,19 +1,22 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
-import { DraggableLineComponent } from "../../sharedComponents/draggableLineComponent";
+import { type GlobalState } from "../../globalState";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
+import { DraggableLineComponent } from "shared-ui-components/lines/draggableLineComponent";
 import { NodeMaterialModes } from "core/Materials/Node/Enums/nodeMaterialModes";
-import type { Observer } from "core/Misc/observable";
-import type { Nullable } from "core/types";
-import { DraggableLineWithButtonComponent } from "../../sharedComponents/draggableLineWithButtonComponent";
-import { LineWithFileButtonComponent } from "../../sharedComponents/lineWithFileButtonComponent";
+import { type Observer } from "core/Misc/observable";
+import { type Nullable } from "core/types";
+import { DraggableLineWithButtonComponent } from "shared-ui-components/lines/draggableLineWithButtonComponent";
+import { LineWithFileButtonComponent } from "shared-ui-components/lines/lineWithFileButtonComponent";
 import { Tools } from "core/Misc/tools";
 import addButton from "../../imgs/add.svg";
 import deleteButton from "../../imgs/delete.svg";
 import { NodeLedger } from "shared-ui-components/nodeGraphSystem/nodeLedger";
 
 import "./nodeList.scss";
+import { ToolContext } from "shared-ui-components/fluent/hoc/fluentToolWrapper";
+import { Accordion } from "shared-ui-components/fluent/primitives/accordion";
+import { SearchBar } from "shared-ui-components/fluent/primitives/searchBar";
 
 interface INodeListComponentProps {
     globalState: GlobalState;
@@ -64,6 +67,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         StepBlock: "Outputs 1 for any input value above the edge input, outputs 0 for any input value below the edge input",
         Matrix: "A 4x4 table of related values",
         ProjectionMatrixBlock: "A matrix to remap points in 3D space to 2D plane relative to the screen",
+        ProjectionInverseMatrixBlock: "A matrix to remap points in 2D screen space to 3D space",
         ViewMatrixBlock: "A matrix to remap points in 3D space to 2D plane relative to the view of the scene camera",
         ViewProjectionMatrixBlock: "A matrix to remap points in 3D space to 2D view space before remapping to 2D screen space",
         WorldMatrixBlock: "A matrix to remap points in 3D local space to 3D world space",
@@ -89,6 +93,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         FragmentOutputBlock: "A mandatory final node for outputing the color of each pixel",
         PrePassOutputBlock: "An optional final node for outputing geometry data on prepass textures",
         VertexOutputBlock: "A mandatory final node for outputing the position of each vertex",
+        SmartFilterFragmentOutputBlock: "A mandatory final node for outputing the color of each pixel in Smart Filters mode",
         ClampBlock: "Outputs values above the maximum or below minimum as maximum or minimum values respectively",
         NormalizeBlock: "Remaps the length of a vector or color to 1",
         RemapBlock: "Remaps input value between sourceMin and sourceMax to a new range between targetMin and targetMax",
@@ -97,6 +102,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         RoundBlock: "Outputs fractional values rounded to the nearest whole number",
         ModBlock: "Outputs the value of one parameter modulo another",
         CameraPositionBlock: "Outputs a Vector3 position of the active scene camera",
+        CameraForwardBlock: "Outputs a Vector3 containing the forward direction of the active scene camera",
         CameraParametersBlock: "Outputs a Vector4 containing (-1 for webGL and 1 for webGPU, camera.minZ, camera.maxZ, 1 / camera.maxZ)",
         FogBlock: "Applies fog to the scene with an increasing opacity based on distance from the camera",
         FogColorBlock: "The system value for fog color pulled from the scene",
@@ -139,6 +145,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         ReflectBlock: "Outputs the direction of the input vector reflected across the surface normal.",
         RefractBlock: "Outputs a direction simulating a deflection of the input vector.",
         Rotate2dBlock: "Rotates UV coordinates around the W axis.",
+        PannerBlock: "Pans UV coordinates over time based on a speed vector. It animates coordinates connected to the UV input by the speed input multiplied with the time input.",
         PBRMetallicRoughnessBlock: "PBR metallic/roughness material",
         SheenBlock: "PBR Sheen block",
         AnisotropyBlock: "PBR Anisotropy block",
@@ -146,6 +153,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         ClearCoatBlock: "PBR ClearCoat block",
         RefractionBlock: "PBR Refraction block",
         SubSurfaceBlock: "PBR SubSurface block",
+        IridescenceBlock: "PBR Iridescence block",
         ScreenPositionBlock: "A Vector2 representing the position of each vertex of the screen quad (derived from UV set from the quad used to render)",
         CurrentScreenBlock: "The screen buffer used as input for the post process",
         ParticleUVBlock: "The particle uv texture coordinate",
@@ -155,6 +163,11 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         ParticleRampGradientBlock: "The particle ramp gradient block",
         ParticleBlendMultiplyBlock: "The particle blend multiply block",
         ParticlePositionWorldBlock: "The world position of the particle",
+        ScreenUVBlock: "The screen quad's UV texture coordinates",
+        GaussianSplattingBlock: "The gaussian splatting block",
+        GaussianBlock: "The gaussian color computation block",
+        SplatReaderBlock: "The gaussian splat reader block",
+        SplatIndexBlock: "The splat index",
         FragCoordBlock: "The gl_FragCoord predefined variable that contains the window relative coordinate (x, y, z, 1/w)",
         ScreenSizeBlock: "The size (in pixels) of the screen window",
         SceneDepthBlock: "The scene depth buffer",
@@ -169,6 +182,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         OrBlock: "Return a value if (a or b) > 0",
         AndBlock: "Return a value if (a and b) > 0",
         ImageSourceBlock: "Centralize texture access for TextureBlocks",
+        DepthSourceBlock: "Centralize depth texture access for TextureBlocks",
         CloudBlock: "Generate Fractal Brownian Motion Clouds",
         VoronoiNoiseBlock: "Generate Voronoi Noise",
         ScreenSpaceBlock: "Convert a Vector3 or a Vector4 into screen space",
@@ -186,6 +200,14 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         MatrixTransposeBlock: "Compute the transpose of a matrix",
         MeshAttributeExistsBlock: "Falls back to secondary input if specified attribute doesn't exists on the rendered mesh",
         CurveBlock: "Apply a curve function",
+        ColorConverterBlock: "Converts between RGB and HSL color spaces",
+        LoopBlock: "Block used to repeat code",
+        StorageReadBlock: "Block used to read from a loop storage variable",
+        StorageWriteBlock: "Block used to write to a loop storage variable",
+        MatrixSplitterBlock: "Block used to split a matrix into Vector4",
+        DebugBlock: "Block used to render intermediate debug values",
+        SmartFilterTextureBlock: "Block used to add a Smart Filter Effect (SFE) shader interface",
+        AmbientOcclusionBlock: "Block used to compute screen space ambient occlusion",
     };
 
     private _customFrameList: { [key: string]: string };
@@ -222,6 +244,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
     loadCustomFrame(file: File) {
         Tools.ReadFile(
             file,
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             async (data) => {
                 // get Frame Data from file
                 const decoder = new TextDecoder("utf-8");
@@ -270,6 +293,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
     loadCustomBlock(file: File) {
         Tools.ReadFile(
             file,
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             async (data) => {
                 // get Block Data from file
                 const decoder = new TextDecoder("utf-8");
@@ -311,6 +335,38 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         }
     }
 
+    renderFluent(blockMenu: JSX.Element[]) {
+        return (
+            <div>
+                <SearchBar placeholder="Filter" onChange={(val) => this.filterContent(val.toString())} />
+                <Accordion>{blockMenu}</Accordion>
+            </div>
+        );
+    }
+
+    renderOriginal(blockMenu: JSX.Element[]) {
+        return (
+            <div id="nmeNodeList">
+                <div className="panes">
+                    <div className="pane">
+                        <div className="filter">
+                            <input
+                                type="text"
+                                placeholder="Filter"
+                                onFocus={() => (this.props.globalState.lockObject.lock = true)}
+                                onBlur={() => {
+                                    this.props.globalState.lockObject.lock = false;
+                                }}
+                                onChange={(evt) => this.filterContent(evt.target.value)}
+                            />
+                        </div>
+                        <div className="list-container">{blockMenu}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     override render() {
         const customFrameNames: string[] = [];
         for (const frame in this._customFrameList) {
@@ -323,11 +379,12 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         }
 
         // Block types used to create the menu from
-        const allBlocks: any = {
+        const allBlocks: Record<string, string[]> = {
             Custom_Frames: customFrameNames,
             Custom_Blocks: customBlockNames,
+            SFE: ["ScreenUVBlock", "SmartFilterTextureBlock", "SmartFilterFragmentOutputBlock"],
             Animation: ["BonesBlock", "MorphTargetsBlock"],
-            Color_Management: ["ReplaceColorBlock", "PosterizeBlock", "GradientBlock", "DesaturateBlock"],
+            Color_Management: ["ReplaceColorBlock", "PosterizeBlock", "GradientBlock", "DesaturateBlock", "ColorConverterBlock"],
             Conversion_Blocks: ["ColorMergerBlock", "ColorSplitterBlock", "VectorMergerBlock", "VectorSplitterBlock"],
             Inputs: [
                 "Float",
@@ -346,6 +403,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "FragCoordBlock",
                 "ScreenSizeBlock",
                 "ImageSourceBlock",
+                "DepthSourceBlock",
                 "TriPlanarBlock",
                 "BiPlanarBlock",
             ],
@@ -398,6 +456,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "ReflectBlock",
                 "RefractBlock",
                 "Rotate2dBlock",
+                "PannerBlock",
                 "TransformBlock",
                 "ScreenSpaceBlock",
                 "TwirlBlock",
@@ -410,11 +469,13 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "ViewMatrixBlock",
                 "ViewProjectionMatrixBlock",
                 "ProjectionMatrixBlock",
+                "ProjectionInverseMatrixBlock",
                 "MatrixBuilderBlock",
                 "MatrixDeterminantBlock",
                 "MatrixTransposeBlock",
+                "MatrixSplitterBlock",
             ],
-            Misc: ["ElbowBlock", "ShadowMapBlock", "TeleportInBlock", "TeleportOutBlock"],
+            Misc: ["ElbowBlock", "ShadowMapBlock", "TeleportInBlock", "TeleportOutBlock", "DebugBlock", "AmbientOcclusionBlock"],
             Mesh: [
                 "InstancesBlock",
                 "PositionBlock",
@@ -437,6 +498,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "FrontFacingBlock",
                 "MeshAttributeExistsBlock",
             ],
+            Loop: ["LoopBlock", "StorageReadBlock", "StorageWriteBlock"],
             Noises: ["RandomNumberBlock", "SimplexPerlin3DBlock", "WorleyNoise3DBlock", "CloudBlock", "VoronoiNoiseBlock"],
             Output_Nodes: ["VertexOutputBlock", "FragmentOutputBlock", "PrePassOutputBlock", "DiscardBlock", "ClipPlanesBlock", "FragDepthBlock"],
             Particle: [
@@ -448,7 +510,8 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "ParticleTextureMaskBlock",
                 "ParticleUVBlock",
             ],
-            PBR: ["PBRMetallicRoughnessBlock", "AnisotropyBlock", "ClearCoatBlock", "ReflectionBlock", "RefractionBlock", "SheenBlock", "SubSurfaceBlock"],
+            GaussianSplatting: ["GaussianSplattingBlock", "SplatIndexBlock", "SplatReaderBlock", "GaussianBlock"],
+            PBR: ["PBRMetallicRoughnessBlock", "AnisotropyBlock", "ClearCoatBlock", "IridescenceBlock", "ReflectionBlock", "RefractionBlock", "SheenBlock", "SubSurfaceBlock"],
             PostProcess: ["ScreenPositionBlock", "CurrentScreenBlock", "PrePassTextureBlock"],
             Procedural__Texture: ["ScreenPositionBlock"],
             Range: ["ClampBlock", "RemapBlock", "NormalizeBlock"],
@@ -456,6 +519,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
             Scene: [
                 "FogBlock",
                 "CameraPositionBlock",
+                "CameraForwardBlock",
                 "CameraParametersBlock",
                 "FogColorBlock",
                 "ImageProcessingBlock",
@@ -466,45 +530,79 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
             ],
         };
 
+        let excludeNodes: Record<string, string[]> = {};
+        let excludeCategories: string[] = [];
         switch (this.props.globalState.mode) {
             case NodeMaterialModes.Material:
-                delete allBlocks["PostProcess"];
-                delete allBlocks["Particle"];
-                delete allBlocks["Procedural__Texture"];
+                excludeCategories = ["SFE", "PostProcess", "Particle", "Procedural__Texture", "GaussianSplatting"];
+                break;
+            case NodeMaterialModes.SFE:
+                excludeCategories = ["Animation", "Mesh", "Particle", "Procedural__Texture", "PostProcess", "PBR", "Scene", "GaussianSplatting"];
+                excludeNodes = {
+                    Output_Nodes: ["VertexOutputBlock", "FragmentOutputBlock", "PrePassOutputBlock", "ClipPlanesBlock", "FragDepthBlock"],
+                    Inputs: [
+                        "TextureBlock",
+                        "MaterialAlphaBlock",
+                        "BiPlanarBlock",
+                        "TriPlanarBlock",
+                        "ReflectionTextureBlock",
+                        "DeltaTimeBlock",
+                        "RealTimeBlock",
+                        "MouseInfoBlock",
+                    ],
+                    Matrices: [
+                        "WorldMatrixBlock",
+                        "WorldViewMatrixBlock",
+                        "WorldViewProjectionMatrixBlock",
+                        "ViewMatrixBlock",
+                        "ViewProjectionMatrixBlock",
+                        "ProjectionMatrixBlock",
+                        "ProjectionInverseMatrixBlock",
+                    ],
+                    Misc: ["ShadowMapBlock"],
+                    Math__Vector: ["ScreenSpaceBlock"],
+                };
                 break;
             case NodeMaterialModes.PostProcess:
-                delete allBlocks["Animation"];
-                delete allBlocks["Mesh"];
-                delete allBlocks["Particle"];
-                delete allBlocks["Procedural__Texture"];
-                delete allBlocks["PBR"];
-                allBlocks.Output_Nodes.splice(allBlocks.Output_Nodes.indexOf("PrePassOutputBlock"), 1);
+                excludeCategories = ["SFE", "Animation", "Mesh", "Particle", "Procedural__Texture", "PBR", "GaussianSplatting"];
+                excludeNodes = {
+                    Output_Nodes: ["PrePassOutputBlock"],
+                };
                 break;
             case NodeMaterialModes.ProceduralTexture:
-                delete allBlocks["Animation"];
-                delete allBlocks["Mesh"];
-                delete allBlocks["Particle"];
-                delete allBlocks["PostProcess"];
-                delete allBlocks["PBR"];
-                allBlocks.Output_Nodes.splice(allBlocks.Output_Nodes.indexOf("PrePassOutputBlock"), 1);
+                excludeCategories = ["SFE", "Animation", "Mesh", "Particle", "PostProcess", "PBR", "GaussianSplatting"];
+                excludeNodes = {
+                    Output_Nodes: ["PrePassOutputBlock"],
+                };
                 break;
             case NodeMaterialModes.Particle:
-                delete allBlocks["Animation"];
-                delete allBlocks["Mesh"];
-                delete allBlocks["PostProcess"];
-                delete allBlocks["Procedural__Texture"];
-                delete allBlocks["PBR"];
-                allBlocks.Output_Nodes.splice(allBlocks.Output_Nodes.indexOf("VertexOutputBlock"), 1);
-                allBlocks.Scene.splice(allBlocks.Scene.indexOf("FogBlock"), 1);
-                allBlocks.Scene.splice(allBlocks.Scene.indexOf("FogColorBlock"), 1);
-                allBlocks.Output_Nodes.splice(allBlocks.Output_Nodes.indexOf("PrePassOutputBlock"), 1);
+                excludeCategories = ["SFE", "Animation", "Mesh", "PostProcess", "Procedural__Texture", "PBR", "GaussianSplatting"];
+                excludeNodes = {
+                    Output_Nodes: ["VertexOutputBlock", "PrePassOutputBlock"],
+                    Scene: ["FogBlock", "FogColorBlock"],
+                };
                 break;
+            case NodeMaterialModes.GaussianSplatting:
+                excludeCategories = ["SFE", "Animation", "Mesh", "PostProcess", "Procedural__Texture", "PBR"];
+                excludeNodes = {
+                    Output_Nodes: ["VertexOutputBlock", "PrePassOutputBlock"],
+                    Scene: ["FogBlock", "FogColorBlock"],
+                };
+                break;
+        }
+        for (const category in excludeNodes) {
+            allBlocks[category] = allBlocks[category].filter((node) => !excludeNodes[category].includes(node));
+        }
+        for (const category of excludeCategories) {
+            if (allBlocks[category]) {
+                delete allBlocks[category];
+            }
         }
 
         // Create node menu
-        const blockMenu = [];
+        const blockMenu: JSX.Element[] = [];
         for (const key in allBlocks) {
-            const blockList = (allBlocks as any)[key]
+            const blockList = allBlocks[key]
                 .filter((b: string) => !this.state.filter || b.toLowerCase().indexOf(this.state.filter.toLowerCase()) !== -1)
                 .sort((a: string, b: string) => a.localeCompare(b))
                 .map((block: any) => {
@@ -512,6 +610,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                         return (
                             <DraggableLineWithButtonComponent
                                 key={block}
+                                format={"babylonjs-material-node"}
                                 data={block}
                                 tooltip={this._customFrameList[block] || ""}
                                 iconImage={deleteButton}
@@ -523,6 +622,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                         return (
                             <DraggableLineWithButtonComponent
                                 key={block}
+                                format={"babylonjs-material-node"}
                                 data={block}
                                 tooltip={this._customBlockList[block] || ""}
                                 iconImage={deleteButton}
@@ -532,7 +632,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                             />
                         );
                     }
-                    return <DraggableLineComponent key={block} data={block} tooltip={NodeListComponent._Tooltips[block] || ""} />;
+                    return <DraggableLineComponent key={block} format={"babylonjs-material-node"} data={block} tooltip={NodeListComponent._Tooltips[block] || ""} />;
                 });
 
             if (key === "Custom_Frames") {
@@ -580,6 +680,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
 
             // Register blocks
             const ledger = NodeLedger.RegisteredNodeNames;
+            ledger.length = 0;
             for (const key in allBlocks) {
                 const blocks = allBlocks[key] as string[];
                 if (blocks.length) {
@@ -591,7 +692,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 }
             }
             NodeLedger.NameFormatter = (name) => {
-                let finalName = name;
+                let finalName: string;
                 // custom frame
                 if (name.endsWith("Custom")) {
                     const nameIndex = name.lastIndexOf("Custom");
@@ -604,25 +705,6 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
             };
         }
 
-        return (
-            <div id="nmeNodeList">
-                <div className="panes">
-                    <div className="pane">
-                        <div className="filter">
-                            <input
-                                type="text"
-                                placeholder="Filter"
-                                onFocus={() => (this.props.globalState.lockObject.lock = true)}
-                                onBlur={() => {
-                                    this.props.globalState.lockObject.lock = false;
-                                }}
-                                onChange={(evt) => this.filterContent(evt.target.value)}
-                            />
-                        </div>
-                        <div className="list-container">{blockMenu}</div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <ToolContext.Consumer>{({ useFluent }) => (useFluent ? this.renderFluent(blockMenu) : this.renderOriginal(blockMenu))}</ToolContext.Consumer>;
     }
 }

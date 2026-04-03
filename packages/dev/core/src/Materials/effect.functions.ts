@@ -1,17 +1,16 @@
-import type { ProcessingOptions, ShaderCustomProcessingFunction, ShaderProcessingContext } from "core/Engines/Processors/shaderProcessingOptions";
+import { type _IProcessingOptions, type ShaderCustomProcessingFunction, type _IShaderProcessingContext } from "core/Engines/Processors/shaderProcessingOptions";
 import { GetDOMTextContent, IsWindowObjectExist } from "core/Misc/domManagement";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { ShaderLanguage } from "./shaderLanguage";
-import type { WebGLContext } from "core/Engines/thinEngine.functions";
-import { getStateObject } from "core/Engines/thinEngine.functions";
+import { type WebGLContext, getStateObject } from "core/Engines/thinEngine.functions";
 import { ShaderStore } from "core/Engines/shaderStore";
-import type { AbstractEngine } from "core/Engines/abstractEngine";
-import type { Effect, IShaderPath } from "./effect";
-import type { IPipelineContext } from "core/Engines/IPipelineContext";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+import { type Effect, type IShaderPath } from "./effect";
+import { type IPipelineContext } from "core/Engines/IPipelineContext";
 import { Logger } from "core/Misc/logger";
 import { Finalize, Initialize, Process } from "core/Engines/Processors/shaderProcessor";
-import { _loadFile } from "core/Engines/abstractEngine.functions";
-import type { WebGLPipelineContext } from "core/Engines/WebGL/webGLPipelineContext";
+import { _LoadFile } from "core/Engines/abstractEngine.functions";
+import { type WebGLPipelineContext } from "core/Engines/WebGL/webGLPipelineContext";
 
 /**
  * Options to be used when creating a pipeline
@@ -51,12 +50,22 @@ export interface IPipelineGenerationOptions {
     /**
      * extend the processing options when running code processing
      */
-    extendedProcessingOptions?: Partial<ProcessingOptions>;
+    extendedProcessingOptions?: Partial<_IProcessingOptions>;
 
     /**
      * extend the pipeline generation options
      */
     extendedCreatePipelineOptions?: Partial<ICreateAndPreparePipelineContextOptions>;
+
+    /**
+     * If true, generating a new pipeline will return when the pipeline is ready to be used
+     */
+    waitForIsReady?: boolean;
+
+    /**
+     * If true, the pipeline will be created synchronously, even if parallel shader compilation is available
+     */
+    disableParallelCompilation?: boolean;
 }
 
 /**
@@ -64,7 +73,7 @@ export interface IPipelineGenerationOptions {
  */
 export interface ICreateAndPreparePipelineContextOptions {
     parallelShaderCompile?: { COMPLETION_STATUS_KHR: number };
-    shaderProcessingContext: Nullable<ShaderProcessingContext>;
+    shaderProcessingContext: Nullable<_IShaderProcessingContext>;
     existingPipelineContext?: Nullable<IPipelineContext>;
     name?: string;
     rebuildRebind?: (vertexSourceCode: string, fragmentSourceCode: string, onCompiled: (pipelineContext: IPipelineContext) => void, onError: (message: string) => void) => void;
@@ -76,6 +85,7 @@ export interface ICreateAndPreparePipelineContextOptions {
     fragment: string;
     defines: Nullable<string>;
     transformFeedbackVaryings: Nullable<string[]>;
+    disableParallelCompilation?: boolean;
 }
 
 /**
@@ -85,6 +95,7 @@ export interface ICreateAndPreparePipelineContextOptions {
  * @returns the cached pipeline context if it exists
  * @internal
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function getCachedPipeline(name: string, context: WebGLContext): IPipelineContext | undefined {
     const stateObject = getStateObject(context);
     return stateObject.cachedPipelines[name];
@@ -93,11 +104,12 @@ export function getCachedPipeline(name: string, context: WebGLContext): IPipelin
 /**
  * @internal
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function resetCachedPipeline(pipeline: IPipelineContext): void {
     const name = pipeline._name;
     const context = (pipeline as WebGLPipelineContext).context;
     if (name && context) {
-        const stateObject = getStateObject(context!);
+        const stateObject = getStateObject(context);
         const cachedPipeline = stateObject.cachedPipelines[name];
         cachedPipeline?.dispose();
         delete stateObject.cachedPipelines[name];
@@ -105,8 +117,9 @@ export function resetCachedPipeline(pipeline: IPipelineContext): void {
 }
 
 /** @internal */
-export function _processShaderCode(
-    processorOptions: ProcessingOptions,
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export function _ProcessShaderCode(
+    processorOptions: _IProcessingOptions,
     baseName: any,
     processFinalCode?: Nullable<ShaderCustomProcessingFunction>,
     onFinalCodeReady?: (vertexCode: string, fragmentCode: string) => void,
@@ -139,56 +152,64 @@ export function _processShaderCode(
         fragmentSource = baseName.fragment || baseName;
     }
 
+    // Important:
+    //   The vertex shader must be compiled before the fragment shader, as processing the fragment shader may require information from the vertex shader.
+    //   Also, they should be processed in the same JS tick because the shader processor is a singleton and stores information about the current processing in its internal state.
+    //   Processing the vertex and fragment shaders in different ticks may cause issues as the internal state may be overridden by another shader being processed in between.
+    // This means that the shaders must be processed in sequence and synchronously, but the loading of the shader code can be done in parallel
+    // as long as we wait for both shaders to be loaded before starting the processing.
     const shaderCodes: [string | undefined, string | undefined] = [undefined, undefined];
     const shadersLoaded = () => {
         if (shaderCodes[0] && shaderCodes[1]) {
-            processorOptions.isFragment = true;
-            const [migratedVertexCode, fragmentCode] = shaderCodes;
-            Process(
-                fragmentCode,
-                processorOptions,
-                (migratedFragmentCode, codeBeforeMigration) => {
-                    if (effectContext) {
-                        effectContext._fragmentSourceCodeBeforeMigration = codeBeforeMigration;
-                    }
-                    if (processFinalCode) {
-                        migratedFragmentCode = processFinalCode("fragment", migratedFragmentCode);
-                    }
-                    const finalShaders = Finalize(migratedVertexCode, migratedFragmentCode, processorOptions);
-                    processorOptions = null as any;
-                    const finalCode = _useFinalCode(finalShaders.vertexCode, finalShaders.fragmentCode, baseName, shaderLanguage);
-                    onFinalCodeReady?.(finalCode.vertexSourceCode, finalCode.fragmentSourceCode);
-                },
-                engine
-            );
-        }
-    };
-    _loadShader(
-        vertexSource,
-        "Vertex",
-        "",
-        (vertexCode) => {
+            const [vertexCode, fragmentCode] = shaderCodes;
             Initialize(processorOptions);
             Process(
                 vertexCode,
                 processorOptions,
                 (migratedVertexCode, codeBeforeMigration) => {
                     if (effectContext) {
-                        effectContext._rawVertexSourceCode = vertexCode;
                         effectContext._vertexSourceCodeBeforeMigration = codeBeforeMigration;
                     }
                     if (processFinalCode) {
                         migratedVertexCode = processFinalCode("vertex", migratedVertexCode);
                     }
-                    shaderCodes[0] = migratedVertexCode;
-                    shadersLoaded();
+                    processorOptions.isFragment = true;
+                    Process(
+                        fragmentCode,
+                        processorOptions,
+                        (migratedFragmentCode: string, codeBeforeMigration: string) => {
+                            if (effectContext) {
+                                effectContext._fragmentSourceCodeBeforeMigration = codeBeforeMigration;
+                            }
+                            if (processFinalCode) {
+                                migratedFragmentCode = processFinalCode("fragment", migratedFragmentCode);
+                            }
+                            const finalShaders = Finalize(migratedVertexCode, migratedFragmentCode, processorOptions);
+                            processorOptions = null as any;
+                            const finalCode = UseFinalCode(finalShaders.vertexCode, finalShaders.fragmentCode, baseName, shaderLanguage);
+                            onFinalCodeReady?.(finalCode.vertexSourceCode, finalCode.fragmentSourceCode);
+                        },
+                        engine
+                    );
                 },
                 engine
             );
+        }
+    };
+    LoadShader(
+        vertexSource,
+        "Vertex",
+        "",
+        (vertexCode) => {
+            if (effectContext) {
+                effectContext._rawVertexSourceCode = vertexCode;
+            }
+            shaderCodes[0] = vertexCode;
+            shadersLoaded();
         },
         shaderLanguage
     );
-    _loadShader(
+    LoadShader(
         fragmentSource,
         "Fragment",
         "Pixel",
@@ -203,7 +224,7 @@ export function _processShaderCode(
     );
 }
 
-function _loadShader(shader: any, key: string, optionalKey: string, callback: (data: any) => void, shaderLanguage?: ShaderLanguage, _loadFileInjection?: typeof _loadFile) {
+function LoadShader(shader: any, key: string, optionalKey: string, callback: (data: any) => void, shaderLanguage?: ShaderLanguage, _loadFileInjection?: typeof _LoadFile) {
     if (typeof HTMLElement !== "undefined") {
         // DOM element ?
         if (shader instanceof HTMLElement) {
@@ -214,14 +235,14 @@ function _loadShader(shader: any, key: string, optionalKey: string, callback: (d
     }
 
     // Direct source ?
-    if (shader.substr(0, 7) === "source:") {
-        callback(shader.substr(7));
+    if (shader.substring(0, 7) === "source:") {
+        callback(shader.substring(7));
         return;
     }
 
     // Base64 encoded ?
-    if (shader.substr(0, 7) === "base64:") {
-        const shaderBinary = window.atob(shader.substr(7));
+    if (shader.substring(0, 7) === "base64:") {
+        const shaderBinary = window.atob(shader.substring(7));
         callback(shaderBinary);
         return;
     }
@@ -246,7 +267,7 @@ function _loadShader(shader: any, key: string, optionalKey: string, callback: (d
     } else {
         shaderUrl = ShaderStore.GetShadersRepository(shaderLanguage) + shader;
     }
-    _loadFileInjection = _loadFileInjection || _loadFile;
+    _loadFileInjection = _loadFileInjection || _LoadFile;
     if (!_loadFileInjection) {
         // we got to this point and loadFile was not injected - throw an error
         throw new Error("loadFileInjection is not defined");
@@ -255,7 +276,7 @@ function _loadShader(shader: any, key: string, optionalKey: string, callback: (d
     _loadFileInjection(shaderUrl + "." + key.toLowerCase() + ".fx", callback);
 }
 
-function _useFinalCode(migratedVertexCode: string, migratedFragmentCode: string, baseName: any, shaderLanguage?: ShaderLanguage) {
+function UseFinalCode(migratedVertexCode: string, migratedFragmentCode: string, baseName: any, shaderLanguage?: ShaderLanguage) {
     if (baseName) {
         const vertex = baseName.vertexElement || baseName.vertex || baseName.spectorName || baseName;
         const fragment = baseName.fragmentElement || baseName.fragment || baseName.spectorName || baseName;
@@ -276,17 +297,22 @@ function _useFinalCode(migratedVertexCode: string, migratedFragmentCode: string,
  * Creates and prepares a pipeline context
  * @internal
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const createAndPreparePipelineContext = (
     options: ICreateAndPreparePipelineContextOptions,
     createPipelineContext: typeof AbstractEngine.prototype.createPipelineContext,
-    _preparePipelineContext: typeof AbstractEngine.prototype._preparePipelineContext,
+    _preparePipelineContext: typeof AbstractEngine.prototype._preparePipelineContextAsync,
     _executeWhenRenderingStateIsCompiled: typeof AbstractEngine.prototype._executeWhenRenderingStateIsCompiled
 ): IPipelineContext => {
     try {
+        const stateObject = options.context ? getStateObject(options.context) : null;
+        if (stateObject) {
+            // will not remove the reference to parallelShaderPrecompile, but will prevent it from being used in the next shader compilation
+            stateObject.disableParallelShaderCompile = options.disableParallelCompilation;
+        }
         const pipelineContext: IPipelineContext = options.existingPipelineContext || createPipelineContext(options.shaderProcessingContext);
         pipelineContext._name = options.name;
-        if (options.name && options.context) {
-            const stateObject = getStateObject(options.context);
+        if (options.name && stateObject) {
             stateObject.cachedPipelines[options.name] = pipelineContext;
         }
 

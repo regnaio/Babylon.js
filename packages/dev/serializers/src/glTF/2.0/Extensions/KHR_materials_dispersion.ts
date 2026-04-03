@@ -1,7 +1,7 @@
-import type { IMaterial, IKHRMaterialsDispersion } from "babylonjs-gltf2interface";
-import type { IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
-import { _Exporter } from "../glTFExporter";
-import type { Material } from "core/Materials/material";
+import { type IMaterial, type IKHRMaterialsDispersion } from "babylonjs-gltf2interface";
+import { type IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
+import { GLTFExporter } from "../glTFExporter";
+import { type Material } from "core/Materials/material";
 import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
 
 const NAME = "KHR_materials_dispersion";
@@ -54,6 +54,7 @@ export class KHR_materials_dispersion implements IGLTFExporterExtensionV2 {
      * @param babylonMaterial corresponding babylon material
      * @returns promise, resolves with the material
      */
+    // eslint-disable-next-line no-restricted-syntax
     public postExportMaterialAsync?(context: string, node: IMaterial, babylonMaterial: Material): Promise<IMaterial> {
         return new Promise((resolve) => {
             if (babylonMaterial instanceof PBRMaterial && this._isExtensionEnabled(babylonMaterial)) {
@@ -73,4 +74,4 @@ export class KHR_materials_dispersion implements IGLTFExporterExtensionV2 {
     }
 }
 
-_Exporter.RegisterExtension(NAME, () => new KHR_materials_dispersion());
+GLTFExporter.RegisterExtension(NAME, () => new KHR_materials_dispersion());

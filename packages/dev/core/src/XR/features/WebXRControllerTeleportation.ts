@@ -1,17 +1,14 @@
-import type { IWebXRFeature } from "../webXRFeaturesManager";
-import { WebXRFeaturesManager, WebXRFeatureName } from "../webXRFeaturesManager";
-import type { Observer } from "../../Misc/observable";
-import { Observable } from "../../Misc/observable";
-import type { WebXRSessionManager } from "../webXRSessionManager";
-import type { Nullable } from "../../types";
-import type { WebXRInput } from "../webXRInput";
-import type { WebXRInputSource } from "../webXRInputSource";
-import type { IWebXRMotionControllerAxesValue } from "../motionController/webXRControllerComponent";
-import { WebXRControllerComponent } from "../motionController/webXRControllerComponent";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
+import { type IWebXRFeature, WebXRFeaturesManager, WebXRFeatureName } from "../webXRFeaturesManager";
+import { type Observer, Observable } from "../../Misc/observable";
+import { type WebXRSessionManager } from "../webXRSessionManager";
+import { type Nullable } from "../../types";
+import { type WebXRInput } from "../webXRInput";
+import { type WebXRInputSource } from "../webXRInputSource";
+import { type IWebXRMotionControllerAxesValue, WebXRControllerComponent } from "../motionController/webXRControllerComponent";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
 import { Vector3, Quaternion } from "../../Maths/math.vector";
 import { Ray } from "../../Culling/ray";
-import type { Material } from "../../Materials/material";
+import { type Material } from "../../Materials/material";
 import { DynamicTexture } from "../../Materials/Textures/dynamicTexture";
 import { CreateCylinder } from "../../Meshes/Builders/cylinderBuilder";
 import { SineEase, EasingFunction } from "../../Animations/easing";
@@ -20,16 +17,16 @@ import { Axis } from "../../Maths/math.axis";
 import { StandardMaterial } from "../../Materials/standardMaterial";
 import { CreateGround } from "../../Meshes/Builders/groundBuilder";
 import { CreateTorus } from "../../Meshes/Builders/torusBuilder";
-import type { PickingInfo } from "../../Collisions/pickingInfo";
+import { type PickingInfo } from "../../Collisions/pickingInfo";
 import { Curve3 } from "../../Maths/math.path";
 import { CreateLines } from "../../Meshes/Builders/linesBuilder";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
 import { Color3, Color4 } from "../../Maths/math.color";
-import type { Scene } from "../../scene";
+import { type Scene } from "../../scene";
 import { UtilityLayerRenderer } from "../../Rendering/utilityLayerRenderer";
 import { PointerEventTypes } from "../../Events/pointerEvents";
 import { setAndStartTimer } from "../../Misc/timer";
-import type { LinesMesh } from "../../Meshes/linesMesh";
+import { type LinesMesh } from "../../Meshes/linesMesh";
 
 /**
  * The options container for the teleportation module
@@ -258,7 +255,7 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
     /**
      * Observable raised before camera rotation
      */
-    public onBeforeCameraTeleportRotation = new Observable<Number>();
+    public onBeforeCameraTeleportRotation = new Observable<number>();
 
     /**
      *  Observable raised after camera rotation
@@ -385,7 +382,9 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
         // Safety reset
         this._currentTeleportationControllerId = "";
 
-        this._options.xrInput.controllers.forEach(this._attachController);
+        for (const controller of this._options.xrInput.controllers) {
+            this._attachController(controller);
+        }
         this._addNewAttachObserver(this._options.xrInput.onControllerAddedObservable, this._attachController);
         this._addNewAttachObserver(this._options.xrInput.onControllerRemovedObservable, (controller) => {
             // REMOVE the controller
@@ -400,9 +399,11 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
             return false;
         }
 
-        Object.keys(this._controllers).forEach((controllerId) => {
+        const keys = Object.keys(this._controllers);
+
+        for (const controllerId of keys) {
             this._detachController(controllerId);
-        });
+        }
 
         this._setTargetMeshVisibility(false);
         this._currentTeleportationControllerId = "";
@@ -417,6 +418,11 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
         if (this._worldScaleObserver) {
             this._xrSessionManager.onWorldScaleFactorChangedObservable.remove(this._worldScaleObserver);
         }
+        this.onTargetMeshPositionUpdatedObservable.clear();
+        this.onBeforeCameraTeleportRotation.clear();
+        this.onAfterCameraTeleportRotation.clear();
+        this.onBeforeCameraTeleport.clear();
+        this.onAfterCameraTeleport.clear();
     }
 
     /**
@@ -492,7 +498,7 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
     protected _onXRFrame(_xrFrame: XRFrame) {
         const frame = this._xrSessionManager.currentFrame;
         const scene = this._xrSessionManager.scene;
-        if (!this.attach || !frame) {
+        if (!this.attached || !frame) {
             return;
         }
 
@@ -557,18 +563,7 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
                     }
                 }
                 // straight ray is still the main ray, but disabling the straight line will force parabolic line.
-                if (this.parabolicRayEnabled && !hitPossible) {
-                    // radius compensation according to pointer rotation around X
-                    const xRotation = controllerData.xrController.pointer.rotationQuaternion!.toEulerAngles().x;
-                    const compensation = 1 + (Math.PI / 2 - Math.abs(xRotation));
-                    // check parabolic ray
-                    const radius = this.parabolicCheckRadius * compensation;
-                    this._tmpRay.origin.addToRef(this._tmpRay.direction.scale(radius * 2), this._tmpVector);
-                    this._tmpVector.y = this._tmpRay.origin.y;
-                    this._tmpRay.origin.addInPlace(this._tmpRay.direction.scale(radius));
-                    this._tmpVector.subtractToRef(this._tmpRay.origin, this._tmpRay.direction);
-                    this._tmpRay.direction.normalize();
-
+                if (this.parabolicRayEnabled && !hitPossible && this._buildParabolicRay(this._tmpRay, this._tmpVector)) {
                     const pick = scene.pickWithRay(this._tmpRay, (o) => {
                         if (this._options.blockerMeshesPredicate && this._options.blockerMeshesPredicate(o)) {
                             return true;
@@ -710,7 +705,7 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
                                 if (!controllerData.teleportationState.backwards) {
                                     controllerData.teleportationState.backwards = true;
                                     // teleport backwards ONCE
-                                    this._tmpQuaternion.copyFrom(this._options.xrInput.xrCamera.rotationQuaternion!);
+                                    this._tmpQuaternion.copyFrom(this._options.xrInput.xrCamera.rotationQuaternion);
                                     this._tmpQuaternion.toEulerAnglesToRef(this._tmpVector);
                                     // get only the y rotation
                                     this._tmpVector.x = 0;
@@ -978,13 +973,13 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
         let closestDistance = Number.MAX_VALUE;
         if (this._snapToPositions.length) {
             const radiusSquared = radius * radius;
-            this._snapToPositions.forEach((position) => {
+            for (const position of this._snapToPositions) {
                 const dist = Vector3.DistanceSquared(position, realPosition);
                 if (dist <= radiusSquared && dist < closestDistance) {
                     closestDistance = dist;
                     closestPoint = position;
                 }
-            });
+            }
         }
         return closestPoint;
     }
@@ -1014,9 +1009,10 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
             return;
         }
         this._options.teleportationTargetMesh.isVisible = visible;
-        this._options.teleportationTargetMesh.getChildren(undefined, false).forEach((m) => {
+        const children = this._options.teleportationTargetMesh.getChildren(undefined, false);
+        for (const m of children) {
             (<any>m).isVisible = visible;
-        });
+        }
 
         if (!visible) {
             if (this._quadraticBezierCurve) {
@@ -1031,6 +1027,50 @@ export class WebXRMotionControllerTeleportation extends WebXRAbstractFeature {
                 this._selectionFeature.detach();
             }
         }
+    }
+
+    /**
+     * Computes the parabolic ray origin and direction for teleportation.
+     * The effective radius scales with the horizontal component of the controller direction,
+     * so pointing more vertically results in shorter landing distances.
+     * Note: the actual landing distance also depends on controller height above the floor;
+     * `parabolicCheckRadius` controls the forward offset, not a strict max ground distance.
+     * Modifies the ray in place — the new origin serves as both the raycast start
+     * and the Bezier control point for the visual arc.
+     * @param ray - The controller ray (origin at controller, direction is forward). Modified in place.
+     * @param tmpVector - Pre-allocated temporary vector for computation. Modified in place.
+     * @returns true if the parabolic ray was computed, false if direction is too vertical
+     */
+    private _buildParabolicRay(ray: Ray, tmpVector: Vector3): boolean {
+        const dir = ray.direction;
+        const horizontalLengthSq = dir.x * dir.x + dir.z * dir.z;
+        const horizontalLength = Math.sqrt(horizontalLengthSq);
+
+        // Skip if pointing almost straight up or down — no meaningful horizontal reach
+        if (horizontalLength < 0.01) {
+            return false;
+        }
+
+        // Effective radius scales with horizontal component of direction.
+        // Pointing horizontally (horizontalLength ~ 1) gives full reach.
+        // Pointing up (horizontalLength ~ 0) gives minimal reach.
+        const effectiveRadius = this.parabolicCheckRadius * horizontalLength;
+
+        // Place "air point" at effectiveRadius forward in controller direction, then flatten Y.
+        // This represents the far ground-level target the ray angles toward.
+        dir.scaleToRef(effectiveRadius, tmpVector);
+        tmpVector.addInPlace(ray.origin);
+        tmpVector.y = ray.origin.y;
+
+        // Move ray origin forward by half the effective radius along controller direction.
+        // This elevated midpoint serves as both the raycast start and the Bezier control point.
+        dir.scaleAndAddToRef(effectiveRadius * 0.5, ray.origin);
+
+        // Direction from the new origin toward the air point (angled downward)
+        tmpVector.subtractToRef(ray.origin, ray.direction);
+        ray.direction.normalize();
+
+        return true;
     }
 
     private _disposeBezierCurve() {

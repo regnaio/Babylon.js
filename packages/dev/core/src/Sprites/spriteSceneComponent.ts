@@ -1,18 +1,18 @@
-import type { Nullable } from "../types";
-import { Observable } from "../Misc/observable";
+import { type Nullable } from "../types";
+import { Observable, type IReadonlyObservable } from "../Misc/observable";
 import { Scene } from "../scene";
-import type { Sprite } from "./sprite";
-import type { ISpriteManager } from "./spriteManager";
-import { Ray } from "../Culling/ray";
-import type { Camera } from "../Cameras/camera";
+import { type Sprite } from "./sprite";
+import { type ISpriteManager } from "./spriteManager";
+import { CreatePickingRayInCameraSpace, CreatePickingRayInCameraSpaceToRef, Ray } from "../Culling/ray.core";
+import { type Camera } from "../Cameras/camera";
 import { PickingInfo } from "../Collisions/pickingInfo";
-import type { ISceneComponent } from "../sceneComponent";
-import { SceneComponentConstants } from "../sceneComponent";
+import { type ISceneComponent, SceneComponentConstants } from "../sceneComponent";
 import { ActionEvent } from "../Actions/actionEvent";
 import { Constants } from "../Engines/constants";
-import type { IPointerEvent } from "../Events/deviceInputEvents";
+import { type IPointerEvent } from "../Events/deviceInputEvents";
 
 declare module "../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /** @internal */
         _pointerOverSprite: Nullable<Sprite>;
@@ -28,6 +28,16 @@ declare module "../scene" {
          * @see https://doc.babylonjs.com/features/featuresDeepDive/sprites
          */
         spriteManagers?: Array<ISpriteManager>;
+
+        /**
+         * An event triggered when a sprite manager is added to the scene
+         */
+        readonly onNewSpriteManagerAddedObservable: IReadonlyObservable<ISpriteManager>;
+
+        /**
+         * An event triggered when a sprite manager is removed from the scene
+         */
+        readonly onSpriteManagerRemovedObservable: IReadonlyObservable<ISpriteManager>;
 
         /**
          * An event triggered when sprites rendering is about to start
@@ -96,6 +106,36 @@ declare module "../scene" {
         getPointerOverSprite(): Nullable<Sprite>;
     }
 }
+
+/** @internal */
+export type InternalSpriteAugmentedScene = Scene & {
+    _onNewSpriteManagerAddedObservable?: Observable<ISpriteManager>;
+    _onSpriteManagerRemovedObservable?: Observable<ISpriteManager>;
+};
+
+Object.defineProperty(Scene.prototype, "onNewSpriteManagerAddedObservable", {
+    get: function (this: InternalSpriteAugmentedScene) {
+        if (!this.isDisposed && !this._onNewSpriteManagerAddedObservable) {
+            const onNewSpriteManagerAddedObservable = (this._onNewSpriteManagerAddedObservable = new Observable<ISpriteManager>());
+            this.onDisposeObservable.addOnce(() => onNewSpriteManagerAddedObservable.clear());
+        }
+        return this._onNewSpriteManagerAddedObservable;
+    },
+    enumerable: true,
+    configurable: true,
+});
+
+Object.defineProperty(Scene.prototype, "onSpriteManagerRemovedObservable", {
+    get: function (this: InternalSpriteAugmentedScene) {
+        if (!this.isDisposed && !this._onSpriteManagerRemovedObservable) {
+            const onSpriteManagerRemovedObservable = (this._onSpriteManagerRemovedObservable = new Observable<ISpriteManager>());
+            this.onDisposeObservable.addOnce(() => onSpriteManagerRemovedObservable.clear());
+        }
+        return this._onSpriteManagerRemovedObservable;
+    },
+    enumerable: true,
+    configurable: true,
+});
 
 Scene.prototype._internalPickSprites = function (ray: Ray, predicate?: (sprite: Sprite) => boolean, fastCheck?: boolean, camera?: Camera): Nullable<PickingInfo> {
     if (!PickingInfo) {
@@ -177,11 +217,11 @@ Scene.prototype.pickSprite = function (x: number, y: number, predicate?: (sprite
         return null;
     }
 
-    this.createPickingRayInCameraSpaceToRef(x, y, this._tempSpritePickingRay, camera);
+    CreatePickingRayInCameraSpaceToRef(this, x, y, this._tempSpritePickingRay, camera);
 
     const result = this._internalPickSprites(this._tempSpritePickingRay, predicate, fastCheck, camera);
     if (result) {
-        result.ray = this.createPickingRayInCameraSpace(x, y, camera);
+        result.ray = CreatePickingRayInCameraSpace(this, x, y, camera);
     }
 
     return result;
@@ -210,7 +250,7 @@ Scene.prototype.pickSpriteWithRay = function (ray: Ray, predicate?: (sprite: Spr
 };
 
 Scene.prototype.multiPickSprite = function (x: number, y: number, predicate?: (sprite: Sprite) => boolean, camera?: Camera): Nullable<PickingInfo[]> {
-    this.createPickingRayInCameraSpaceToRef(x, y, this._tempSpritePickingRay!, camera);
+    CreatePickingRayInCameraSpaceToRef(this, x, y, this._tempSpritePickingRay!, camera);
 
     return this._internalMultiPickSprites(this._tempSpritePickingRay!, predicate, camera);
 };
@@ -276,6 +316,7 @@ export class SpriteSceneComponent implements ISceneComponent {
     constructor(scene: Scene) {
         this.scene = scene;
         this.scene.spriteManagers = [] as ISpriteManager[];
+        // This ray is used to pick sprites in the scene
         this.scene._tempSpritePickingRay = Ray ? Ray.Zero() : null;
         this.scene.onBeforeSpritesRenderingObservable = new Observable<Scene>();
         this.scene.onAfterSpritesRenderingObservable = new Observable<Scene>();

@@ -1,24 +1,23 @@
 import * as React from "react";
-import type { Observable, Observer } from "core/Misc/observable";
-import type { PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
+import { type Observable, type Observer } from "core/Misc/observable";
+import { type PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
 import { Control } from "gui/2D/controls/control";
 import { SliderLineComponent } from "shared-ui-components/lines/sliderLineComponent";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { CommandButtonComponent } from "../../../commandButtonComponent";
-import type { Image } from "gui/2D/controls/image";
-import type { TextBlock } from "gui/2D/controls/textBlock";
+import { type Image } from "gui/2D/controls/image";
+import { type TextBlock } from "gui/2D/controls/textBlock";
 import { Container } from "gui/2D/controls/container";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
 import { ValueAndUnit } from "gui/2D/valueAndUnit";
 import { ColorLine } from "shared-ui-components/lines/colorLineComponent";
 import { makeTargetsProxy, conflictingValuesPlaceholder } from "shared-ui-components/lines/targetsProxy";
-import type { DimensionProperties } from "../../../../diagram/coordinateHelper";
-import { CoordinateHelper } from "../../../../diagram/coordinateHelper";
+import { type DimensionProperties, CoordinateHelper } from "../../../../diagram/coordinateHelper";
 import { Vector2 } from "core/Maths/math";
 
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { IconComponent } from "shared-ui-components/lines/iconComponent";
 import { OptionsLineComponent } from "shared-ui-components/components/lines/OptionsLineComponent";
 
@@ -52,14 +51,14 @@ import vAlignCenterIcon from "shared-ui-components/imgs/vAlignCenterIcon.svg";
 import vAlignTopIcon from "shared-ui-components/imgs/vAlignTopIcon.svg";
 import vAlignBottomIcon from "shared-ui-components/imgs/vAlignBottomIcon.svg";
 import descendantsOnlyPaddingIcon from "shared-ui-components/imgs/descendantsOnlyPaddingIcon.svg";
-import type { StackPanel } from "gui/2D/controls/stackPanel";
+import { type StackPanel } from "gui/2D/controls/stackPanel";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { UnitButton } from "shared-ui-components/lines/unitButton";
-import type { IInspectableOptions } from "core/Misc/iInspectable";
+import { type IInspectableOptions } from "core/Misc/iInspectable";
 
 import { WorkbenchComponent } from "../../../../diagram/workbench";
-import type { GlobalState } from "../../../../globalState";
-import { Popup } from "shared-ui-components/lines/popup";
+import { type GlobalState } from "../../../../globalState";
+import { GUIEditor } from "../../../../guiEditor";
 
 interface ICommonControlPropertyGridComponentProps {
     controls: Control[];
@@ -134,7 +133,7 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
         });
     }
 
-    override componentWillMount() {
+    override componentDidMount() {
         this._checkFontsInLayout();
     }
 
@@ -263,7 +262,9 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
 
     private _getCommonPropertyKeys(objects: {}[]) {
         objects = objects.filter((x) => !!x);
-        if (objects.length === 0) return [];
+        if (objects.length === 0) {
+            return [];
+        }
         if (objects.length === 1) {
             return Object.keys(objects[0]);
         }
@@ -275,10 +276,11 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
 
     private _markChildrenAsDirty() {
         for (const control of this.props.controls) {
-            if (control instanceof Container)
-                (control as Container)._children.forEach((child) => {
+            if (control instanceof Container) {
+                for (const child of (control as Container)._children) {
                     child._markAsDirty();
-                });
+                }
+            }
         }
     }
 
@@ -360,8 +362,12 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
                 const initialValue = control[propertyName];
                 const initialUnit = (control as any)["_" + propertyName]._unit;
                 let newValue: number = (control as any)[`${propertyName}InPixels`] + amount;
-                if (minimum !== undefined && newValue < minimum) newValue = minimum;
-                if (maximum !== undefined && newValue > maximum) newValue = maximum;
+                if (minimum !== undefined && newValue < minimum) {
+                    newValue = minimum;
+                }
+                if (maximum !== undefined && newValue > maximum) {
+                    newValue = maximum;
+                }
                 (control as any)[`${propertyName}InPixels`] = newValue;
                 if (initialUnit === ValueAndUnit.UNITMODE_PERCENTAGE) {
                     CoordinateHelper.ConvertToPercentage(control, [propertyName]);
@@ -514,7 +520,7 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
                                         if (control.typeName === "Image") {
                                             (control as Image).autoScale = false;
                                         } else if (control instanceof Container) {
-                                            (control as Container).adaptWidthToChildren = false;
+                                            control.adaptWidthToChildren = false;
                                         } else if (control.typeName === "ColorPicker") {
                                             if (newValue === "0" || newValue === "-") {
                                                 newValue = "1";
@@ -538,7 +544,7 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
                                         if (control.typeName === "Image") {
                                             (control as Image).autoScale = false;
                                         } else if (control instanceof Container) {
-                                            (control as Container).adaptHeightToChildren = false;
+                                            control.adaptHeightToChildren = false;
                                         } else if (control.typeName === "ColorPicker") {
                                             if (newValue === "0" || newValue === "-") {
                                                 newValue = "1";
@@ -711,7 +717,7 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
                 </div>
                 <div className="ge-divider">
                     <IconComponent icon={shadowColorIcon} label={"Shadow Color"} />
-                    <ColorLine lockObject={this.props.lockObject} label="" target={proxy} propertyName="shadowColor" disableAlpha={true} />
+                    <ColorLine lockObject={this.props.lockObject} label="" target={proxy} propertyName="shadowColor" />
                 </div>
                 <div className="ge-divider double">
                     <IconComponent icon={shadowOffsetXIcon} label={"Shadow Offset"} />
@@ -802,7 +808,7 @@ export class CommonControlPropertyGridComponent extends React.Component<ICommonC
                         icon={addIcon}
                         isActive={false}
                         onClick={() => {
-                            const w = (Popup as any)["gui-editor"] ?? window;
+                            const w = GUIEditor._PopupWindow ?? window;
                             const input = w.prompt("Enter new key name for metadata value", "newKey");
                             if (input === null || input.trim() === "") {
                                 return;

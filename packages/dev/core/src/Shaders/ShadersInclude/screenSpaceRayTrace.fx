@@ -6,6 +6,15 @@
 
 float distanceSquared(vec2 a, vec2 b) { a -= b; return dot(a, a); }
 
+#ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+float linearizeDepth(float depth, float near, float far) {
+    #ifdef SSRAYTRACE_RIGHT_HANDED_SCENE
+        return -(near * far) / (far - depth * (far - near));
+    #else
+        return (near * far) / (far - depth * (far - near));
+    #endif
+}
+#endif
 /**
     \param csOrigin Camera-space ray origin, which must be 
     within the view volume and must have z > 0.01 and project within the valid screen rectangle
@@ -45,7 +54,7 @@ float distanceSquared(vec2 a, vec2 b) { a -= b; return dot(a, a); }
  */
 #define inline
 bool traceScreenSpaceRay1(
-    vec3        csOrigin, 
+    vec3        csOrigin,
     vec3        csDirection,
     mat4        projectToPixelMatrix,
     sampler2D   csZBuffer,
@@ -56,13 +65,14 @@ bool traceScreenSpaceRay1(
 #endif
     float       csZThickness,
     float       nearPlaneZ,
+    float       farPlaneZ,
     float       stride,
     float       jitterFraction,
     float       maxSteps,
     float       maxRayTraceDistance,
     float       selfCollisionNumSkip,
     out vec2    startPixel,
-    out vec2    hitPixel, 
+    out vec2    hitPixel,
     out vec3    csHitPoint,
     out float   numIterations
 #ifdef SSRAYTRACE_DEBUG
@@ -184,11 +194,15 @@ bool traceScreenSpaceRay1(
          stepCount <= selfCollisionNumSkip ||
          (pqk.x * stepDirection) <= end &&
          stepCount < maxSteps &&
-         !hit &&
-         sceneZMax != 0.0; 
+         !hit; 
         pqk += dPQK, ++stepCount)
     {
         hitPixel = permute ? pqk.yx : pqk.xy;
+
+    #ifndef SSRAYTRACE_CLIP_TO_FRUSTUM
+        if (hitPixel.x < 0.0 || hitPixel.x >= csZBufferSize.x ||
+            hitPixel.y < 0.0 || hitPixel.y >= csZBufferSize.y) break;
+    #endif
 
         // The depth range that the ray covers within this loop
         // iteration.  Assume that the ray is moving in increasing z
@@ -201,16 +215,29 @@ bool traceScreenSpaceRay1(
 		rayZMax = (dPQK.z * 0.5 + pqk.z) / (dPQK.w * 0.5 + pqk.w);
         rayZMax = clamp(rayZMax, zMin, zMax);
         prevZMaxEstimate = rayZMax;
+    #ifdef SSRAYTRACE_RIGHT_HANDED_SCENE
+        if (prevZMaxEstimate < -farPlaneZ) break;
+    #else
+        if (prevZMaxEstimate > farPlaneZ) break;
+    #endif
         if (rayZMin > rayZMax) { 
            float t = rayZMin; rayZMin = rayZMax; rayZMax = t;
         }
 
         // Camera-space z of the scene
         sceneZMax = texelFetch(csZBuffer, ivec2(hitPixel), 0).r;
+    #ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+        sceneZMax = linearizeDepth(sceneZMax, nearPlaneZ, farPlaneZ);
+    #endif
+        if (sceneZMax == 0.0) sceneZMax = 1e8;
 
     #ifdef SSRAYTRACE_RIGHT_HANDED_SCENE
         #ifdef SSRAYTRACE_USE_BACK_DEPTHBUFFER
             float sceneBackZ = texelFetch(csZBackBuffer, ivec2(hitPixel / csZBackSizeFactor), 0).r;
+            #ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+                sceneBackZ = linearizeDepth(sceneBackZ, nearPlaneZ, farPlaneZ);
+            #endif
+            if (sceneBackZ == 0.0) sceneBackZ = -1e8;
             hit = (rayZMax >= sceneBackZ - csZThickness) && (rayZMin <= sceneZMax);
         #else
             hit = (rayZMax >= sceneZMax - csZThickness) && (rayZMin <= sceneZMax);
@@ -218,7 +245,11 @@ bool traceScreenSpaceRay1(
     #else
         #ifdef SSRAYTRACE_USE_BACK_DEPTHBUFFER
             float sceneBackZ = texelFetch(csZBackBuffer, ivec2(hitPixel / csZBackSizeFactor), 0).r;
-            hit = (rayZMin <= sceneBackZ + csZThickness) && (rayZMax >= sceneZMax) && (sceneZMax != 0.0);
+            #ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+                sceneBackZ = linearizeDepth(sceneBackZ, nearPlaneZ, farPlaneZ);
+            #endif
+            if (sceneBackZ == 0.0) sceneBackZ = 1e8;
+            hit = (rayZMin <= sceneBackZ + csZThickness) && (rayZMax >= sceneZMax);
         #else
             hit = (rayZMin <= sceneZMax + csZThickness) && (rayZMax >= sceneZMax);
         #endif
@@ -230,7 +261,7 @@ bool traceScreenSpaceRay1(
     pqk -= dPQK;
     stepCount -= 1.0;
 
-    if (((pqk.x + dPQK.x) * stepDirection) > end || (stepCount + 1.0) >= maxSteps || sceneZMax == 0.0) {
+    if (((pqk.x + dPQK.x) * stepDirection) > end || (stepCount + 1.0) >= maxSteps) {
         hit = false;
     }
 
@@ -264,7 +295,7 @@ bool traceScreenSpaceRay1(
         for (;
             refinementStepCount <= 1.0 ||
             (refinementStepCount <= stride * 1.4) &&
-            (rayZMax < sceneZMax) && (sceneZMax != 0.0);
+            (rayZMax < sceneZMax);
             pqk += dPQK, refinementStepCount += 1.0)
         {
             rayZMin = prevZMaxEstimate;
@@ -278,6 +309,10 @@ bool traceScreenSpaceRay1(
 
             hitPixel = permute ? pqk.yx : pqk.xy;
             sceneZMax = texelFetch(csZBuffer, ivec2(hitPixel), 0).r;
+            #ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+                sceneZMax = linearizeDepth(sceneZMax, nearPlaneZ, farPlaneZ);
+            #endif
+            if (sceneZMax == 0.0) sceneZMax = 1e8;
         }
 
         // Undo the last increment, which happened after the test variables were set up
@@ -304,8 +339,8 @@ bool traceScreenSpaceRay1(
     } else if ((stepCount + 1.0) >= maxSteps) {
         // Ran out of steps -> red
         debugColor = vec3(1,0,0);
-    } else if (sceneZMax == 0.0) {
-        // Went off screen -> yellow
+    } else if (!hit) {
+        // Went off screen or beyond far plane -> yellow
         debugColor = vec3(1,1,0);
     } else {
         // Encountered a valid hit -> green

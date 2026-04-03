@@ -1,22 +1,23 @@
 import { PhysicsBody } from "./physicsBody";
-import type { PhysicsMaterial } from "./physicsMaterial";
+import { type PhysicsMaterial } from "./physicsMaterial";
 import { PhysicsShape } from "./physicsShape";
 import { Logger } from "../../Misc/logger";
-import type { Scene } from "../../scene";
-import type { TransformNode } from "../../Meshes/transformNode";
+import { type Scene } from "../../scene";
+import { type TransformNode } from "../../Meshes/transformNode";
 import { Quaternion, TmpVectors, Vector3 } from "../../Maths/math.vector";
-import { Scalar } from "../../Maths/math.scalar";
+import { WithinEpsilon } from "../../Maths/math.scalar.functions";
 import { PhysicsMotionType, PhysicsShapeType } from "./IPhysicsEnginePlugin";
-import type { Mesh } from "../../Meshes/mesh";
-import type { Observer } from "../../Misc/observable";
-import type { Nullable } from "../../types";
-import type { Node } from "../../node";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
+import { type Mesh } from "../../Meshes/mesh";
+import { type Observer } from "../../Misc/observable";
+import { type Nullable } from "../../types";
+import { type Node } from "../../node";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
 import { BoundingBox } from "../../Culling/boundingBox";
 
 /**
  * The interface for the physics aggregate parameters
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface PhysicsAggregateParameters {
     /**
      * The mass of the physics aggregate
@@ -81,8 +82,8 @@ export interface PhysicsAggregateParameters {
 /**
  * Helper class to create and interact with a PhysicsAggregate.
  * This is a transition object that works like Physics Plugin V1 Impostors.
- * This helper instanciate all mandatory physics objects to get a body/shape and material.
- * It's less efficient that handling body and shapes independently but for prototyping or
+ * This helper instantiates all mandatory physics objects to get a body/shape and material.
+ * It's less efficient than handling body and shapes independently but for prototyping or
  * a small numbers of physics objects, it's good enough.
  */
 export class PhysicsAggregate {
@@ -206,7 +207,7 @@ export class PhysicsAggregate {
 
         switch (this.type) {
             case PhysicsShapeType.SPHERE:
-                if (!this._options.radius && Scalar.WithinEpsilon(extents.x, extents.y, 0.0001) && Scalar.WithinEpsilon(extents.x, extents.z, 0.0001)) {
+                if (!this._options.radius && WithinEpsilon(extents.x, extents.y, 0.0001) && WithinEpsilon(extents.x, extents.z, 0.0001)) {
                     this._options.radius = extents.x / 2;
                 } else if (!this._options.radius) {
                     Logger.Warn("Non uniform scaling is unsupported for sphere shapes. Setting the radius to the biggest bounding box extent.");

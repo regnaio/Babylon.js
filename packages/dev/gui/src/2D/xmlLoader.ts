@@ -1,5 +1,5 @@
 import { GetClass } from "core/Misc/typeStore";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 
 const XmlLoaderError = "XmlLoader Exception : XML file is malformed or corrupted.";
 
@@ -132,7 +132,7 @@ export class XmlLoader {
         let columns;
         const rows = node.children;
         let cells;
-        let isPixel = false;
+        let isPixel: boolean;
         let cellNode;
         let rowNumber = -1;
         let columnNumber = -1;
@@ -379,7 +379,7 @@ export class XmlLoader {
      * @returns Promise
      */
     public async loadLayoutAsync(xmlFile: any, rootNode: any): Promise<any> {
-        return new Promise((resolve: any, reject: any) => {
+        return await new Promise((resolve: any, reject: any) => {
             this.loadLayout(xmlFile, rootNode, resolve, reject);
         });
     }

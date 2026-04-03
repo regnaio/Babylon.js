@@ -1,9 +1,10 @@
+/* eslint-disable github/no-then */
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
-import type { Nullable } from "core/types";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
+import { type GlobalState } from "../../globalState";
+import { type Nullable } from "core/types";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { StringTools } from "shared-ui-components/stringTools";
-import { FileButtonLineComponent } from "../../sharedComponents/fileButtonLineComponent";
+import { FileButtonLine } from "shared-ui-components/lines/fileButtonLineComponent";
 import { Tools } from "core/Misc/tools";
 import { SerializationTools } from "../../serializationTools";
 import { CheckBoxLineComponent } from "../../sharedComponents/checkBoxLineComponent";
@@ -12,26 +13,20 @@ import { Engine } from "core/Engines/engine";
 import { FramePropertyTabComponent } from "../../graphSystem/properties/framePropertyComponent";
 import { FrameNodePortPropertyTabComponent } from "../../graphSystem/properties/frameNodePortPropertyComponent";
 import { NodePortPropertyTabComponent } from "../../graphSystem/properties/nodePortPropertyComponent";
-import type { Observer } from "core/Misc/observable";
+import { type Observer } from "core/Misc/observable";
 import { InputsPropertyTabComponent } from "./inputsPropertyTabComponent";
 import { LogEntry } from "../log/logComponent";
 import "./propertyTab.scss";
 import { GraphNode } from "shared-ui-components/nodeGraphSystem/graphNode";
 import { GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
 import { NodePort } from "shared-ui-components/nodeGraphSystem/nodePort";
-import type { FrameNodePort } from "shared-ui-components/nodeGraphSystem/frameNodePort";
+import { type FrameNodePort } from "shared-ui-components/nodeGraphSystem/frameNodePort";
 import { IsFramePortData } from "shared-ui-components/nodeGraphSystem/tools";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
-import { Vector2LineComponent } from "shared-ui-components/lines/vector2LineComponent";
-import { Vector3LineComponent } from "shared-ui-components/lines/vector3LineComponent";
-import { Vector4LineComponent } from "shared-ui-components/lines/vector4LineComponent";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
-import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { SliderLineComponent } from "shared-ui-components/lines/sliderLineComponent";
-import type { GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
-import { NodeGeometryBlockConnectionPointTypes } from "core/Meshes/Node/Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometry } from "core/Meshes/Node/nodeGeometry";
 
 interface IPropertyTabComponentProps {
@@ -85,79 +80,6 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
         this.props.globalState.stateManager.onRebuildRequiredObservable.notifyObservers();
     }
 
-    renderInputBlock(block: GeometryInputBlock) {
-        switch (block.type) {
-            case NodeGeometryBlockConnectionPointTypes.Int:
-            case NodeGeometryBlockConnectionPointTypes.Float: {
-                const cantDisplaySlider = isNaN(block.min) || isNaN(block.max) || block.min === block.max;
-                const isInteger = block.type === NodeGeometryBlockConnectionPointTypes.Int;
-                return (
-                    <div key={block.uniqueId}>
-                        {cantDisplaySlider && (
-                            <FloatLineComponent
-                                lockObject={this.props.lockObject}
-                                key={block.uniqueId}
-                                label={block.name}
-                                target={block}
-                                isInteger={isInteger}
-                                propertyName="value"
-                                onChange={() => this.processInputBlockUpdate()}
-                            />
-                        )}
-                        {!cantDisplaySlider && (
-                            <SliderLineComponent
-                                lockObject={this.props.lockObject}
-                                key={block.uniqueId}
-                                label={block.name}
-                                target={block}
-                                propertyName="value"
-                                step={isInteger ? 1 : Math.abs(block.max - block.min) / 100.0}
-                                decimalCount={isInteger ? 0 : 2}
-                                minimum={block.min}
-                                maximum={block.max}
-                                onChange={() => this.processInputBlockUpdate()}
-                            />
-                        )}
-                    </div>
-                );
-            }
-            case NodeGeometryBlockConnectionPointTypes.Vector2:
-                return (
-                    <Vector2LineComponent
-                        lockObject={this.props.lockObject}
-                        key={block.uniqueId}
-                        label={block.name}
-                        target={block}
-                        propertyName="value"
-                        onChange={() => this.processInputBlockUpdate()}
-                    />
-                );
-            case NodeGeometryBlockConnectionPointTypes.Vector3:
-                return (
-                    <Vector3LineComponent
-                        lockObject={this.props.lockObject}
-                        key={block.uniqueId}
-                        label={block.name}
-                        target={block}
-                        propertyName="value"
-                        onChange={() => this.processInputBlockUpdate()}
-                    />
-                );
-            case NodeGeometryBlockConnectionPointTypes.Vector4:
-                return (
-                    <Vector4LineComponent
-                        lockObject={this.props.lockObject}
-                        key={block.uniqueId}
-                        label={block.name}
-                        target={block}
-                        propertyName="value"
-                        onChange={() => this.processInputBlockUpdate()}
-                    />
-                );
-        }
-        return null;
-    }
-
     load(file: File) {
         Tools.ReadFile(
             file,
@@ -168,6 +90,7 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                 this.props.globalState.onResetRequiredObservable.notifyObservers(false);
                 this.props.globalState.stateManager.onSelectionChangedObservable.notifyObservers(null);
                 this.props.globalState.onFrame.notifyObservers();
+                this.props.globalState.onClearUndoStack.notifyObservers();
             },
             undefined,
             true
@@ -226,6 +149,7 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
 
                     this.forceUpdate();
                     if (navigator.clipboard) {
+                        // eslint-disable-next-line @typescript-eslint/no-floating-promises
                         navigator.clipboard.writeText(geometry.snippetId);
                     }
 
@@ -281,6 +205,7 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
             .then(() => {
                 geometry.build();
                 this.props.globalState.onFrame.notifyObservers();
+                this.props.globalState.onClearUndoStack.notifyObservers();
             })
             .catch((err) => {
                 this.props.globalState.hostDocument.defaultView!.alert("Unable to load your node geometry: " + err);
@@ -334,27 +259,29 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                 </div>
                 <div>
                     <LineContainerComponent title="GENERAL">
+                        <TextInputLineComponent label="Name" lockObject={this.props.globalState.lockObject} target={this.props.globalState.nodeGeometry} propertyName="name" />
                         <TextLineComponent label="Version" value={Engine.Version} />
                         <TextLineComponent
                             label="Help"
                             value="doc.babylonjs.com"
                             underline={true}
-                            onLink={() => this.props.globalState.hostDocument.defaultView!.open("https://doc.babylonjs.com/how_to/node_Geometry", "_blank")}
+                            onLink={() => this.props.globalState.hostDocument.defaultView!.open("https://doc.babylonjs.com/features/featuresDeepDive/mesh/nodeGeometry", "_blank")}
                         />
                         <TextInputLineComponent
                             label="Comment"
                             multilines={true}
                             lockObject={this.props.globalState.lockObject}
-                            value={this.props.globalState.nodeGeometry!.comment}
+                            value={this.props.globalState.nodeGeometry.comment}
                             target={this.props.globalState.nodeGeometry}
                             propertyName="comment"
                         />
                         <ButtonLineComponent
                             label="Reset to default"
                             onClick={() => {
-                                this.props.globalState.nodeGeometry!.setToDefault();
+                                this.props.globalState.nodeGeometry.setToDefault();
                                 this.props.globalState.onResetRequiredObservable.notifyObservers(true);
                                 this.props.globalState.onFrame.notifyObservers();
+                                this.props.globalState.onClearUndoStack.notifyObservers();
                             }}
                         />
                     </LineContainerComponent>
@@ -395,6 +322,14 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                                 this.props.globalState.stateManager.onGridSizeChanged.notifyObservers();
                             }}
                         />
+                        <CheckBoxLineComponent
+                            label="Undo / Redo"
+                            isSelected={() => DataStorage.ReadBoolean("UndoRedo", true)}
+                            onSelect={(value: boolean) => {
+                                DataStorage.WriteBoolean("UndoRedo", value);
+                                this.props.globalState.stateManager.historyStack.isEnabled = value;
+                            }}
+                        />
                         <TextInputLineComponent
                             label="Node Material ID"
                             value={DataStorage.ReadString("NMEID", "")}
@@ -429,7 +364,7 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                         <ButtonLineComponent label="Rebuild" onClick={() => this.props.globalState.stateManager.onRebuildRequiredObservable.notifyObservers()} />
                     </LineContainerComponent>
                     <LineContainerComponent title="FILE">
-                        <FileButtonLineComponent label="Load" onClick={(file) => this.load(file)} accept=".json" />
+                        <FileButtonLine label="Load" onClick={(file) => this.load(file)} accept=".json" />
                         <ButtonLineComponent
                             label="Save"
                             onClick={() => {
@@ -439,13 +374,13 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                         <ButtonLineComponent
                             label="Generate code"
                             onClick={() => {
-                                StringTools.DownloadAsFile(this.props.globalState.hostDocument, this.props.globalState.nodeGeometry!.generateCode(), "code.txt");
+                                StringTools.DownloadAsFile(this.props.globalState.hostDocument, this.props.globalState.nodeGeometry.generateCode(), "code.txt");
                             }}
                         />
                         {this.props.globalState.customSave && (
                             <>
                                 <ButtonLineComponent
-                                    label={this.props.globalState.customSave!.label}
+                                    label={this.props.globalState.customSave.label}
                                     isDisabled={this.state.uploadInProgress}
                                     onClick={() => {
                                         this.customSave();
@@ -454,7 +389,7 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                                 <TextLineComponent label="(*) Mesh and texture data will NOT be serialized by default" ignoreValue={true} additionalClass="label-center" />
                             </>
                         )}
-                        <FileButtonLineComponent label="Load Frame" uploadName={"frame-upload"} onClick={(file) => this.loadFrame(file)} accept=".json" />
+                        <FileButtonLine label="Load Frame" onClick={(file) => this.loadFrame(file)} accept=".json" />
                         <ButtonLineComponent
                             label="Export as GLB"
                             onClick={() => {
@@ -464,7 +399,7 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
                     </LineContainerComponent>
                     {!this.props.globalState.customSave && (
                         <LineContainerComponent title="SNIPPET">
-                            {this.props.globalState.nodeGeometry!.snippetId && <TextLineComponent label="Snippet ID" value={this.props.globalState.nodeGeometry!.snippetId} />}
+                            {this.props.globalState.nodeGeometry.snippetId && <TextLineComponent label="Snippet ID" value={this.props.globalState.nodeGeometry.snippetId} />}
                             <ButtonLineComponent label="Load from snippet server" onClick={() => this.loadFromSnippet()} />
                             <ButtonLineComponent
                                 label="Save to snippet server"

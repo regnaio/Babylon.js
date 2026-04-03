@@ -1,12 +1,12 @@
 import * as React from "react";
-import type { Observable } from "core/Misc/observable";
-import type { IShadowLight } from "core/Lights/shadowLight";
-import type { PropertyChangedEvent } from "../../../../propertyChangedEvent";
+import { type Observable } from "core/Misc/observable";
+import { type IShadowLight } from "core/Lights/shadowLight";
+import { type PropertyChangedEvent } from "../../../../propertyChangedEvent";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { GlobalState } from "../../../../globalState";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type GlobalState } from "../../../../globalState";
 import { OptionsLine } from "shared-ui-components/lines/optionsLineComponent";
 import { ShadowGenerator } from "core/Lights/Shadows/shadowGenerator";
 import { CascadedShadowGenerator } from "core/Lights/Shadows/cascadedShadowGenerator";
@@ -39,15 +39,15 @@ export class CommonShadowLightPropertyGridComponent extends React.Component<ICom
         const internals = this._internals;
         const generator = internals.generatorType === 0 ? new ShadowGenerator(internals.mapSize, light) : new CascadedShadowGenerator(internals.mapSize, light as DirectionalLight);
 
-        scene.meshes.forEach((m) => {
+        for (const m of scene.meshes) {
             if (m.infiniteDistance) {
-                return;
+                continue;
             }
             generator.addShadowCaster(m);
             if (!m.isAnInstance) {
                 m.receiveShadows = true;
             }
-        });
+        }
 
         this.forceUpdate();
     }
@@ -63,9 +63,18 @@ export class CommonShadowLightPropertyGridComponent extends React.Component<ICom
     override render() {
         const light = this.props.light;
         const internals = this._internals;
-        const generator = (light.getShadowGenerator() as ShadowGenerator | CascadedShadowGenerator) || null;
-        const csmGenerator = generator instanceof CascadedShadowGenerator;
         const camera = light.getScene().activeCamera;
+
+        let generator = (light.getShadowGenerator(camera) as ShadowGenerator | CascadedShadowGenerator) || null;
+        if (generator === null) {
+            // try to get the first shadow generator
+            const shadowGenerators = light.getShadowGenerators();
+            if (shadowGenerators && shadowGenerators.size > 0) {
+                generator = shadowGenerators.values().next().value as ShadowGenerator | CascadedShadowGenerator;
+            }
+        }
+
+        const csmGenerator = generator instanceof CascadedShadowGenerator;
 
         const typeGeneratorOptions = [{ label: "Shadow Generator", value: 0 }];
 

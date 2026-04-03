@@ -1,7 +1,8 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { Inspector } from "../inspector";
 import { Logger } from "core/Misc/logger";
+import { CreatePopup } from "shared-ui-components/popupHelper";
+import { type PropsWithChildren } from "react";
 
 export interface IPopupComponentProps {
     id: string;
@@ -14,7 +15,7 @@ export interface IPopupComponentProps {
     onKeyDown?: (evt: KeyboardEvent) => void;
 }
 
-export class PopupComponent extends React.Component<IPopupComponentProps, { isComponentMounted: boolean; blockedByBrowser: boolean }> {
+export class PopupComponent extends React.Component<PropsWithChildren<IPopupComponentProps>, { isComponentMounted: boolean; blockedByBrowser: boolean }> {
     private _container: HTMLDivElement | null;
     private _window: Window | null;
     private _host: HTMLDivElement;
@@ -46,19 +47,16 @@ export class PopupComponent extends React.Component<IPopupComponentProps, { isCo
     openPopup() {
         const { title, size, onClose, onOpen } = this.props;
 
-        const windowVariableName = `window_${title}`;
-
-        this._container = Inspector._CreatePopup(title, windowVariableName, size.width, size.height, true);
+        this._container = CreatePopup(title, { onWindowCreateCallback: (w) => (this._window = w), width: size.width, height: size.height });
 
         if (this._container) {
-            this._host = this._container.ownerDocument!.createElement("div");
+            this._host = this._container.ownerDocument.createElement("div");
 
             this._host.id = "host";
             this._host.style.width = "auto";
             this._container.appendChild(this._host);
         }
 
-        this._window = (Inspector as any)[windowVariableName];
         window.addEventListener("beforeunload", this.onBeforeUnloadListener);
 
         if (this._window) {

@@ -1,5 +1,8 @@
 // Uniforms
 uniform mat4 viewProjection;
+#ifdef MULTIVIEW
+	mat4 viewProjectionR;
+#endif 
 uniform mat4 view;
 
 #ifdef DIFFUSE
@@ -49,6 +52,8 @@ uniform mat4 reflectionMatrix;
 uniform vec4 vDetailInfos;
 uniform mat4 detailMatrix;
 #endif
+
+uniform vec4 cameraInfo;
 
 #include<decalVertexDeclaration>
 

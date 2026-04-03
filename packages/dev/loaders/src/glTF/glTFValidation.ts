@@ -1,14 +1,20 @@
+/* eslint-disable github/no-then */
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable @typescript-eslint/promise-function-async */
 import type * as GLTF2 from "babylonjs-gltf2interface";
+import { type Nullable } from "core/types";
 import { Tools } from "core/Misc/tools";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 declare let GLTFValidator: GLTF2.IGLTFValidator;
 
 // WorkerGlobalScope
+// eslint-disable-next-line @typescript-eslint/naming-convention
 declare function importScripts(...urls: string[]): void;
+// eslint-disable-next-line @typescript-eslint/naming-convention
 declare function postMessage(message: any, transfer?: any[]): void;
 
-function validateAsync(
+function ValidateAsync(
     data: string | Uint8Array,
     rootUrl: string,
     fileName: string,
@@ -28,7 +34,7 @@ function validateAsync(
 /**
  * The worker function that gets converted to a blob url to pass into a worker.
  */
-function workerFunc(): void {
+function WorkerFunc(): void {
     const pendingExternalResources: Array<{ resolve: (data: any) => void; reject: (reason: any) => void }> = [];
 
     onmessage = (message) => {
@@ -39,7 +45,7 @@ function workerFunc(): void {
                 break;
             }
             case "validate": {
-                validateAsync(
+                ValidateAsync(
                     data.data,
                     data.rootUrl,
                     data.fileName,
@@ -95,6 +101,12 @@ export class GLTFValidation {
     private static _LoadScriptPromise: Promise<void>;
 
     /**
+     * The most recent validation results.
+     * @internal - Used for back-compat in Sandbox with Inspector V2.
+     */
+    public static _LastResults: Nullable<GLTF2.IGLTFValidationResults> = null;
+
+    /**
      * Validate a glTF asset using the glTF-Validator.
      * @param data The JSON of a glTF or the array buffer of a binary glTF
      * @param rootUrl The root url for the glTF
@@ -110,13 +122,14 @@ export class GLTFValidation {
     ): Promise<GLTF2.IGLTFValidationResults> {
         if (typeof Worker === "function") {
             return new Promise((resolve, reject) => {
-                const workerContent = `${validateAsync}(${workerFunc})()`;
+                const workerContent = `${ValidateAsync}(${WorkerFunc})()`;
                 const workerBlobUrl = URL.createObjectURL(new Blob([workerContent], { type: "application/javascript" }));
                 const worker = new Worker(workerBlobUrl);
 
                 const onError = (error: ErrorEvent) => {
                     worker.removeEventListener("error", onError);
                     worker.removeEventListener("message", onMessage);
+                    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                     reject(error);
                 };
 
@@ -137,6 +150,7 @@ export class GLTFValidation {
                         case "validate.resolve": {
                             worker.removeEventListener("error", onError);
                             worker.removeEventListener("message", onMessage);
+                            GLTFValidation._LastResults = data.value;
                             resolve(data.value);
                             worker.terminate();
                             break;
@@ -144,6 +158,7 @@ export class GLTFValidation {
                         case "validate.reject": {
                             worker.removeEventListener("error", onError);
                             worker.removeEventListener("message", onMessage);
+                            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                             reject(data.reason);
                             worker.terminate();
                         }
@@ -169,7 +184,7 @@ export class GLTFValidation {
             }
 
             return this._LoadScriptPromise.then(() => {
-                return validateAsync(data, rootUrl, fileName, getExternalResource);
+                return ValidateAsync(data, rootUrl, fileName, getExternalResource);
             });
         }
     }

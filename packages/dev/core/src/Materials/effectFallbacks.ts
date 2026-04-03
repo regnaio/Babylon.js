@@ -1,15 +1,15 @@
-import type { Nullable } from "../types";
-import type { IEffectFallbacks } from "./iEffectFallbacks";
+import { type Nullable } from "../types";
+import { type IEffectFallbacks } from "./iEffectFallbacks";
 
-import type { Effect } from "./effect";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
+import { type Effect } from "./effect";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
 
 /**
  * EffectFallbacks can be used to add fallbacks (properties to disable) to certain properties when desired to improve performance.
  * (Eg. Start at high quality with reflection and fog, if fps is low, remove reflection, if still low remove fog)
  */
 export class EffectFallbacks implements IEffectFallbacks {
-    private _defines: { [key: string]: Array<String> } = {};
+    private _defines: { [key: string]: Array<string> } = {};
 
     private _currentRank = 32;
     private _maxRank = -1;
@@ -38,7 +38,7 @@ export class EffectFallbacks implements IEffectFallbacks {
                 this._maxRank = rank;
             }
 
-            this._defines[rank] = new Array<String>();
+            this._defines[rank] = new Array<string>();
         }
 
         this._defines[rank].push(define);

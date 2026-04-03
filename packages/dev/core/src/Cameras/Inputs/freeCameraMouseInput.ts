@@ -1,14 +1,11 @@
-import type { Observer, EventState } from "../../Misc/observable";
-import { Observable } from "../../Misc/observable";
+import { type Observer, type EventState, Observable } from "../../Misc/observable";
 import { serialize } from "../../Misc/decorators";
-import type { Nullable } from "../../types";
-import type { ICameraInput } from "../../Cameras/cameraInputsManager";
-import { CameraInputTypes } from "../../Cameras/cameraInputsManager";
-import type { FreeCamera } from "../../Cameras/freeCamera";
-import type { PointerInfo } from "../../Events/pointerEvents";
-import { PointerEventTypes } from "../../Events/pointerEvents";
+import { type Nullable } from "../../types";
+import { type ICameraInput, CameraInputTypes } from "../../Cameras/cameraInputsManager";
+import { type FreeCamera } from "../../Cameras/freeCamera";
+import { type PointerInfo, PointerEventTypes } from "../../Events/pointerEvents";
 import { Tools } from "../../Misc/tools";
-import type { IMouseEvent, IPointerEvent } from "../../Events/deviceInputEvents";
+import { type IMouseEvent, type IPointerEvent } from "../../Events/deviceInputEvents";
 /**
  * Manage the mouse inputs to control the movement of a free camera.
  * @see https://doc.babylonjs.com/features/featuresDeepDive/cameras/customizingCameraInputs
@@ -67,7 +64,6 @@ export class FreeCameraMouseInput implements ICameraInput<FreeCamera> {
      * @param noPreventDefault Defines whether event caught by the controls should call preventdefault() (https://developer.mozilla.org/en-US/docs/Web/API/Event/preventDefault)
      */
     public attachControl(noPreventDefault?: boolean): void {
-        // eslint-disable-next-line prefer-rest-params
         noPreventDefault = Tools.BackCompatCameraNoPreventDefault(arguments);
         const engine = this.camera.getEngine();
         const element = engine.getInputElement();
@@ -111,7 +107,9 @@ export class FreeCameraMouseInput implements ICameraInput<FreeCamera> {
 
                     if (!noPreventDefault) {
                         evt.preventDefault();
-                        element && element.focus();
+                        if (element) {
+                            element.focus();
+                        }
                     }
 
                     // This is required to move while pointer button is down
@@ -143,7 +141,7 @@ export class FreeCameraMouseInput implements ICameraInput<FreeCamera> {
                     } else if (this._previousPosition) {
                         const handednessMultiplier = this.camera._calculateHandednessMultiplier();
                         const offsetX = (evt.clientX - this._previousPosition.x) * handednessMultiplier;
-                        const offsetY = evt.clientY - this._previousPosition.y;
+                        const offsetY = (evt.clientY - this._previousPosition.y) * handednessMultiplier;
 
                         if (this._allowCameraRotation) {
                             this.camera.cameraRotation.y += offsetX / this.angularSensibility;
@@ -170,12 +168,8 @@ export class FreeCameraMouseInput implements ICameraInput<FreeCamera> {
             }
 
             const handednessMultiplier = this.camera._calculateHandednessMultiplier();
-            const offsetX = evt.movementX * handednessMultiplier;
-
-            this.camera.cameraRotation.y += offsetX / this.angularSensibility;
-
-            const offsetY = evt.movementY;
-            this.camera.cameraRotation.x += offsetY / this.angularSensibility;
+            this.camera.cameraRotation.y += (evt.movementX * handednessMultiplier) / this.angularSensibility;
+            this.camera.cameraRotation.x += (evt.movementY * handednessMultiplier) / this.angularSensibility;
 
             this._previousPosition = null;
 
@@ -213,7 +207,9 @@ export class FreeCameraMouseInput implements ICameraInput<FreeCamera> {
             if (this._contextMenuBind) {
                 const engine = this.camera.getEngine();
                 const element = engine.getInputElement();
-                element && element.removeEventListener("contextmenu", this._contextMenuBind);
+                if (element) {
+                    element.removeEventListener("contextmenu", this._contextMenuBind);
+                }
             }
 
             if (this.onPointerMovedObservable) {

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Vector2, TmpVectors } from "../../../Maths/math.vector";
-import type { Camera } from "../../../Cameras/camera";
-import type { Effect } from "../../../Materials/effect";
+import { type Camera } from "../../../Cameras/camera";
+import { type Effect } from "../../../Materials/effect";
 import { Texture } from "../../../Materials/Textures/texture";
 import { PostProcess } from "../../../PostProcesses/postProcess";
 import { PostProcessRenderPipeline } from "../../../PostProcesses/RenderPipeline/postProcessRenderPipeline";
@@ -10,11 +10,12 @@ import { PassPostProcess } from "../../../PostProcesses/passPostProcess";
 import { BlurPostProcess } from "../../../PostProcesses/blurPostProcess";
 import { Constants } from "../../../Engines/constants";
 import { serialize } from "../../../Misc/decorators";
-import type { Scene } from "../../../scene";
+import { type Scene } from "../../../scene";
 import { RawTexture } from "../../../Materials/Textures/rawTexture";
-import { Scalar } from "../../../Maths/math.scalar";
+import { RandomRange } from "../../../Maths/math.scalar.functions";
 
 import "../../../PostProcesses/RenderPipeline/postProcessRenderPipelineManagerSceneComponent";
+import "../../../Rendering/depthRendererSceneComponent";
 
 import "../../../Shaders/ssao.fragment";
 import "../../../Shaders/ssaoCombine.fragment";
@@ -231,6 +232,8 @@ export class SSAORenderingPipeline extends PostProcessRenderPipeline {
 
         this._scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline(this._name, this._scene.cameras);
 
+        this._scene.postProcessRenderPipelineManager.removePipeline(this._name);
+
         super.dispose();
     }
 
@@ -247,7 +250,7 @@ export class SSAORenderingPipeline extends PostProcessRenderPipeline {
             Texture.BILINEAR_SAMPLINGMODE,
             this._scene.getEngine(),
             false,
-            Constants.TEXTURETYPE_UNSIGNED_INT
+            Constants.TEXTURETYPE_UNSIGNED_BYTE
         );
         this._blurVPostProcess = new BlurPostProcess(
             "BlurV",
@@ -258,7 +261,7 @@ export class SSAORenderingPipeline extends PostProcessRenderPipeline {
             Texture.BILINEAR_SAMPLINGMODE,
             this._scene.getEngine(),
             false,
-            Constants.TEXTURETYPE_UNSIGNED_INT
+            Constants.TEXTURETYPE_UNSIGNED_BYTE
         );
 
         this._blurHPostProcess.onActivateObservable.add(() => {
@@ -343,9 +346,9 @@ export class SSAORenderingPipeline extends PostProcessRenderPipeline {
 
         const data = new Uint8Array(size * size * 4);
         for (let index = 0; index < data.length; ) {
-            data[index++] = Math.floor(Math.max(0.0, Scalar.RandomRange(-1.0, 1.0)) * 255);
-            data[index++] = Math.floor(Math.max(0.0, Scalar.RandomRange(-1.0, 1.0)) * 255);
-            data[index++] = Math.floor(Math.max(0.0, Scalar.RandomRange(-1.0, 1.0)) * 255);
+            data[index++] = Math.floor(Math.max(0.0, RandomRange(-1.0, 1.0)) * 255);
+            data[index++] = Math.floor(Math.max(0.0, RandomRange(-1.0, 1.0)) * 255);
+            data[index++] = Math.floor(Math.max(0.0, RandomRange(-1.0, 1.0)) * 255);
             data[index++] = 255;
         }
 

@@ -1,19 +1,19 @@
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
+import { type GlobalState } from "../../globalState";
 import { FloatPropertyTabComponent } from "../../components/propertyTab/properties/floatPropertyTabComponent";
 import { Vector2PropertyTabComponent } from "../../components/propertyTab/properties/vector2PropertyTabComponent";
 import { Vector3PropertyTabComponent } from "../../components/propertyTab/properties/vector3PropertyTabComponent";
 import { Vector4PropertyTabComponent } from "../../components/propertyTab/properties/vector4PropertyTabComponent";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { GeneralPropertyTabComponent } from "./genericNodePropertyComponent";
 import { CheckBoxLineComponent } from "../../sharedComponents/checkBoxLineComponent";
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
-import type { IPropertyComponentProps } from "shared-ui-components/nodeGraphSystem/interfaces/propertyComponentProps";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type IPropertyComponentProps } from "shared-ui-components/nodeGraphSystem/interfaces/propertyComponentProps";
 import { OptionsLine } from "shared-ui-components/lines/optionsLineComponent";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { SliderLineComponent } from "shared-ui-components/lines/sliderLineComponent";
-import type { GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
+import { type GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
 import { NodeGeometryBlockConnectionPointTypes } from "core/Meshes/Node/Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryContextualSources } from "core/Meshes/Node/Enums/nodeGeometryContextualSources";
 
@@ -141,6 +141,8 @@ export class InputPropertyTabComponent extends React.Component<IPropertyComponen
                 contextualSourcesOptions = [
                     { label: "Positions", value: NodeGeometryContextualSources.Positions },
                     { label: "Normals", value: NodeGeometryContextualSources.Normals },
+                    { label: "LatticeID", value: NodeGeometryContextualSources.LatticeID },
+                    { label: "LatticeControl", value: NodeGeometryContextualSources.LatticeControl },
                 ];
                 break;
             case NodeGeometryBlockConnectionPointTypes.Vector4:
@@ -219,6 +221,9 @@ export class InputPropertyTabComponent extends React.Component<IPropertyComponen
                                 this.props.stateManager.onRebuildRequiredObservable.notifyObservers();
                             }}
                         />
+                    )}
+                    {!inputBlock.isContextual && (
+                        <CheckBoxLineComponent label="Display in the Inspector" target={inputBlock} propertyName={"displayInInspector"}></CheckBoxLineComponent>
                     )}
                     {!inputBlock.isContextual && <CheckBoxLineComponent label="Visible on frame" target={inputBlock} propertyName={"visibleOnFrame"}></CheckBoxLineComponent>}
                 </LineContainerComponent>

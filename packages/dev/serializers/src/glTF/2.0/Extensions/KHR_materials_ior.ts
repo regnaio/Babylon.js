@@ -1,7 +1,7 @@
-import type { IMaterial, IKHRMaterialsIor } from "babylonjs-gltf2interface";
-import type { IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
-import { _Exporter } from "../glTFExporter";
-import type { Material } from "core/Materials/material";
+import { type IMaterial, type IKHRMaterialsIor } from "babylonjs-gltf2interface";
+import { type IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
+import { GLTFExporter } from "../glTFExporter";
+import { type Material } from "core/Materials/material";
 import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
 
 const NAME = "KHR_materials_ior";
@@ -47,6 +47,7 @@ export class KHR_materials_ior implements IGLTFExporterExtensionV2 {
      * @param babylonMaterial corresponding babylon material
      * @returns promise, resolves with the material
      */
+    // eslint-disable-next-line no-restricted-syntax
     public postExportMaterialAsync?(context: string, node: IMaterial, babylonMaterial: Material): Promise<IMaterial> {
         return new Promise((resolve) => {
             if (babylonMaterial instanceof PBRMaterial && this._isExtensionEnabled(babylonMaterial)) {
@@ -64,4 +65,4 @@ export class KHR_materials_ior implements IGLTFExporterExtensionV2 {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-_Exporter.RegisterExtension(NAME, (exporter) => new KHR_materials_ior());
+GLTFExporter.RegisterExtension(NAME, (exporter) => new KHR_materials_ior());

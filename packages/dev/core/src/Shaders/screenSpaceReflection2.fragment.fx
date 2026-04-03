@@ -39,6 +39,7 @@ uniform mat4 invProjectionMatrix;
 uniform mat4 projectionPixel;
 
 uniform float nearPlaneZ;
+uniform float farPlaneZ;
 uniform float stepSize;
 uniform float maxSteps;
 uniform float strength;
@@ -102,7 +103,7 @@ void main()
     // Get color and reflectivity
     vec4 colorFull = TEXTUREFUNC(textureSampler, vUV, 0.0);
     vec3 color = colorFull.rgb;
-    vec4 reflectivity = TEXTUREFUNC(reflectivitySampler, vUV, 0.0);
+    vec4 reflectivity = max(TEXTUREFUNC(reflectivitySampler, vUV, 0.0), vec4(0.));
 #ifndef SSR_DISABLE_REFLECTIVITY_TEST
     if (max(reflectivity.r, max(reflectivity.g, reflectivity.b)) <= reflectivityThreshold) {
         #ifdef SSR_USE_BLUR
@@ -129,6 +130,9 @@ void main()
         csNormal = (view * vec4(csNormal, 0.0)).xyz;
     #endif
     float depth = texelFetch(depthSampler, ivec2(vUV * texSize), 0).r;
+    #ifdef SSRAYTRACE_SCREENSPACE_DEPTH
+        depth = linearizeDepth(depth, nearPlaneZ, farPlaneZ);
+    #endif
     vec3 csPosition = computeViewPosFromUVDepth(vUV, depth, projection, invProjectionMatrix);
     #ifdef ORTHOGRAPHIC_CAMERA
         vec3 csViewDirection = vec3(0., 0., 1.);
@@ -202,6 +206,7 @@ void main()
         #endif
             thickness,
             nearPlaneZ,
+            farPlaneZ,
             stepSize,
             jitter,
             maxSteps,
@@ -240,6 +245,7 @@ void main()
 #ifndef SSR_BLEND_WITH_FRESNEL
     SSR *= fresnel;
 #endif
+    SSR = clamp(SSR, vec3(0.0), vec3(1000.0)); // Sanity check to avoid artifacts on some devices (iPad, mobile)
 
     #ifdef SSR_USE_BLUR
         // from https://github.com/godotengine/godot/blob/master/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl

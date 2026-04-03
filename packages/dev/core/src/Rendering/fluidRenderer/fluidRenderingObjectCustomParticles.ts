@@ -1,10 +1,11 @@
 import { VertexBuffer } from "core/Buffers/buffer";
 import { Constants } from "core/Engines/constants";
 import { EffectWrapper } from "core/Materials/effectRenderer";
-import type { Scene } from "core/scene";
-import type { FloatArray, Nullable } from "core/types";
+import { type Scene } from "core/scene";
+import { type FloatArray, type Nullable } from "core/types";
 
 import { FluidRenderingObject } from "./fluidRenderingObject";
+import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
 /**
  * Defines a rendering object based on a list of custom buffers
@@ -34,9 +35,10 @@ export class FluidRenderingObjectCustomParticles extends FluidRenderingObject {
      * @param scene The scene the particles should be rendered into
      * @param buffers The list of buffers (must contain at least one "position" buffer!). Note that you don't have to pass all (or any!) buffers at once in the constructor, you can use the addBuffers method to add more later.
      * @param numParticles Number of vertices to take into account from the buffers
+     * @param shaderLanguage The shader language to use
      */
-    constructor(scene: Scene, buffers: { [key: string]: FloatArray }, numParticles: number) {
-        super(scene);
+    constructor(scene: Scene, buffers: { [key: string]: FloatArray }, numParticles: number, shaderLanguage?: ShaderLanguage) {
+        super(scene, shaderLanguage);
 
         this._numParticles = numParticles;
         this._diffuseEffectWrapper = null;
@@ -81,6 +83,14 @@ export class FluidRenderingObjectCustomParticles extends FluidRenderingObject {
             attributeNames,
             uniformNames,
             samplerNames: [],
+            shaderLanguage: this._shaderLanguage,
+            extraInitializationsAsync: async () => {
+                if (this._shaderLanguage === ShaderLanguage.WGSL) {
+                    await import("../../ShadersWGSL/fluidRenderingParticleDiffuse.fragment");
+                } else {
+                    await import("../../Shaders/fluidRenderingParticleDiffuse.fragment");
+                }
+            },
         });
     }
 
@@ -122,7 +132,7 @@ export class FluidRenderingObjectCustomParticles extends FluidRenderingObject {
             return;
         }
 
-        const diffuseDrawWrapper = this._diffuseEffectWrapper._drawWrapper;
+        const diffuseDrawWrapper = this._diffuseEffectWrapper.drawWrapper;
         const diffuseEffect = diffuseDrawWrapper.effect!;
 
         this._engine.enableEffect(diffuseDrawWrapper);
@@ -142,7 +152,7 @@ export class FluidRenderingObjectCustomParticles extends FluidRenderingObject {
     }
 
     /**
-     * Releases the ressources used by the class
+     * Releases the resources used by the class
      */
     public override dispose(): void {
         super.dispose();

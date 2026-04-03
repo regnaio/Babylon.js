@@ -1,17 +1,19 @@
-import type { Nullable } from "core/types";
-import type { TransformNode } from "core/Meshes/transformNode";
-import type { Camera } from "core/Cameras/camera";
+import { type Nullable } from "core/types";
+import { type TransformNode } from "core/Meshes/transformNode";
+import { type Camera } from "core/Cameras/camera";
+import { type AnimationGroup } from "core/Animations/animationGroup";
 
-import type { IProperty } from "babylonjs-gltf2interface";
-import type { INode, ICamera, IMaterial } from "../glTFLoaderInterfaces";
-import type { IGLTFLoaderExtension } from "../glTFLoaderExtension";
-import { GLTFLoader } from "../glTFLoader";
-import type { Material } from "core/Materials/material";
+import { type IProperty } from "babylonjs-gltf2interface";
+import { type INode, type ICamera, type IMaterial, type IAnimation } from "../glTFLoaderInterfaces";
+import { type IGLTFLoaderExtension } from "../glTFLoaderExtension";
+import { type GLTFLoader } from "../glTFLoader";
+import { type Material } from "core/Materials/material";
+import { registerGLTFExtension, unregisterGLTFExtension } from "../glTFLoaderExtensionRegistry";
 
 const NAME = "ExtrasAsMetadata";
 
 declare module "../../glTFFileLoader" {
-    // eslint-disable-next-line jsdoc/require-jsdoc
+    // eslint-disable-next-line jsdoc/require-jsdoc, @typescript-eslint/naming-convention
     export interface GLTFLoaderExtensionOptions {
         /**
          * Defines options for the ExtrasAsMetadata extension.
@@ -21,7 +23,7 @@ declare module "../../glTFFileLoader" {
     }
 }
 
-interface ObjectWithMetadata {
+interface IObjectWithMetadata {
     metadata: any;
 }
 
@@ -41,7 +43,7 @@ export class ExtrasAsMetadata implements IGLTFLoaderExtension {
 
     private _loader: GLTFLoader;
 
-    private _assignExtras(babylonObject: ObjectWithMetadata, gltfProp: IProperty): void {
+    private _assignExtras(babylonObject: IObjectWithMetadata, gltfProp: IProperty): void {
         if (gltfProp.extras && Object.keys(gltfProp.extras).length > 0) {
             const metadata = (babylonObject.metadata = babylonObject.metadata || {});
             const gltf = (metadata.gltf = metadata.gltf || {});
@@ -64,6 +66,7 @@ export class ExtrasAsMetadata implements IGLTFLoaderExtension {
     /**
      * @internal
      */
+    // eslint-disable-next-line no-restricted-syntax
     public loadNodeAsync(context: string, node: INode, assign: (babylonTransformNode: TransformNode) => void): Nullable<Promise<TransformNode>> {
         return this._loader.loadNodeAsync(context, node, (babylonTransformNode): void => {
             this._assignExtras(babylonTransformNode, node);
@@ -74,6 +77,7 @@ export class ExtrasAsMetadata implements IGLTFLoaderExtension {
     /**
      * @internal
      */
+    // eslint-disable-next-line no-restricted-syntax
     public loadCameraAsync(context: string, camera: ICamera, assign: (babylonCamera: Camera) => void): Nullable<Promise<Camera>> {
         return this._loader.loadCameraAsync(context, camera, (babylonCamera): void => {
             this._assignExtras(babylonCamera, camera);
@@ -89,6 +93,19 @@ export class ExtrasAsMetadata implements IGLTFLoaderExtension {
         this._assignExtras(babylonMaterial, material);
         return babylonMaterial;
     }
+
+    /**
+     * @internal
+     */
+    // eslint-disable-next-line no-restricted-syntax
+    public loadAnimationAsync(context: string, animation: IAnimation): Nullable<Promise<AnimationGroup>> {
+        // eslint-disable-next-line github/no-then
+        return this._loader.loadAnimationAsync(context, animation).then((babylonAnimation: AnimationGroup) => {
+            this._assignExtras(babylonAnimation, animation);
+            return babylonAnimation;
+        });
+    }
 }
 
-GLTFLoader.RegisterExtension(NAME, (loader): IGLTFLoaderExtension => new ExtrasAsMetadata(loader));
+unregisterGLTFExtension(NAME);
+registerGLTFExtension(NAME, false, (loader) => new ExtrasAsMetadata(loader));

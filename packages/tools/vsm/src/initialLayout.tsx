@@ -1,10 +1,11 @@
 import { SceneRendererComponent } from "./components/SceneRendererComponent";
-import type { Layout } from "shared-ui-components/components/layout/types";
+import { type Layout } from "shared-ui-components/components/layout/types";
 import { EditValueComponent } from "./components/EditValueComponent";
 import { NodeListComponent } from "./components/NodeListComponent";
 import { StateViewNodeRenderer } from "./components/StateViewNodeRenderer";
 import { StateBehaviorNodeRenderer } from "./components/StateBehaviorNodeRenderer";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const initialLayout: Layout = {
     columns: [
         {

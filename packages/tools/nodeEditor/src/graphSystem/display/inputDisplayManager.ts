@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { InputBlock } from "core/Materials/Node/Blocks/Input/inputBlock";
+import { type InputBlock } from "core/Materials/Node/Blocks/Input/inputBlock";
 import { NodeMaterialSystemValues } from "core/Materials/Node/Enums/nodeMaterialSystemValues";
 import { NodeMaterialBlockConnectionPointTypes } from "core/Materials/Node/Enums/nodeMaterialBlockConnectionPointTypes";
 import { AnimatedInputBlockTypes } from "core/Materials/Node/Blocks/Input/animatedInputBlockTypes";
-import type { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
-import type { Color3 } from "core/Maths/math.color";
+import { type Vector2, type Vector3, type Vector4 } from "core/Maths/math.vector";
+import { type Color3 } from "core/Maths/math.color";
 import { BlockTools } from "../../blockTools";
-import type { IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
-import type { INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
-import styles from "./inputDisplayManager.modules.scss";
+import { type IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
+import { type INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
+import * as styles from "./inputDisplayManager.module.scss";
 
 const inputNameToAttributeValue: { [name: string]: string } = {
     position2d: "position",
@@ -16,6 +16,7 @@ const inputNameToAttributeValue: { [name: string]: string } = {
     particle_color: "color",
     particle_texturemask: "textureMask",
     particle_positionw: "positionW",
+    postprocess_uv: "uv",
 };
 
 const inputNameToAttributeName: { [name: string]: string } = {
@@ -24,6 +25,7 @@ const inputNameToAttributeName: { [name: string]: string } = {
     particle_color: "particle",
     particle_texturemask: "particle",
     particle_positionw: "particle",
+    postprocess_uv: "screen",
 };
 
 export class InputDisplayManager implements IDisplayManager {
@@ -61,7 +63,7 @@ export class InputDisplayManager implements IDisplayManager {
     }
 
     public getBackgroundColor(nodeData: INodeData): string {
-        let color = "";
+        let color: string;
         const inputBlock = nodeData.data as InputBlock;
 
         switch (inputBlock.type) {
@@ -109,8 +111,14 @@ export class InputDisplayManager implements IDisplayManager {
                 case NodeMaterialSystemValues.Projection:
                     value = "Projection";
                     break;
+                case NodeMaterialSystemValues.ProjectionInverse:
+                    value = "Projection Inverse";
+                    break;
                 case NodeMaterialSystemValues.CameraPosition:
                     value = "Camera position";
+                    break;
+                case NodeMaterialSystemValues.CameraForward:
+                    value = "Camera forward";
                     break;
                 case NodeMaterialSystemValues.FogColor:
                     value = "Fog color";

@@ -1,15 +1,15 @@
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
-import type { LogEntry } from "./components/log/logComponent";
+import { type LogEntry } from "./components/log/logComponent";
 import { DataStorage } from "core/Misc/dataStorage";
 import { Color3 } from "core/Maths/math.color";
-import type { WorkbenchComponent } from "./diagram/workbench";
-import type { AdvancedDynamicTexture } from "gui/2D/advancedDynamicTexture";
-import type { PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
-import type { Scene } from "core/scene";
-import type { Control } from "gui/2D/controls/control";
+import { type WorkbenchComponent } from "./diagram/workbench";
+import { type AdvancedDynamicTexture } from "gui/2D/advancedDynamicTexture";
+import { type PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
+import { type Scene } from "core/scene";
+import { type Control } from "gui/2D/controls/control";
 import { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { ISize } from "core/Maths/math";
+import { type ISize } from "core/Maths/math";
 import { CoordinateHelper } from "./diagram/coordinateHelper";
 import { Container } from "gui/2D/controls/container";
 import { KeyboardManager } from "./keyboardManager";
@@ -49,7 +49,7 @@ export class GlobalState {
     private _backgroundColor: Color3;
     private _outlines: boolean = false;
     public keys: KeyboardManager;
-    private _fromPG: boolean;
+    private _fromPg: boolean;
     /** DO NOT USE: in the process of removing */
     public blockKeyboardEvents = false;
     onOutlineChangedObservable = new Observable<void>();
@@ -73,7 +73,9 @@ export class GlobalState {
         }
     }
     public set tool(newTool: GUIEditorTool) {
-        if (this._tool === newTool) return;
+        if (this._tool === newTool) {
+            return;
+        }
         this._prevTool = this._tool;
         this._tool = newTool;
         this.onToolChangeObservable.notifyObservers();
@@ -172,11 +174,13 @@ export class GlobalState {
     public get backgroundColor() {
         return this._backgroundColor;
     }
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public get fromPG() {
-        return this._fromPG;
+        return this._fromPg;
     }
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public set fromPG(value: boolean) {
-        this._fromPG = value;
+        this._fromPg = value;
     }
 
     public set backgroundColor(value: Color3) {
@@ -252,8 +256,12 @@ export class GlobalState {
     }
 
     public isMultiSelectable(control: Control): boolean {
-        if (this.selectedControls.length === 0) return true;
-        if (this.selectedControls[0].parent === control.parent) return true;
+        if (this.selectedControls.length === 0) {
+            return true;
+        }
+        if (this.selectedControls[0].parent === control.parent) {
+            return true;
+        }
         return false;
     }
 

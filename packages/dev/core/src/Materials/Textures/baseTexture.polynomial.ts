@@ -1,9 +1,10 @@
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { CubeMapToSphericalPolynomialTools } from "../../Misc/HighDynamicRange/cubemapToSphericalPolynomial";
-import type { SphericalPolynomial } from "../../Maths/sphericalPolynomial";
+import { type SphericalPolynomial } from "../../Maths/sphericalPolynomial";
 import { BaseTexture } from "./baseTexture";
 
 declare module "./baseTexture" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface BaseTexture {
         /**
          * Get the polynomial representation of the texture data.
@@ -17,8 +18,13 @@ declare module "./baseTexture" {
          * Can be useful if you generate a cubemap multiple times (from a probe for eg) and you need the proper polynomials each time
          */
         forceSphericalPolynomialsRecompute(): void;
+
+        /** @internal */
+        _sphericalPolynomialTargetSize: number;
     }
 }
+
+BaseTexture.prototype._sphericalPolynomialTargetSize = 0;
 
 BaseTexture.prototype.forceSphericalPolynomialsRecompute = function (): void {
     if (this._texture) {
@@ -41,6 +47,7 @@ Object.defineProperty(BaseTexture.prototype, "sphericalPolynomial", {
                     if (this._texture._sphericalPolynomialPromise === null) {
                         this._texture._sphericalPolynomialComputed = true;
                     } else {
+                        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
                         this._texture._sphericalPolynomialPromise.then((sphericalPolynomial) => {
                             this._texture!._sphericalPolynomial = sphericalPolynomial;
                             this._texture!._sphericalPolynomialComputed = true;

@@ -1,5 +1,5 @@
 import { Vector3 } from "../Maths/math.vector";
-import type { Path2 } from "../Maths/math.path";
+import { type Path2 } from "../Maths/math.path";
 
 /**
  * A cursor which tracks a point on a path
@@ -96,7 +96,9 @@ export class PathCursor {
      * @returns This path cursor
      */
     private _raiseOnChange(): PathCursor {
-        this._onchange.forEach((f) => f(this));
+        for (const f of this._onchange) {
+            f(this);
+        }
 
         return this;
     }

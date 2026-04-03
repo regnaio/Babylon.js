@@ -1,26 +1,33 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { serialize } from "../../../Misc/decorators";
 import { SerializationHelper } from "../../../Misc/decorators.serialization";
-import { Camera } from "../../../Cameras/camera";
-import type { Effect } from "../../../Materials/effect";
+import { type Camera } from "../../../Cameras/camera";
+import { type Effect } from "../../../Materials/effect";
 import { PostProcess } from "../../postProcess";
 import { PostProcessRenderPipeline } from "../postProcessRenderPipeline";
 import { PostProcessRenderEffect } from "../postProcessRenderEffect";
-import type { Scene } from "../../../scene";
+import { type Scene } from "../../../scene";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { Constants } from "../../../Engines/constants";
-import type { Nullable } from "../../../types";
+import { type Nullable } from "../../../types";
 import { PassPostProcess } from "core/PostProcesses/passPostProcess";
-import type { RenderTargetWrapper } from "core/Engines/renderTargetWrapper";
-import { Halton2DSequence } from "core/Maths/halton2DSequence";
+import { type RenderTargetWrapper } from "core/Engines/renderTargetWrapper";
+import { ThinTAAPostProcess } from "core/PostProcesses/thinTAAPostProcess";
+import { type PrePassEffectConfiguration } from "core/Rendering/prePassEffectConfiguration";
+import { Logger } from "core/Misc/logger";
 
 import "../postProcessRenderPipelineManagerSceneComponent";
 
-import "../../../Shaders/taa.fragment";
+class TAAEffectConfiguration implements PrePassEffectConfiguration {
+    public name = "taa";
+    public enabled = true;
+    public readonly texturesRequired = [Constants.PREPASS_VELOCITY_LINEAR_TEXTURE_TYPE];
+}
 
 /**
  * Simple implementation of Temporal Anti-Aliasing (TAA).
  * This can be used to improve image quality for still pictures (screenshots for e.g.).
+ * Note that TAA post-process must be the first in the camera, so TAARenderingPipeline must be created before any other pipeline/post-processing.
  */
 export class TAARenderingPipeline extends PostProcessRenderPipeline {
     /**
@@ -32,22 +39,16 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
      */
     public TAAPassEffect: string = "TAAPassEffect";
 
-    @serialize("samples")
-    private _samples = 8;
     /**
      * Number of accumulated samples (default: 16)
      */
+    @serialize("samples")
     public set samples(samples: number) {
-        if (this._samples === samples) {
-            return;
-        }
-
-        this._samples = samples;
-        this._hs.regenerate(samples);
+        this._taaThinPostProcess.samples = samples;
     }
 
     public get samples(): number {
-        return this._samples;
+        return this._taaThinPostProcess.samples;
     }
 
     @serialize("msaaSamples")
@@ -74,14 +75,54 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
      * The factor used to blend the history frame with current frame (default: 0.05)
      */
     @serialize()
-    public factor = 0.05;
+    public get factor() {
+        return this._taaThinPostProcess.factor;
+    }
+
+    public set factor(value: number) {
+        this._taaThinPostProcess.factor = value;
+    }
 
     /**
      * Disable TAA on camera move (default: true).
      * You generally want to keep this enabled, otherwise you will get a ghost effect when the camera moves (but if it's what you want, go for it!)
      */
     @serialize()
-    public disableOnCameraMove = true;
+    public get disableOnCameraMove() {
+        return this._taaThinPostProcess.disableOnCameraMove;
+    }
+
+    public set disableOnCameraMove(value: boolean) {
+        this._taaThinPostProcess.disableOnCameraMove = value;
+    }
+
+    /**
+     * Enables reprojecting the history texture with a per-pixel velocity.
+     */
+    @serialize()
+    public get reprojectHistory(): boolean {
+        return this._taaThinPostProcess.reprojectHistory;
+    }
+
+    public set reprojectHistory(reproject: boolean) {
+        if (this.reprojectHistory === reproject) {
+            return;
+        }
+        this._updateReprojection(reproject);
+    }
+
+    /**
+     * Clamps the history pixel to the min and max of the 3x3 pixels surrounding the target pixel.
+     * This can help further reduce ghosting and artifacts.
+     */
+    @serialize()
+    public get clampHistory(): boolean {
+        return this._taaThinPostProcess.clampHistory;
+    }
+
+    public set clampHistory(history: boolean) {
+        this._taaThinPostProcess.clampHistory = history;
+    }
 
     @serialize("isEnabled")
     private _isEnabled = true;
@@ -99,6 +140,8 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
 
         this._isEnabled = value;
 
+        this._taaThinPostProcess.disabled = !value;
+
         if (!value) {
             if (this._cameras !== null) {
                 this._scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline(this._name, this._cameras);
@@ -107,7 +150,7 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
         } else if (value) {
             if (!this._isDirty) {
                 if (this._cameras !== null) {
-                    this._firstUpdate = true;
+                    this._taaThinPostProcess._reset();
                     this._scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline(this._name, this._cameras);
                 }
             } else {
@@ -128,12 +171,11 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
     private _camerasToBeAttached: Array<Camera> = [];
     private _textureType: number;
     private _taaPostProcess: Nullable<PostProcess>;
+    private _taaThinPostProcess: ThinTAAPostProcess;
     private _passPostProcess: Nullable<PassPostProcess>;
     private _ping: RenderTargetWrapper;
     private _pong: RenderTargetWrapper;
     private _pingpong = 0;
-    private _hs: Halton2DSequence;
-    private _firstUpdate = true;
 
     /**
      * Returns true if TAA is supported by the running hardware
@@ -162,7 +204,7 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
 
         this._scene = scene;
         this._textureType = textureType;
-        this._hs = new Halton2DSequence(this.samples);
+        this._taaThinPostProcess = new ThinTAAPostProcess("TAA", this._scene);
 
         if (this.isSupported) {
             this._createPingPongTextures(engine.getRenderWidth(), engine.getRenderHeight());
@@ -208,6 +250,8 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
 
         this._scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline(this._name, this._cameras);
 
+        this._scene.postProcessRenderPipelineManager.removePipeline(this._name);
+
         this._ping.dispose();
         this._pong.dispose();
 
@@ -222,22 +266,29 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
 
         this._ping = engine.createRenderTargetTexture(
             { width, height },
-            { generateMipMaps: false, generateDepthBuffer: false, type: Constants.TEXTURETYPE_HALF_FLOAT, samplingMode: Constants.TEXTURE_NEAREST_NEAREST }
+            { generateMipMaps: false, generateDepthBuffer: false, type: Constants.TEXTURETYPE_HALF_FLOAT, samplingMode: Constants.TEXTURE_LINEAR_LINEAR }
         );
 
         this._pong = engine.createRenderTargetTexture(
             { width, height },
-            { generateMipMaps: false, generateDepthBuffer: false, type: Constants.TEXTURETYPE_HALF_FLOAT, samplingMode: Constants.TEXTURE_NEAREST_NEAREST }
+            { generateMipMaps: false, generateDepthBuffer: false, type: Constants.TEXTURETYPE_HALF_FLOAT, samplingMode: Constants.TEXTURE_LINEAR_LINEAR }
         );
 
-        this._hs.setDimensions(width / 2, height / 2);
-        this._firstUpdate = true;
+        this._taaThinPostProcess.textureWidth = width;
+        this._taaThinPostProcess.textureHeight = height;
     }
 
-    private _updateEffectDefines(): void {
-        const defines: string[] = [];
+    private _updateReprojection(reproject: boolean) {
+        if (reproject) {
+            if (!this._scene.enablePrePassRenderer()) {
+                Logger.Warn("TAA reprojection requires PrePass which is not supported");
+                return;
+            }
+        }
 
-        this._taaPostProcess?.updateEffect(defines.join("\n"));
+        this._taaThinPostProcess.reprojectHistory = reproject;
+
+        this._buildPipeline();
     }
 
     private _buildPipeline() {
@@ -312,45 +363,44 @@ export class TAARenderingPipeline extends PostProcessRenderPipeline {
             size: 1.0,
             engine: this._scene.getEngine(),
             textureType: this._textureType,
+            effectWrapper: this._taaThinPostProcess,
         });
+
+        if (this.reprojectHistory) {
+            this._taaPostProcess._prePassEffectConfiguration = new TAAEffectConfiguration();
+        }
 
         this._taaPostProcess.samples = this._msaaSamples;
 
-        this._updateEffectDefines();
-
         this._taaPostProcess.onActivateObservable.add(() => {
-            const camera = this._scene.activeCamera;
+            this._taaThinPostProcess.camera = this._scene.activeCamera;
 
             if (this._taaPostProcess?.width !== this._ping.width || this._taaPostProcess?.height !== this._ping.height) {
                 const engine = this._scene.getEngine();
                 this._createPingPongTextures(engine.getRenderWidth(), engine.getRenderHeight());
             }
 
-            if (camera && !camera.hasMoved) {
-                if (camera.mode === Camera.PERSPECTIVE_CAMERA) {
-                    const projMat = camera.getProjectionMatrix();
-                    projMat.setRowFromFloats(2, this._hs.x, this._hs.y, projMat.m[10], projMat.m[11]);
-                } else {
-                    // We must force the update of the projection matrix so that m[12] and m[13] are recomputed, as we modified them the previous frame
-                    const projMat = camera.getProjectionMatrix(true);
-                    projMat.setRowFromFloats(3, this._hs.x + projMat.m[12], this._hs.y + projMat.m[13], projMat.m[14], projMat.m[15]);
-                }
+            this._taaThinPostProcess._updateJitter();
+
+            if (!this.reprojectHistory) {
+                this._scene.updateTransformMatrix(); // make sure the scene ubo is updated with the updated matrices
             }
 
             if (this._passPostProcess) {
                 this._passPostProcess.inputTexture = this._pingpong ? this._ping : this._pong;
             }
             this._pingpong = this._pingpong ^ 1;
-            this._hs.next();
         });
 
         this._taaPostProcess.onApplyObservable.add((effect: Effect) => {
-            const camera = this._scene.activeCamera;
-
             effect._bindTexture("historySampler", this._pingpong ? this._ping.texture : this._pong.texture);
-            effect.setFloat("factor", (camera?.hasMoved && this.disableOnCameraMove) || this._firstUpdate ? 1 : this.factor);
 
-            this._firstUpdate = false;
+            const prePassRenderer = this._scene.prePassRenderer;
+            if (this.reprojectHistory && prePassRenderer) {
+                const renderTarget = prePassRenderer.getRenderTarget();
+                const velocityIndex = prePassRenderer.getIndex(Constants.PREPASS_VELOCITY_LINEAR_TEXTURE_TYPE);
+                effect.setTexture("velocitySampler", renderTarget.textures[velocityIndex]);
+            }
         });
     }
 

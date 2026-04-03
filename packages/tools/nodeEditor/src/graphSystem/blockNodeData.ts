@@ -1,14 +1,14 @@
 import { NodeMaterialBlockTargets } from "core/Materials/Node/Enums/nodeMaterialBlockTargets";
-import type { NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
-import type { INodeContainer } from "shared-ui-components/nodeGraphSystem/interfaces/nodeContainer";
-import type { INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
-import type { IPortData } from "shared-ui-components/nodeGraphSystem/interfaces/portData";
+import { type NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
+import { type INodeContainer } from "shared-ui-components/nodeGraphSystem/interfaces/nodeContainer";
+import { type INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
+import { type IPortData } from "shared-ui-components/nodeGraphSystem/interfaces/portData";
 import { ConnectionPointPortData } from "./connectionPointPortData";
 import triangle from "../imgs/triangle.svg";
 import square from "../imgs/square.svg";
-import styles from "./blockNodeData.modules.scss";
-import type { NodeMaterialTeleportOutBlock } from "core/Materials/Node/Blocks/Teleport/teleportOutBlock";
-import type { NodeMaterialTeleportInBlock } from "core/Materials/Node/Blocks/Teleport/teleportInBlock";
+import * as styles from "./blockNodeData.module.scss";
+import { type NodeMaterialTeleportOutBlock } from "core/Materials/Node/Blocks/Teleport/teleportOutBlock";
+import { type NodeMaterialTeleportInBlock } from "core/Materials/Node/Blocks/Teleport/teleportInBlock";
 
 export class BlockNodeData implements INodeData {
     private _inputs: IPortData[] = [];
@@ -106,15 +106,27 @@ export class BlockNodeData implements INodeData {
         nodeContainer: INodeContainer
     ) {
         if (data.inputs) {
-            this.data.inputs.forEach((input) => {
+            for (const input of this.data.inputs) {
                 this._inputs.push(new ConnectionPointPortData(input, nodeContainer));
-            });
+            }
         }
 
         if (data.outputs && !this.data.isTeleportIn) {
-            this.data.outputs.forEach((output) => {
+            for (const output of this.data.outputs) {
                 this._outputs.push(new ConnectionPointPortData(output, nodeContainer));
-            });
+            }
         }
+    }
+
+    public get canBeActivated() {
+        return this.data.getClassName() === "NodeMaterialDebugBlock";
+    }
+
+    public get isActive() {
+        return (this.data as any).isActive;
+    }
+
+    public setIsActive(value: boolean) {
+        (this.data as any).isActive = value;
     }
 }

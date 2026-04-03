@@ -1,13 +1,11 @@
-import type { FC } from "react";
-import { useContext, useRef } from "react";
+import { type FC, type PropsWithChildren, useContext, useRef } from "react";
 import { Vector2 } from "core/Maths/math";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { useDrop } from "react-dnd";
-import { ElementTypes } from "./types";
-import type { LayoutTabsRow, LayoutColumn } from "./types";
+import { ElementTypes, type LayoutTabsRow, type LayoutColumn } from "./types";
 import { addPercentageStringToNumber, getPosInLayout } from "./utils";
 import { LayoutContext } from "./LayoutContext";
-import type { ResizeItem } from "./FlexibleResizeBar";
+import { type ResizeItem } from "./FlexibleResizeBar";
 
 /**
  * Arguments for the DragHandler component.
@@ -25,7 +23,7 @@ export interface IFlexibleDragHandlerProps {
  * @param props properties
  * @returns DragHandler element
  */
-export const FlexibleDragHandler: FC<IFlexibleDragHandlerProps> = (props) => {
+export const FlexibleDragHandler: FC<PropsWithChildren<IFlexibleDragHandlerProps>> = (props) => {
     const { layout, setLayout } = useContext(LayoutContext);
     // CLICK/DRAG INFORMATION
     const pointerPos = useRef<Nullable<Vector2>>(null);

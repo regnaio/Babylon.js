@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 import { Tools } from "./tools";
 import { Texture } from "../Materials/Textures/texture";
 import { InternalTexture, InternalTextureSource } from "../Materials/Textures/internalTexture";
-import { Scalar } from "../Maths/math.scalar";
 import { Constants } from "../Engines/constants";
-import type { Engine } from "../Engines/engine";
 import { initializeWebWorker, workerFunction } from "./basisWorker";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+import { type Engine } from "core/Engines/engine";
 
 /**
  * Info about the .basis files
@@ -129,7 +129,7 @@ export const BasisToolsOptions = {
  * @returns internal format corresponding to the Basis format
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const GetInternalFormatFromBasisFormat = (basisFormat: number, engine: Engine) => {
+export const GetInternalFormatFromBasisFormat = (basisFormat: number, engine: AbstractEngine) => {
     let format;
     switch (basisFormat) {
         case BASIS_FORMATS.cTFETC1:
@@ -160,30 +160,35 @@ export const GetInternalFormatFromBasisFormat = (basisFormat: number, engine: En
     return format;
 };
 
-let _WorkerPromise: Nullable<Promise<Worker>> = null;
-let _Worker: Nullable<Worker> = null;
-let _actionId = 0;
-const _IgnoreSupportedFormats = false;
-const _CreateWorkerAsync = () => {
-    if (!_WorkerPromise) {
-        _WorkerPromise = new Promise((res, reject) => {
-            if (_Worker) {
-                res(_Worker);
+let WorkerPromise: Nullable<Promise<Worker>> = null;
+let LocalWorker: Nullable<Worker> = null;
+let ActionId = 0;
+const IgnoreSupportedFormats = false;
+const CreateWorkerAsync = async () => {
+    if (!WorkerPromise) {
+        WorkerPromise = new Promise((res, reject) => {
+            if (LocalWorker) {
+                res(LocalWorker);
             } else {
                 Tools.LoadFileAsync(Tools.GetBabylonScriptURL(BasisToolsOptions.WasmModuleURL))
+                    // eslint-disable-next-line github/no-then
                     .then((wasmBinary) => {
                         if (typeof URL !== "function") {
+                            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                             return reject("Basis transcoder requires an environment with a URL constructor");
                         }
+                        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
                         const workerBlobUrl = URL.createObjectURL(new Blob([`(${workerFunction})()`], { type: "application/javascript" }));
-                        _Worker = new Worker(workerBlobUrl);
-                        initializeWebWorker(_Worker, wasmBinary, BasisToolsOptions.JSModuleURL).then(res, reject);
+                        LocalWorker = new Worker(workerBlobUrl);
+                        // eslint-disable-next-line github/no-then
+                        initializeWebWorker(LocalWorker, wasmBinary, BasisToolsOptions.JSModuleURL).then(res, reject);
                     })
+                    // eslint-disable-next-line github/no-then
                     .catch(reject);
             }
         });
     }
-    return _WorkerPromise;
+    return await WorkerPromise;
 };
 
 /**
@@ -191,7 +196,7 @@ const _CreateWorkerAsync = () => {
  * @param worker The worker that will be used for transcoding
  */
 export const SetBasisTranscoderWorker = (worker: Worker) => {
-    _Worker = worker;
+    LocalWorker = worker;
 };
 
 /**
@@ -200,32 +205,35 @@ export const SetBasisTranscoderWorker = (worker: Worker) => {
  * @param config configuration options for the transcoding
  * @returns a promise resulting in the transcoded image
  */
-export const TranscodeAsync = (data: ArrayBuffer | ArrayBufferView, config: BasisTranscodeConfiguration): Promise<TranscodeResult> => {
+export const TranscodeAsync = async (data: ArrayBuffer | ArrayBufferView, config: BasisTranscodeConfiguration): Promise<TranscodeResult> => {
     const dataView = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
 
-    return new Promise((res, rej) => {
-        _CreateWorkerAsync().then(
+    return await new Promise((res, rej) => {
+        // eslint-disable-next-line github/no-then
+        CreateWorkerAsync().then(
             () => {
-                const actionId = _actionId++;
+                const actionId = ActionId++;
                 const messageHandler = (msg: any) => {
                     if (msg.data.action === "transcode" && msg.data.id === actionId) {
-                        _Worker!.removeEventListener("message", messageHandler);
+                        LocalWorker!.removeEventListener("message", messageHandler);
                         if (!msg.data.success) {
+                            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                             rej("Transcode is not supported on this device");
                         } else {
                             res(msg.data);
                         }
                     }
                 };
-                _Worker!.addEventListener("message", messageHandler);
+                LocalWorker!.addEventListener("message", messageHandler);
 
                 const dataViewCopy = new Uint8Array(dataView.byteLength);
                 dataViewCopy.set(new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength));
-                _Worker!.postMessage({ action: "transcode", id: actionId, imageData: dataViewCopy, config: config, ignoreSupportedFormats: _IgnoreSupportedFormats }, [
+                LocalWorker!.postMessage({ action: "transcode", id: actionId, imageData: dataViewCopy, config: config, ignoreSupportedFormats: IgnoreSupportedFormats }, [
                     dataViewCopy.buffer,
                 ]);
             },
             (error) => {
+                // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                 rej(error);
             }
         );
@@ -261,7 +269,7 @@ export const LoadTextureFromTranscodeResult = (texture: InternalTexture, transco
             texture.type = Constants.TEXTURETYPE_UNSIGNED_SHORT_5_6_5;
             texture.format = Constants.TEXTUREFORMAT_RGB;
 
-            if (engine._features.basisNeedsPOT && (Scalar.Log2(rootImage.width) % 1 !== 0 || Scalar.Log2(rootImage.height) % 1 !== 0)) {
+            if (engine._features.basisNeedsPOT && (Math.log2(rootImage.width) % 1 !== 0 || Math.log2(rootImage.height) % 1 !== 0)) {
                 // Create non power of two texture
                 const source = new InternalTexture(engine, InternalTextureSource.Temp);
 
@@ -295,17 +303,20 @@ export const LoadTextureFromTranscodeResult = (texture: InternalTexture, transco
             texture.height = rootImage.height;
             texture.generateMipMaps = transcodeResult.fileInfo.images[i].levels.length > 1;
 
-            const format = BasisTools.GetInternalFormatFromBasisFormat(transcodeResult.format!, engine);
+            const format = BasisTools.GetInternalFormatFromBasisFormat(transcodeResult.format, engine);
             texture.format = format;
 
             BindTexture(texture, engine);
 
             // Upload all mip levels in the file
-            transcodeResult.fileInfo.images[i].levels.forEach((level: any, index: number) => {
-                engine._uploadCompressedDataToTextureDirectly(texture, format, level.width, level.height, level.transcodedPixels, i, index);
-            });
+            const levels = transcodeResult.fileInfo.images[i].levels;
 
-            if (engine._features.basisNeedsPOT && (Scalar.Log2(texture.width) % 1 !== 0 || Scalar.Log2(texture.height) % 1 !== 0)) {
+            for (let index = 0; index < levels.length; index++) {
+                const level = levels[index];
+                engine._uploadCompressedDataToTextureDirectly(texture, format, level.width, level.height, level.transcodedPixels, i, index);
+            }
+
+            if (engine._features.basisNeedsPOT && (Math.log2(texture.width) % 1 !== 0 || Math.log2(texture.height) % 1 !== 0)) {
                 Tools.Warn(
                     "Loaded .basis texture width and height are not a power of two. Texture wrapping will be set to Texture.CLAMP_ADDRESSMODE as other modes are not supported with non power of two dimensions in webGL 1."
                 );

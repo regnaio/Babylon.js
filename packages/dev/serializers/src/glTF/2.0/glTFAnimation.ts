@@ -1,22 +1,31 @@
-import type { IAnimation, INode, IBufferView, IAccessor, IAnimationSampler, IAnimationChannel } from "babylonjs-gltf2interface";
-import { AnimationSamplerInterpolation, AnimationChannelTargetPath, AccessorType, AccessorComponentType } from "babylonjs-gltf2interface";
-import type { Node } from "core/node";
-import type { Nullable } from "core/types";
+import {
+    type IAnimation,
+    type INode,
+    type IBufferView,
+    type IAccessor,
+    type IAnimationSampler,
+    type IAnimationChannel,
+    AnimationSamplerInterpolation,
+    AnimationChannelTargetPath,
+    AccessorType,
+    AccessorComponentType,
+} from "babylonjs-gltf2interface";
+import { type Node } from "core/node";
+import { type Nullable } from "core/types";
 import { Vector3, Quaternion } from "core/Maths/math.vector";
 import { Tools } from "core/Misc/tools";
 import { Animation } from "core/Animations/animation";
 import { TransformNode } from "core/Meshes/transformNode";
-import type { Scene } from "core/scene";
+import { type Scene } from "core/scene";
 import { MorphTarget } from "core/Morph/morphTarget";
 import { Mesh } from "core/Meshes/mesh";
 
-import type { _BinaryWriter } from "./glTFExporter";
-import { _GLTFUtilities } from "./glTFUtilities";
-import type { IAnimationKey } from "core/Animations/animationKey";
-import { AnimationKeyInterpolation } from "core/Animations/animationKey";
+import { type IAnimationKey, AnimationKeyInterpolation } from "core/Animations/animationKey";
 
 import { Camera } from "core/Cameras/camera";
 import { Light } from "core/Lights/light";
+import { type BufferManager } from "./bufferManager";
+import { GetAccessorElementCount, ConvertToRightHandedPosition, Rotate180Y, ConvertToRightHandedRotation } from "./glTFUtilities";
 
 /**
  * @internal
@@ -224,7 +233,7 @@ export class _GLTFAnimation {
      * @param idleGLTFAnimations
      * @param nodeMap
      * @param nodes
-     * @param binaryWriter
+     * @param bufferManager
      * @param bufferViews
      * @param accessors
      * @param animationSampleRate
@@ -233,12 +242,13 @@ export class _GLTFAnimation {
         babylonNode: Node,
         runtimeGLTFAnimation: IAnimation,
         idleGLTFAnimations: IAnimation[],
-        nodeMap: { [key: number]: number },
+        nodeMap: Map<Node, number>,
         nodes: INode[],
-        binaryWriter: _BinaryWriter,
+        bufferManager: BufferManager,
         bufferViews: IBufferView[],
         accessors: IAccessor[],
         animationSampleRate: number,
+        useRightHanded: boolean,
         shouldExportAnimation?: (animation: Animation) => boolean
     ) {
         let glTFAnimation: IAnimation;
@@ -263,11 +273,12 @@ export class _GLTFAnimation {
                             animationInfo.dataAccessorType,
                             animationInfo.animationChannelTargetPath,
                             nodeMap,
-                            binaryWriter,
+                            bufferManager,
                             bufferViews,
                             accessors,
                             animationInfo.useQuaternion,
-                            animationSampleRate
+                            animationSampleRate,
+                            useRightHanded
                         );
                         if (glTFAnimation.samplers.length && glTFAnimation.channels.length) {
                             idleGLTFAnimations.push(glTFAnimation);
@@ -286,7 +297,7 @@ export class _GLTFAnimation {
      * @param idleGLTFAnimations
      * @param nodeMap
      * @param nodes
-     * @param binaryWriter
+     * @param bufferManager
      * @param bufferViews
      * @param accessors
      * @param animationSampleRate
@@ -295,12 +306,13 @@ export class _GLTFAnimation {
         babylonNode: Node,
         runtimeGLTFAnimation: IAnimation,
         idleGLTFAnimations: IAnimation[],
-        nodeMap: { [key: number]: number },
+        nodeMap: Map<Node, number>,
         nodes: INode[],
-        binaryWriter: _BinaryWriter,
+        bufferManager: BufferManager,
         bufferViews: IBufferView[],
         accessors: IAccessor[],
         animationSampleRate: number,
+        useRightHanded: boolean,
         shouldExportAnimation?: (animation: Animation) => boolean
     ) {
         let glTFAnimation: IAnimation;
@@ -334,7 +346,7 @@ export class _GLTFAnimation {
                                 }
                             }
                         }
-                        combinedAnimation.setKeys(combinedAnimationKeys);
+                        combinedAnimation.setKeys(combinedAnimationKeys, true);
                         const animationInfo = _GLTFAnimation._DeduceAnimationInfo(combinedAnimation);
                         if (animationInfo) {
                             glTFAnimation = {
@@ -350,11 +362,12 @@ export class _GLTFAnimation {
                                 animationInfo.dataAccessorType,
                                 animationInfo.animationChannelTargetPath,
                                 nodeMap,
-                                binaryWriter,
+                                bufferManager,
                                 bufferViews,
                                 accessors,
                                 animationInfo.useQuaternion,
                                 animationSampleRate,
+                                useRightHanded,
                                 morphTargetManager.numTargets
                             );
                             if (glTFAnimation.samplers.length && glTFAnimation.channels.length) {
@@ -374,7 +387,7 @@ export class _GLTFAnimation {
      * @param glTFAnimations
      * @param nodeMap
      * @param nodes
-     * @param binaryWriter
+     * @param bufferManager
      * @param bufferViews
      * @param accessors
      * @param animationSampleRate
@@ -382,11 +395,12 @@ export class _GLTFAnimation {
     public static _CreateNodeAndMorphAnimationFromAnimationGroups(
         babylonScene: Scene,
         glTFAnimations: IAnimation[],
-        nodeMap: { [key: number]: number },
-        binaryWriter: _BinaryWriter,
+        nodeMap: Map<Node, number>,
+        bufferManager: BufferManager,
         bufferViews: IBufferView[],
         accessors: IAccessor[],
         animationSampleRate: number,
+        leftHandedNodes: Set<Node>,
         shouldExportAnimation?: (animation: Animation) => boolean
     ) {
         let glTFAnimation: IAnimation;
@@ -409,6 +423,9 @@ export class _GLTFAnimation {
                     if (shouldExportAnimation && !shouldExportAnimation(animation)) {
                         continue;
                     }
+
+                    const convertToRightHanded = leftHandedNodes.has(target);
+
                     if (this._IsTransformable(target) || (target.length === 1 && this._IsTransformable(target[0]))) {
                         const animationInfo = _GLTFAnimation._DeduceAnimationInfo(targetAnimation.animation);
                         if (animationInfo) {
@@ -422,18 +439,19 @@ export class _GLTFAnimation {
                                     animationInfo.dataAccessorType,
                                     animationInfo.animationChannelTargetPath,
                                     nodeMap,
-                                    binaryWriter,
+                                    bufferManager,
                                     bufferViews,
                                     accessors,
                                     animationInfo.useQuaternion,
-                                    animationSampleRate
+                                    animationSampleRate,
+                                    convertToRightHanded
                                 );
                             }
                         }
                     } else if (target instanceof MorphTarget || (target.length === 1 && target[0] instanceof MorphTarget)) {
                         const animationInfo = _GLTFAnimation._DeduceAnimationInfo(targetAnimation.animation);
                         if (animationInfo) {
-                            const babylonMorphTarget = target instanceof MorphTarget ? (target as MorphTarget) : (target[0] as MorphTarget);
+                            const babylonMorphTarget = target instanceof MorphTarget ? target : (target[0] as MorphTarget);
                             if (babylonMorphTarget) {
                                 const babylonMorphTargetManager = babylonScene.morphTargetManagers.find((morphTargetManager) => {
                                     for (let j = 0; j < morphTargetManager.numTargets; ++j) {
@@ -507,7 +525,7 @@ export class _GLTFAnimation {
                             }
                         }
                     }
-                    combinedAnimationGroup!.setKeys(animationKeys);
+                    combinedAnimationGroup!.setKeys(animationKeys, true);
                     const animationInfo = _GLTFAnimation._DeduceAnimationInfo(combinedAnimationGroup!);
                     if (animationInfo) {
                         _GLTFAnimation._AddAnimation(
@@ -518,11 +536,12 @@ export class _GLTFAnimation {
                             animationInfo.dataAccessorType,
                             animationInfo.animationChannelTargetPath,
                             nodeMap,
-                            binaryWriter,
+                            bufferManager,
                             bufferViews,
                             accessors,
                             animationInfo.useQuaternion,
                             animationSampleRate,
+                            false,
                             morphTargetManager?.numTargets
                         );
                     }
@@ -541,12 +560,13 @@ export class _GLTFAnimation {
         animation: Animation,
         dataAccessorType: AccessorType,
         animationChannelTargetPath: AnimationChannelTargetPath,
-        nodeMap: { [key: number]: number },
-        binaryWriter: _BinaryWriter,
+        nodeMap: Map<Node, number>,
+        bufferManager: BufferManager,
         bufferViews: IBufferView[],
         accessors: IAccessor[],
         useQuaternion: boolean,
         animationSampleRate: number,
+        convertToRightHanded: boolean,
         morphAnimationChannels?: number
     ) {
         const animationData = _GLTFAnimation._CreateNodeAnimation(babylonTransformNode, animation, animationChannelTargetPath, useQuaternion, animationSampleRate);
@@ -554,7 +574,6 @@ export class _GLTFAnimation {
         let accessor: IAccessor;
         let keyframeAccessorIndex: number;
         let dataAccessorIndex: number;
-        let outputLength: number;
         let animationSampler: IAnimationSampler;
         let animationChannel: IAnimationChannel;
 
@@ -566,7 +585,7 @@ export class _GLTFAnimation {
              */
             if (morphAnimationChannels) {
                 let index = 0;
-                let currentInput: number = 0;
+                let currentInput: number;
                 const newInputs: number[] = [];
                 while (animationData.inputs.length > 0) {
                     currentInput = animationData.inputs.shift()!;
@@ -578,44 +597,61 @@ export class _GLTFAnimation {
                 animationData.inputs = newInputs;
             }
 
-            const nodeIndex = nodeMap[babylonTransformNode.uniqueId];
+            const nodeIndex = nodeMap.get(babylonTransformNode);
 
-            // Creates buffer view and accessor for key frames.
-            let byteLength = animationData.inputs.length * 4;
-            bufferView = _GLTFUtilities._CreateBufferView(0, binaryWriter.getByteOffset(), byteLength, undefined, `${name}  keyframe data view`);
-            bufferViews.push(bufferView);
-            animationData.inputs.forEach(function (input) {
-                binaryWriter.setFloat32(input);
+            // Create buffer view and accessor for key frames.
+            const inputData = new Float32Array(animationData.inputs);
+            bufferView = bufferManager.createBufferView(inputData);
+            accessor = bufferManager.createAccessor(bufferView, AccessorType.SCALAR, AccessorComponentType.FLOAT, animationData.inputs.length, undefined, {
+                min: [animationData.inputsMin],
+                max: [animationData.inputsMax],
             });
-
-            accessor = _GLTFUtilities._CreateAccessor(
-                bufferViews.length - 1,
-                `${name}  keyframes`,
-                AccessorType.SCALAR,
-                AccessorComponentType.FLOAT,
-                animationData.inputs.length,
-                null,
-                [animationData.inputsMin],
-                [animationData.inputsMax]
-            );
             accessors.push(accessor);
             keyframeAccessorIndex = accessors.length - 1;
 
-            // create bufferview and accessor for keyed values.
-            outputLength = animationData.outputs.length;
-            byteLength = _GLTFUtilities._GetDataAccessorElementCount(dataAccessorType) * 4 * animationData.outputs.length;
+            // Perform conversions on keyed values while also building their buffer.
+            const rotationQuaternion = new Quaternion();
+            const eulerVec3 = new Vector3();
+            const position = new Vector3();
+            const isCamera = babylonTransformNode instanceof Camera;
 
-            // check for in and out tangents
-            bufferView = _GLTFUtilities._CreateBufferView(0, binaryWriter.getByteOffset(), byteLength, undefined, `${name}  data view`);
-            bufferViews.push(bufferView);
+            const elementCount = GetAccessorElementCount(dataAccessorType);
+            const outputData = new Float32Array(animationData.outputs.length * elementCount);
+            animationData.outputs.forEach(function (output: number[], index: number) {
+                let outputToWrite: number[] = output;
+                switch (animationChannelTargetPath) {
+                    case AnimationChannelTargetPath.TRANSLATION:
+                        if (convertToRightHanded) {
+                            Vector3.FromArrayToRef(output, 0, position);
+                            ConvertToRightHandedPosition(position);
+                            position.toArray(outputToWrite);
+                        }
+                        break;
+                    case AnimationChannelTargetPath.ROTATION:
+                        if (output.length === 4) {
+                            Quaternion.FromArrayToRef(output, 0, rotationQuaternion);
+                        } else {
+                            outputToWrite = new Array(4); // Will need 4, not 3, for a quaternion
+                            Vector3.FromArrayToRef(output, 0, eulerVec3);
+                            Quaternion.FromEulerVectorToRef(eulerVec3, rotationQuaternion);
+                        }
 
-            animationData.outputs.forEach(function (output) {
-                output.forEach(function (entry) {
-                    binaryWriter.setFloat32(entry);
-                });
+                        if (convertToRightHanded) {
+                            ConvertToRightHandedRotation(rotationQuaternion);
+                            if (isCamera) {
+                                Rotate180Y(rotationQuaternion);
+                            }
+                        }
+
+                        rotationQuaternion.toArray(outputToWrite);
+                        break;
+                }
+                outputData.set(outputToWrite, index * elementCount);
             });
 
-            accessor = _GLTFUtilities._CreateAccessor(bufferViews.length - 1, `${name}  data`, dataAccessorType, AccessorComponentType.FLOAT, outputLength, null, null, null);
+            // Create buffer view and accessor for keyed values.
+            bufferView = bufferManager.createBufferView(outputData);
+            accessor = bufferManager.createAccessor(bufferView, dataAccessorType, AccessorComponentType.FLOAT, animationData.outputs.length);
             accessors.push(accessor);
             dataAccessorIndex = accessors.length - 1;
 
@@ -673,16 +709,15 @@ export class _GLTFAnimation {
         let previousTime: Nullable<number> = null;
         let time: number;
         let maxUsedFrame: Nullable<number> = null;
-        let currKeyFrame: Nullable<IAnimationKey> = null;
-        let nextKeyFrame: Nullable<IAnimationKey> = null;
-        let prevKeyFrame: Nullable<IAnimationKey> = null;
-        let endFrame: Nullable<number> = null;
+        let currKeyFrame: Nullable<IAnimationKey>;
+        let nextKeyFrame: Nullable<IAnimationKey>;
+        let prevKeyFrame: Nullable<IAnimationKey>;
+        let endFrame: Nullable<number>;
         minMaxFrames.min = Tools.FloatRound(minFrame / fps);
 
         const keyFrames = animation.getKeys();
 
         for (let i = 0, length = keyFrames.length; i < length; ++i) {
-            endFrame = null;
             currKeyFrame = keyFrames[i];
 
             if (i + 1 < length) {

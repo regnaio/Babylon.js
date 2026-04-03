@@ -2,9 +2,9 @@ import * as React from "react";
 import { Color3, Color4 } from "core/Maths/math.color";
 import { ColorComponentComponentEntry } from "./ColorComponentEntry";
 import { HexColorComponent } from "./HexColor";
-import type { LockObject } from "../../tabs/propertyGrids/lockObject";
+import { type LockObject } from "../../tabs/propertyGrids/lockObject";
 
-import style from "./ColorPicker.modules.scss";
+import * as style from "./ColorPicker.module.scss";
 import { ClassNames } from "../classNames";
 import { Logger } from "core/Misc/logger";
 

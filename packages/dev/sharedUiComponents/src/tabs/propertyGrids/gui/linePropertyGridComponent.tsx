@@ -1,9 +1,9 @@
 import * as React from "react";
-import type { Observable } from "core/Misc/observable";
-import type { PropertyChangedEvent } from "../../../propertyChangedEvent";
+import { type Observable } from "core/Misc/observable";
+import { type PropertyChangedEvent } from "../../../propertyChangedEvent";
 import { CommonControlPropertyGridComponent } from "../../../tabs/propertyGrids/gui/commonControlPropertyGridComponent";
-import type { LockObject } from "../../../tabs/propertyGrids/lockObject";
-import type { Line } from "gui/2D/controls/line";
+import { type LockObject } from "../../../tabs/propertyGrids/lockObject";
+import { type Line } from "gui/2D/controls/line";
 import { LineContainerComponent } from "../../../lines/lineContainerComponent";
 import { FloatLineComponent } from "../../../lines/floatLineComponent";
 import { TextInputLineComponent } from "../../../lines/textInputLineComponent";
@@ -24,15 +24,15 @@ export class LinePropertyGridComponent extends React.Component<ILinePropertyGrid
         const split = value.split(",");
         line.dash = [];
 
-        split.forEach((v) => {
+        for (const v of split) {
             const int = parseInt(v);
 
             if (isNaN(int)) {
-                return;
+                continue;
             }
 
             line.dash.push(int);
-        });
+        }
     }
 
     override render() {

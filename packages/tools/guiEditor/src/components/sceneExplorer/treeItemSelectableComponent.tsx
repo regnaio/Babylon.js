@@ -1,13 +1,11 @@
-import type { Nullable } from "core/types";
-import type { IExplorerExtensibilityGroup } from "core/Debug/debugLayer";
+import { type Nullable } from "core/types";
+import { type IExplorerExtensibilityGroup } from "core/Debug/debugLayer";
 
 import { Tools } from "../../tools";
-import * as ReactDOM from "react-dom";
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
-import { DragOverLocation } from "../../globalState";
+import { type GlobalState, DragOverLocation } from "../../globalState";
 import { ControlTreeItemComponent } from "./entities/gui/controlTreeItemComponent";
-import type { Observer } from "core/Misc/observable";
+import { type Observer } from "core/Misc/observable";
 import { Container } from "gui/2D/controls/container";
 
 import expandedIcon from "../../imgs/expandedIcon.svg";
@@ -38,6 +36,7 @@ export class TreeItemSelectableComponent extends React.Component<ITreeItemSelect
     private _onSelectionChangedObservable: Nullable<Observer<any>>;
     private _onDraggingEndObservable: Nullable<Observer<any>>;
     private _onDraggingStartObservable: Nullable<Observer<any>>;
+    private _thisRef: React.RefObject<HTMLDivElement> = React.createRef<HTMLDivElement>();
     /** flag flipped onDragEnter if dragOver is already true
      * prevents dragLeave from immediately setting dragOver to false
      * required to make dragging work as expected
@@ -89,7 +88,7 @@ export class TreeItemSelectableComponent extends React.Component<ITreeItemSelect
     }
 
     scrollIntoView() {
-        const element = ReactDOM.findDOMNode(this) as Element;
+        const element = this._thisRef.current;
 
         if (element) {
             element.scrollIntoView(false);
@@ -201,7 +200,7 @@ export class TreeItemSelectableComponent extends React.Component<ITreeItemSelect
         const styleName = className === "itemContainer seAbove" || className === "itemContainer seBelow" ? lineMarginStyle : marginStyle;
 
         return (
-            <div>
+            <div ref={this._thisRef}>
                 <div
                     className={className}
                     style={styleName}

@@ -1,8 +1,8 @@
 import * as React from "react";
-import type { Observable, Observer } from "core/Misc/observable";
-import type { PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
+import { type Observable, type Observer } from "core/Misc/observable";
+import { type PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
 import { CommonControlPropertyGridComponent } from "../gui/commonControlPropertyGridComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { Image } from "gui/2D/controls/image";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
@@ -14,13 +14,13 @@ import { makeTargetsProxy } from "shared-ui-components/lines/targetsProxy";
 import stretchFillIcon from "shared-ui-components/imgs/stretchFillIcon.svg";
 import imageLinkIcon from "shared-ui-components/imgs/imageLinkIcon.svg";
 import cropIcon from "shared-ui-components/imgs/cropIcon.svg";
-import cellIDIcon from "shared-ui-components/imgs/cellIDIcon.svg";
+import cellIdIcon from "shared-ui-components/imgs/cellIDIcon.svg";
 import autoResizeIcon from "shared-ui-components/imgs/autoResizeIcon.svg";
 import sizeIcon from "shared-ui-components/imgs/sizeIcon.svg";
 import animationSheetIcon from "shared-ui-components/imgs/animationSheetIcon.svg";
 import { IconComponent } from "shared-ui-components/lines/iconComponent";
 import { UnitButton } from "shared-ui-components/lines/unitButton";
-import type { GlobalState } from "../../../../globalState";
+import { type GlobalState } from "../../../../globalState";
 
 interface IImagePropertyGridComponentProps {
     images: Image[];
@@ -45,7 +45,10 @@ export class ImagePropertyGridComponent extends React.Component<IImagePropertyGr
     updateObservers(oldImages: Image[], newImages: Image[]) {
         for (const image of newImages) {
             if (!oldImages.includes(image)) {
-                this._observers.set(image, image.onImageLoadedObservable.add(() => this.forceUpdate())!);
+                this._observers.set(
+                    image,
+                    image.onImageLoadedObservable.add(() => this.forceUpdate())
+                );
             }
         }
         for (const image of oldImages) {
@@ -75,11 +78,15 @@ export class ImagePropertyGridComponent extends React.Component<IImagePropertyGr
     getMaxCells() {
         let maxCells = Number.MAX_SAFE_INTEGER;
         for (const image of this.props.images) {
-            if (image.cellWidth === 0 || image.cellHeight === 0) continue;
+            if (image.cellWidth === 0 || image.cellHeight === 0) {
+                continue;
+            }
             const cols = Math.ceil(image.imageWidth / image.cellWidth);
             const rows = Math.ceil(image.imageHeight / image.cellHeight);
             const max = cols * rows - 1;
-            if (max < maxCells) maxCells = max;
+            if (max < maxCells) {
+                maxCells = max;
+            }
         }
         return maxCells;
     }
@@ -264,7 +271,7 @@ export class ImagePropertyGridComponent extends React.Component<IImagePropertyGr
                         <div className="ge-divider double">
                             <FloatLineComponent
                                 iconLabel={"Cell Id"}
-                                icon={cellIDIcon}
+                                icon={cellIdIcon}
                                 lockObject={this.props.lockObject}
                                 label=""
                                 isInteger={true}

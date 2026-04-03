@@ -1,11 +1,12 @@
 import { NodeMaterialBlock } from "../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../nodeMaterialBuildState";
-import type { NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialBuildState } from "../nodeMaterialBuildState";
+import { type NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
 import { NodeMaterialBlockTargets } from "../Enums/nodeMaterialBlockTargets";
 import { RegisterClass } from "../../../Misc/typeStore";
-import type { Scene } from "../../../scene";
+import { type Scene } from "../../../scene";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
+import { editableInPropertyPage, PropertyTypeForEdition } from "core/Decorators/nodeDecorator";
 
 /**
  * Types of curves supported by the Curve block
@@ -74,6 +75,39 @@ export class CurveBlock extends NodeMaterialBlock {
     /**
      * Gets or sets the type of the curve applied by the block
      */
+    @editableInPropertyPage("Type", PropertyTypeForEdition.List, "ADVANCED", {
+        notifiers: { rebuild: true },
+        embedded: true,
+        options: [
+            { label: "EaseInSine", value: CurveBlockTypes.EaseInSine },
+            { label: "EaseOutSine", value: CurveBlockTypes.EaseOutSine },
+            { label: "EaseInOutSine", value: CurveBlockTypes.EaseInOutSine },
+            { label: "EaseInQuad", value: CurveBlockTypes.EaseInQuad },
+            { label: "EaseOutQuad", value: CurveBlockTypes.EaseOutQuad },
+            { label: "EaseInOutQuad", value: CurveBlockTypes.EaseInOutQuad },
+            { label: "EaseInCubic", value: CurveBlockTypes.EaseInCubic },
+            { label: "EaseOutCubic", value: CurveBlockTypes.EaseOutCubic },
+            { label: "EaseInOutCubic", value: CurveBlockTypes.EaseInOutCubic },
+            { label: "EaseInQuart", value: CurveBlockTypes.EaseInQuart },
+            { label: "EaseOutQuart", value: CurveBlockTypes.EaseOutQuart },
+            { label: "EaseInOutQuart", value: CurveBlockTypes.EaseInOutQuart },
+            { label: "EaseInQuint", value: CurveBlockTypes.EaseInQuint },
+            { label: "EaseOutQuint", value: CurveBlockTypes.EaseOutQuint },
+            { label: "EaseInOutQuint", value: CurveBlockTypes.EaseInOutQuint },
+            { label: "EaseInExpo", value: CurveBlockTypes.EaseInExpo },
+            { label: "EaseOutExpo", value: CurveBlockTypes.EaseOutExpo },
+            { label: "EaseInOutExpo", value: CurveBlockTypes.EaseInOutExpo },
+            { label: "EaseInCirc", value: CurveBlockTypes.EaseInCirc },
+            { label: "EaseOutCirc", value: CurveBlockTypes.EaseOutCirc },
+            { label: "EaseInOutCirc", value: CurveBlockTypes.EaseInOutCirc },
+            { label: "EaseInBack", value: CurveBlockTypes.EaseInBack },
+            { label: "EaseOutBack", value: CurveBlockTypes.EaseOutBack },
+            { label: "EaseInOutBack", value: CurveBlockTypes.EaseInOutBack },
+            { label: "EaseInElastic", value: CurveBlockTypes.EaseInElastic },
+            { label: "EaseOutElastic", value: CurveBlockTypes.EaseOutElastic },
+            { label: "EaseInOutElastic", value: CurveBlockTypes.EaseInOutElastic },
+        ],
+    })
     public type = CurveBlockTypes.EaseInOutSine;
 
     /**
@@ -149,13 +183,12 @@ export class CurveBlock extends NodeMaterialBlock {
         super._buildBlock(state);
 
         const output = this._outputs[0];
-        let registeredFunction = "";
-        let registeredFunctionName = "";
+        let registeredFunction: string;
 
         const inputType = state._getShaderType(this.input.type);
         const isWGSL = state.shaderLanguage === ShaderLanguage.WGSL;
 
-        registeredFunctionName = CurveBlockTypes[this.type] + "_" + inputType.replace("<", "").replace(">", "");
+        const registeredFunctionName = CurveBlockTypes[this.type] + "_" + inputType.replace("<", "").replace(">", "");
 
         switch (this.type) {
             case CurveBlockTypes.EaseInSine:
@@ -323,6 +356,10 @@ export class CurveBlock extends NodeMaterialBlock {
         return this;
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -331,6 +368,12 @@ export class CurveBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - the serialization object
+     * @param scene - the scene
+     * @param rootUrl - the root URL
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         super._deserialize(serializationObject, scene, rootUrl);
 

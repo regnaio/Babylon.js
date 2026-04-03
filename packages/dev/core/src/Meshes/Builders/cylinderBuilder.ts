@@ -3,7 +3,7 @@ import { Color4 } from "../../Maths/math.color";
 import { Mesh } from "../mesh";
 import { VertexData } from "../mesh.vertexData";
 import { Scene } from "../../scene";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { Axis } from "../../Maths/math.axis";
 import { useOpenGLOrientationForUV } from "../../Compat/compatibilityOptions";
 
@@ -15,7 +15,7 @@ import { useOpenGLOrientationForUV } from "../../Compat/compatibilityOptions";
  * * diameterBottom sets the diameter of the bottom of the cone, overwrites diameter,  optional, default diameter
  * * diameter sets the diameter of the top and bottom of the cone, optional default 1
  * * tessellation the number of prism sides, 3 for a triangular prism, optional, default 24
- * * subdivisions` the number of rings along the cylinder height, optional, default 1
+ * * `subdivisions` the number of rings along the cylinder height, optional, default 1
  * * arc a number from 0 to 1, to create an unclosed cylinder based on the fraction of the circumference given by the arc value, optional, default 1
  * * faceColors an array of Color3 elements used to set different colors to the top, rings and bottom respectively
  * * faceUV an array of Vector4 elements used to set different images to the top, rings and bottom respectively
@@ -26,7 +26,6 @@ import { useOpenGLOrientationForUV } from "../../Compat/compatibilityOptions";
  * * backUVs only usable when you create a double-sided mesh, used to choose what parts of the texture image to crop and apply on the back side, optional, default vector4 (0, 0, 1, 1)
  * @returns the VertexData of the cylinder, cone or prism
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export function CreateCylinderVertexData(options: {
     height?: number;
     diameterTop?: number;
@@ -91,16 +90,16 @@ export function CreateCylinderVertexData(options: {
     const ringFirstVertex: Vector3 = Vector3.Zero();
     const ringFirstNormal: Vector3 = Vector3.Zero();
     const quadNormal: Vector3 = Vector3.Zero();
-    const Y: Vector3 = Axis.Y;
+    const y: Vector3 = Axis.Y;
 
     // positions, normals, uvs
     let i: number;
     let j: number;
     let r: number;
-    let ringIdx: number = 1;
+    let ringIdx: number;
     let s: number = 1; // surface index
     let cs: number = 0;
-    let v: number = 0;
+    let v: number;
 
     for (i = 0; i <= subdivisions; i++) {
         h = i / subdivisions;
@@ -159,10 +158,10 @@ export function CreateCylinderVertexData(options: {
                 positions.push(0, ringVertex.y, 0);
                 positions.push(0, ringVertex.y, 0);
                 positions.push(ringFirstVertex.x, ringFirstVertex.y, ringFirstVertex.z);
-                Vector3.CrossToRef(Y, ringNormal, quadNormal);
+                Vector3.CrossToRef(y, ringNormal, quadNormal);
                 quadNormal.normalize();
                 normals.push(quadNormal.x, quadNormal.y, quadNormal.z, quadNormal.x, quadNormal.y, quadNormal.z);
-                Vector3.CrossToRef(ringFirstNormal, Y, quadNormal);
+                Vector3.CrossToRef(ringFirstNormal, y, quadNormal);
                 quadNormal.normalize();
                 normals.push(quadNormal.x, quadNormal.y, quadNormal.z, quadNormal.x, quadNormal.y, quadNormal.z);
                 if (hasRings) {

@@ -1,9 +1,7 @@
-import type { FC } from "react";
-import { useCallback } from "react";
-import type { DropTargetMonitor } from "react-dnd";
-import { useDrag, useDrop } from "react-dnd";
+import { type FC, type PropsWithChildren, useCallback } from "react";
+import { type ConnectableElement, type DropTargetMonitor, useDrag, useDrop } from "react-dnd";
 import { ClassNames } from "../classNames";
-import style from "./GraphConnectorHandle.modules.scss";
+import * as style from "./GraphConnectorHandle.module.scss";
 import { useGraphContext } from "./useGraphContext";
 
 /**
@@ -49,7 +47,16 @@ export interface IGraphConnectorHandlerProps {
  * drag the handle in a node and drop it in another node to create a connection.
  * @returns connector element
  */
-export const GraphConnectorHandler: FC<IGraphConnectorHandlerProps> = ({ parentId, parentX, parentY, offsetX = 0, offsetY = 0, parentWidth, parentHeight, parentContainerId }) => {
+export const GraphConnectorHandler: FC<PropsWithChildren<IGraphConnectorHandlerProps>> = ({
+    parentId,
+    parentX,
+    parentY,
+    offsetX = 0,
+    offsetY = 0,
+    parentWidth,
+    parentHeight,
+    parentContainerId,
+}) => {
     const { onNodesConnected } = useGraphContext();
     const centerX = offsetX + parentWidth / 2;
     const centerY = offsetY + parentHeight / 2;
@@ -74,7 +81,7 @@ export const GraphConnectorHandler: FC<IGraphConnectorHandlerProps> = ({ parentI
         },
     }));
     const attachRef = useCallback(
-        (ref) => {
+        (ref: ConnectableElement) => {
             dragRef(ref);
             dropRef(ref);
         },

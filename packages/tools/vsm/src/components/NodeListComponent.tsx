@@ -1,9 +1,8 @@
 import { Vector3 } from "core/Maths/math";
-import type { FC } from "react";
-import { useState } from "react";
+import { type FC, useState } from "react";
 import { SetPositionAction } from "../actions/actions/SetPositionAction";
 import { State } from "../stateMachine/State";
-import style from "./NodeListComponent.modules.scss";
+import * as style from "./NodeListComponent.module.scss";
 import { useSceneNode } from "./tools/useSceneNode";
 import { useStateMachine } from "./tools/useStateMachine";
 

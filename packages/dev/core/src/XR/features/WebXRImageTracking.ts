@@ -1,11 +1,11 @@
 import { WebXRFeaturesManager, WebXRFeatureName } from "../webXRFeaturesManager";
-import type { WebXRSessionManager } from "../webXRSessionManager";
+import { type WebXRSessionManager } from "../webXRSessionManager";
 import { Observable } from "../../Misc/observable";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
 import { Matrix } from "../../Maths/math.vector";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { Tools } from "../../Misc/tools";
-import type { Engine } from "../../Engines/engine";
+import { type Engine } from "../../Engines/engine";
 
 /**
  * Options interface for the background remover plugin
@@ -158,9 +158,9 @@ export class WebXRImageTracking extends WebXRAbstractFeature {
      */
     public override dispose(): void {
         super.dispose();
-        this._trackedImages.forEach((trackedImage) => {
+        for (const trackedImage of this._trackedImages) {
             trackedImage.originalBitmap.close();
-        });
+        }
         this._trackedImages.length = 0;
         this.onTrackableImageFoundObservable.clear();
         this.onUntrackableImageFoundObservable.clear();
@@ -175,11 +175,11 @@ export class WebXRImageTracking extends WebXRAbstractFeature {
         if (!this.options.images || !this.options.images.length) {
             return {};
         }
-        const promises = this.options.images.map((image) => {
+        const promises = this.options.images.map(async (image) => {
             if (typeof image.src === "string") {
-                return (this._xrSessionManager.scene.getEngine() as Engine)._createImageBitmapFromSource(image.src);
+                return await (this._xrSessionManager.scene.getEngine() as Engine)._createImageBitmapFromSource(image.src);
             } else {
-                return Promise.resolve(image.src); // resolve is probably unneeded
+                return image.src;
             }
         });
 
@@ -210,6 +210,7 @@ export class WebXRImageTracking extends WebXRAbstractFeature {
         // Image tracking scores may be generated a few frames after the XR Session initializes.
         // If we haven't received scores yet, then kick off the task to check scores and return immediately.
         if (this._trackableScoreStatus === ImageTrackingScoreStatus.NotReceived) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this._checkScoresAsync();
             return;
         }

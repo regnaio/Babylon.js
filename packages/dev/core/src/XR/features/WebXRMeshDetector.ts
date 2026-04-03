@@ -1,7 +1,7 @@
 import { WebXRFeaturesManager, WebXRFeatureName } from "../webXRFeaturesManager";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
-import type { WebXRSessionManager } from "../webXRSessionManager";
-import type { TransformNode } from "../../Meshes/transformNode";
+import { type WebXRSessionManager } from "../webXRSessionManager";
+import { type TransformNode } from "../../Meshes/transformNode";
 import { Matrix, Quaternion } from "../../Maths/math";
 import { Observable } from "../../Misc/observable";
 import { Mesh } from "../../Meshes/mesh";
@@ -89,7 +89,7 @@ export interface IWebXRVertexData {
     mesh?: Mesh;
 }
 
-let meshIdProvider = 0;
+let MeshIdProvider = 0;
 
 /**
  * The mesh detector is used to detect meshes in the real world when in AR
@@ -195,7 +195,7 @@ export class WebXRMeshDetector extends WebXRAbstractFeature {
                 detectedMeshes.forEach((xrMesh) => {
                     if (!this._detectedMeshes.has(xrMesh)) {
                         const partialVertexData: Partial<IWebXRVertexData> = {
-                            id: meshIdProvider++,
+                            id: MeshIdProvider++,
                             xrMesh: xrMesh,
                         };
                         const vertexData = this._updateVertexDataWithXRMesh(xrMesh, partialVertexData, frame);

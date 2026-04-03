@@ -1,19 +1,18 @@
-import type { Observer } from "../Misc/observable";
-import { Observable } from "../Misc/observable";
-import type { Nullable } from "../types";
-import type { Scene } from "../scene";
+import { type Observer, Observable } from "../Misc/observable";
+import { type Nullable } from "../types";
+import { type Scene } from "../scene";
 import { Vector2 } from "../Maths/math.vector";
 import { Color4 } from "../Maths/math.color";
 import { EngineStore } from "../Engines/engineStore";
 import { VertexBuffer } from "../Buffers/buffer";
 import { Material } from "../Materials/material";
 import { Texture } from "../Materials/Textures/texture";
-import type { BaseTexture } from "../Materials/Textures/baseTexture";
+import { type BaseTexture } from "../Materials/Textures/baseTexture";
 import { SceneComponentConstants } from "../sceneComponent";
 import { LayerSceneComponent } from "./layerSceneComponent";
 import { Constants } from "../Engines/constants";
-import type { RenderTargetTexture } from "../Materials/Textures/renderTargetTexture";
-import type { DataBuffer } from "../Buffers/dataBuffer";
+import { type RenderTargetTexture } from "../Materials/Textures/renderTargetTexture";
+import { type DataBuffer } from "../Buffers/dataBuffer";
 import { DrawWrapper } from "../Materials/drawWrapper";
 
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
@@ -93,6 +92,11 @@ export class Layer {
      * renders in the main frame buffer of the canvas.
      */
     public renderOnlyInRenderTargetTextures = false;
+
+    /**
+     * Define if the colors of the layer should be generated in linear space (default: false)
+     */
+    public convertToLinearSpace = false;
 
     /**
      * Define if the layer is enabled (ie. should be displayed). Default: true
@@ -263,8 +267,14 @@ export class Layer {
             defines = "#define ALPHATEST";
         }
 
-        if (this.texture && !this.texture.gammaSpace) {
-            defines += "\n#define LINEAR";
+        if (this.texture) {
+            if (this.texture.gammaSpace) {
+                if (this.convertToLinearSpace) {
+                    defines += "\n#define CONVERT_TO_LINEAR";
+                }
+            } else if (!this.convertToLinearSpace) {
+                defines += "\n#define CONVERT_TO_GAMMA";
+            }
         }
 
         if (this._previousDefines !== defines) {
@@ -295,7 +305,7 @@ export class Layer {
 
         const currentEffect = this._drawWrapper.effect;
 
-        return currentEffect?.isReady() && (!this.texture || this.texture.isReady());
+        return !!currentEffect?.isReady() && (!this.texture || this.texture.isReady());
     }
 
     /**

@@ -1,7 +1,7 @@
-import type { RawTexture } from "../Textures/rawTexture";
-import type { Vector2 } from "../../Maths/math.vector";
-import type { Nullable } from "../../types";
-import type { Color3 } from "../../Maths/math.color";
+import { type RawTexture } from "../Textures/rawTexture";
+import { type Vector2 } from "../../Maths/math.vector";
+import { type Nullable } from "../../types";
+import { type Color3 } from "../../Maths/math.color";
 /**
  * Interface which defines the available methods for a GreasedLineMaterial
  */
@@ -170,7 +170,13 @@ export const enum GreasedLineMeshColorDistributionType {
 /**
  * Options for GreasedLineMaterial
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface GreasedLineMaterialOptions {
+    /**
+     * Force the greased lines to compile to glsl even on WebGPU engines.
+     * False by default. This is mostly meant for backward compatibility.
+     */
+    forceGLSL?: boolean;
     /**
      * Line width. If sizeAttenuation os false scene units will be used for width.
      * Defaults to 0.1 if @see sizeAttenuation is false, or to 1 if it's true.

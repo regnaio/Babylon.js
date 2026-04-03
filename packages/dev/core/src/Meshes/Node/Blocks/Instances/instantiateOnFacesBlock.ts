@@ -1,14 +1,14 @@
 import { NodeGeometryBlock } from "../../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryBuildState } from "../../nodeGeometryBuildState";
-import type { INodeGeometryExecutionContext } from "../../Interfaces/nodeGeometryExecutionContext";
-import type { VertexData } from "../../../mesh.vertexData";
+import { type NodeGeometryBuildState } from "../../nodeGeometryBuildState";
+import { type INodeGeometryExecutionContext } from "../../Interfaces/nodeGeometryExecutionContext";
+import { type VertexData } from "../../../mesh.vertexData";
 import { Vector2, Vector3 } from "../../../../Maths/math.vector";
 import { PropertyTypeForEdition, editableInPropertyPage } from "../../../../Decorators/nodeDecorator";
-import type { Nullable } from "../../../../types";
-import type { INodeGeometryInstancingContext } from "../../Interfaces/nodeGeometryInstancingContext";
+import { type Nullable } from "../../../../types";
+import { type INodeGeometryInstancingContext } from "../../Interfaces/nodeGeometryInstancingContext";
 
 /**
  * Block used to instance geometry on every face of a geometry
@@ -46,6 +46,7 @@ export class InstantiateOnFacesBlock extends NodeGeometryBlock implements INodeG
         this.registerInput("instance", NodeGeometryBlockConnectionPointTypes.Geometry, true);
         this.registerInput("count", NodeGeometryBlockConnectionPointTypes.Int, true, 256);
         this.registerInput("matrix", NodeGeometryBlockConnectionPointTypes.Matrix, true);
+        this.registerInput("offset", NodeGeometryBlockConnectionPointTypes.Vector3, true, Vector3.Zero());
         this.registerInput("rotation", NodeGeometryBlockConnectionPointTypes.Vector3, true, Vector3.Zero());
         this.registerInput("scaling", NodeGeometryBlockConnectionPointTypes.Vector3, true, Vector3.One());
 
@@ -150,17 +151,24 @@ export class InstantiateOnFacesBlock extends NodeGeometryBlock implements INodeG
     }
 
     /**
+     * Gets the offset input component
+     */
+    public get offset(): NodeGeometryConnectionPoint {
+        return this._inputs[4];
+    }
+
+    /**
      * Gets the rotation input component
      */
     public get rotation(): NodeGeometryConnectionPoint {
-        return this._inputs[4];
+        return this._inputs[5];
     }
 
     /**
      * Gets the scaling input component
      */
     public get scaling(): NodeGeometryConnectionPoint {
-        return this._inputs[5];
+        return this._inputs[6];
     }
 
     /**
@@ -187,7 +195,7 @@ export class InstantiateOnFacesBlock extends NodeGeometryBlock implements INodeG
             }
 
             // Processing
-            let instanceGeometry: Nullable<VertexData> = null;
+            let instanceGeometry: Nullable<VertexData>;
             const instanceCount = this.count.getConnectedValue(state);
             const faceCount = this._vertexData.indices.length / 3;
             const instancePerFace = instanceCount / faceCount;
@@ -254,14 +262,17 @@ export class InstantiateOnFacesBlock extends NodeGeometryBlock implements INodeG
                         accumulatedCount -= instancePerFace;
                         continue;
                     }
-                    const clone = instanceGeometry!.clone();
+                    const clone = instanceGeometry.clone();
 
                     if (this.matrix.isConnected) {
                         const transform = this.matrix.getConnectedValue(state);
                         state._instantiateWithPositionAndMatrix(clone, this._currentPosition, transform, additionalVertexData);
                     } else {
+                        const offset = state.adaptInput(this.offset, NodeGeometryBlockConnectionPointTypes.Vector3, Vector3.ZeroReadOnly);
                         const scaling = state.adaptInput(this.scaling, NodeGeometryBlockConnectionPointTypes.Vector3, Vector3.OneReadOnly);
                         const rotation = this.rotation.getConnectedValue(state) || Vector3.ZeroReadOnly;
+
+                        this._currentPosition.addInPlace(offset);
                         state._instantiate(clone, this._currentPosition, rotation, scaling, additionalVertexData);
                     }
                     totalDone++;
@@ -311,6 +322,7 @@ export class InstantiateOnFacesBlock extends NodeGeometryBlock implements INodeG
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

@@ -1,10 +1,10 @@
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
+import { type GlobalState } from "../../globalState";
 import { Color3, Color4 } from "core/Maths/math.color";
 import { PreviewType } from "./previewType";
 import { DataStorage } from "core/Misc/dataStorage";
-import type { Observer } from "core/Misc/observable";
-import type { Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type Nullable } from "core/types";
 import { NodeMaterialModes } from "core/Materials/Node/Enums/nodeMaterialModes";
 
 import popUpIcon from "./svgs/popOut.svg";
@@ -17,6 +17,7 @@ import { OptionsLine } from "shared-ui-components/lines/optionsLineComponent";
 interface IPreviewMeshControlComponent {
     globalState: GlobalState;
     togglePreviewAreaComponent: () => void;
+    onMounted?: () => void;
 }
 
 export class PreviewMeshControlComponent extends React.Component<IPreviewMeshControlComponent> {
@@ -52,13 +53,17 @@ export class PreviewMeshControlComponent extends React.Component<IPreviewMeshCon
         this.props.globalState.onRefreshPreviewMeshControlComponentRequiredObservable.remove(this._onRefreshPreviewMeshControlComponentRequiredObserver);
     }
 
+    override componentDidMount(): void {
+        this.props.onMounted?.();
+    }
+
     changeMeshType(newOne: PreviewType) {
         if (this.props.globalState.previewType === newOne) {
             return;
         }
 
         this.props.globalState.previewType = newOne;
-        this.props.globalState.onPreviewCommandActivated.notifyObservers(false);
+        this.props.globalState.stateManager.onPreviewCommandActivated.notifyObservers(false);
 
         DataStorage.WriteNumber("PreviewType", newOne);
 
@@ -73,7 +78,7 @@ export class PreviewMeshControlComponent extends React.Component<IPreviewMeshCon
             this.props.globalState.previewFile = file;
             this.props.globalState.previewType = PreviewType.Custom;
             this.props.globalState.listOfCustomPreviewFiles = [...files];
-            this.props.globalState.onPreviewCommandActivated.notifyObservers(false);
+            this.props.globalState.stateManager.onPreviewCommandActivated.notifyObservers(false);
             this.forceUpdate();
         }
         if (this._filePickerRef.current) {
@@ -86,7 +91,7 @@ export class PreviewMeshControlComponent extends React.Component<IPreviewMeshCon
             const file = files[0];
             this.props.globalState.envFile = file;
             this.props.globalState.envType = PreviewType.Custom;
-            this.props.globalState.onPreviewCommandActivated.notifyObservers(false);
+            this.props.globalState.stateManager.onPreviewCommandActivated.notifyObservers(false);
             this.forceUpdate();
         }
         if (this._envPickerRef.current) {
@@ -140,6 +145,13 @@ export class PreviewMeshControlComponent extends React.Component<IPreviewMeshCon
             { label: "Load...", value: PreviewType.Custom + 1 },
         ];
 
+        const gaussianSplattingTypeOptions = [
+            { label: "Default", value: PreviewType.Parrot },
+            { label: "Bricks Skull", value: PreviewType.BricksSkull },
+            { label: "Plants", value: PreviewType.Plants },
+            { label: "Load...", value: PreviewType.Custom + 1 },
+        ];
+
         if (this.props.globalState.listOfCustomPreviewFiles.length > 0) {
             meshTypeOptions.splice(0, 0, {
                 label: "Custom",
@@ -150,14 +162,26 @@ export class PreviewMeshControlComponent extends React.Component<IPreviewMeshCon
                 label: "Custom",
                 value: PreviewType.Custom,
             });
+
+            gaussianSplattingTypeOptions.splice(0, 0, {
+                label: "Custom",
+                value: PreviewType.Custom,
+            });
         }
 
-        const options = this.props.globalState.mode === NodeMaterialModes.Particle ? particleTypeOptions : meshTypeOptions;
+        const options =
+            this.props.globalState.mode === NodeMaterialModes.Particle
+                ? particleTypeOptions
+                : this.props.globalState.mode === NodeMaterialModes.GaussianSplatting
+                  ? gaussianSplattingTypeOptions
+                  : meshTypeOptions;
         const accept = this.props.globalState.mode === NodeMaterialModes.Particle ? ".json" : ".*";
 
         return (
             <div id="preview-mesh-bar">
-                {(this.props.globalState.mode === NodeMaterialModes.Material || this.props.globalState.mode === NodeMaterialModes.Particle) && (
+                {(this.props.globalState.mode === NodeMaterialModes.Material ||
+                    this.props.globalState.mode === NodeMaterialModes.Particle ||
+                    this.props.globalState.mode === NodeMaterialModes.GaussianSplatting) && (
                     <>
                         <OptionsLine
                             label=""

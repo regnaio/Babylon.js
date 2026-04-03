@@ -1,14 +1,14 @@
 import * as React from "react";
 
-import type { Observable } from "core/Misc/observable";
+import { type Observable } from "core/Misc/observable";
 
-import type { PropertyChangedEvent } from "../../../../propertyChangedEvent";
+import { type PropertyChangedEvent } from "../../../../propertyChangedEvent";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { GlobalState } from "../../../../globalState";
-import type { Skeleton } from "core/Bones/skeleton";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type GlobalState } from "../../../../globalState";
+import { type Skeleton } from "core/Bones/skeleton";
 import { AnimationGridComponent } from "../animations/animationPropertyGridComponent";
 import { SkeletonViewer } from "core/Debug/skeletonViewer";
 import { CustomPropertyGridComponent } from "../customPropertyGridComponent";
@@ -226,7 +226,7 @@ export class SkeletonPropertyGridComponent extends React.Component<ISkeletonProp
                     onPropertyChangedObservable={this.props.onPropertyChangedObservable}
                 />
                 <LineContainerComponent title="GENERAL" selection={this.props.globalState}>
-                    <TextLineComponent label="ID" value={skeleton.id} />
+                    <TextLineComponent label="ID" value={skeleton.id} onCopy />
                     <TextLineComponent label="Bone count" value={skeleton.bones.length.toString()} />
                     <CheckBoxLineComponent
                         label="Use texture to store matrices"

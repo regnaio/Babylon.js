@@ -1,15 +1,15 @@
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
+import { type GlobalState } from "../../globalState";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 
 import "./propertyTab.scss";
 import { Vector2LineComponent } from "shared-ui-components/lines/vector2LineComponent";
 import { Vector3LineComponent } from "shared-ui-components/lines/vector3LineComponent";
 import { Vector4LineComponent } from "shared-ui-components/lines/vector4LineComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { SliderLineComponent } from "shared-ui-components/lines/sliderLineComponent";
-import type { GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
+import { type GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
 import { NodeGeometryBlockConnectionPointTypes } from "core/Meshes/Node/Enums/nodeGeometryConnectionPointTypes";
 
 interface IInputsPropertyTabComponentProps {
@@ -104,7 +104,7 @@ export class InputsPropertyTabComponent extends React.Component<IInputsPropertyT
         return (
             <LineContainerComponent title="INPUTS">
                 {this.props.inputs.map((ib) => {
-                    if (ib.isContextual || !ib.name) {
+                    if (ib.isContextual || !ib.name || !ib.displayInInspector) {
                         return null;
                     }
                     return this.renderInputBlock(ib);

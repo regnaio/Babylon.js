@@ -1,16 +1,14 @@
 import { NodeMaterialBlock } from "../../nodeMaterialBlock";
-import type { NodeMaterialBuildState } from "../../nodeMaterialBuildState";
+import { type NodeMaterialBuildState } from "../../nodeMaterialBuildState";
 import { NodeMaterialBlockTargets } from "../../Enums/nodeMaterialBlockTargets";
-import type { NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
-import type { BaseTexture } from "../../../Textures/baseTexture";
-import type { AbstractMesh } from "../../../../Meshes/abstractMesh";
-import type { NodeMaterialDefines } from "../../nodeMaterial";
-import { NodeMaterial } from "../../nodeMaterial";
-import type { Effect } from "../../../effect";
-import type { Mesh } from "../../../../Meshes/mesh";
-import type { Nullable } from "../../../../types";
+import { type NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
+import { type BaseTexture } from "../../../Textures/baseTexture";
+import { type NodeMaterialDefines, NodeMaterial } from "../../nodeMaterial";
+import { type Effect } from "../../../effect";
+import { type Mesh } from "../../../../Meshes/mesh";
+import { type Nullable } from "../../../../types";
 import { RegisterClass } from "../../../../Misc/typeStore";
-import type { Scene } from "../../../../scene";
+import { type Scene } from "../../../../scene";
 import { InputBlock } from "../Input/inputBlock";
 import { NodeMaterialSystemValues } from "../../Enums/nodeMaterialSystemValues";
 import { Constants } from "../../../../Engines/constants";
@@ -19,7 +17,7 @@ import { CubeTexture } from "../../../Textures/cubeTexture";
 import { Texture } from "../../../Textures/texture";
 import { EngineStore } from "../../../../Engines/engineStore";
 import { editableInPropertyPage, PropertyTypeForEdition } from "../../../../Decorators/nodeDecorator";
-import type { SubMesh } from "../../../..//Meshes/subMesh";
+import { type SubMesh } from "../../../..//Meshes/subMesh";
 import { NodeMaterialBlockConnectionPointTypes } from "../../Enums/nodeMaterialBlockConnectionPointTypes";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
@@ -61,7 +59,7 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
     public _reflectionSizeName: string;
 
     protected _positionUVWName: string;
-    protected _directionWName: string;
+    protected _directionWname: string;
     protected _reflectionVectorName: string;
     /** @internal */
     public _reflectionCoordsName: string;
@@ -170,7 +168,12 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         return this.texture;
     }
 
+    /**
+     * Initialize the block
+     * @param state - the build state
+     */
     public override initialize(state: NodeMaterialBuildState) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._initShaderSourceAsync(state.shaderLanguage);
     }
 
@@ -224,7 +227,11 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         }
     }
 
-    public override prepareDefines(mesh: AbstractMesh, nodeMaterial: NodeMaterial, defines: NodeMaterialDefines) {
+    /**
+     * Prepare the list of defines
+     * @param defines - the material defines
+     */
+    public override prepareDefines(defines: NodeMaterialDefines) {
         if (!defines._areTexturesDirty) {
             return;
         }
@@ -249,6 +256,10 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         defines.setValue(this._defineMirroredEquirectangularFixedName, texture.coordinatesMode === Constants.TEXTURE_FIXED_EQUIRECTANGULAR_MIRRORED_MODE, true);
     }
 
+    /**
+     * Checks if the block is ready
+     * @returns true if ready
+     */
     public override isReady() {
         const texture = this._getTexture();
 
@@ -259,6 +270,13 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         return true;
     }
 
+    /**
+     * Bind data to effect
+     * @param effect - the effect to bind to
+     * @param nodeMaterial - the node material
+     * @param mesh - the mesh to bind for
+     * @param _subMesh - the submesh
+     */
     public override bind(effect: Effect, nodeMaterial: NodeMaterial, mesh?: Mesh, _subMesh?: SubMesh) {
         const texture = this._getTexture();
 
@@ -323,7 +341,7 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         }
 
         this._positionUVWName = state._getFreeVariableName("positionUVW");
-        this._directionWName = state._getFreeVariableName("directionW");
+        this._directionWname = state._getFreeVariableName("directionW");
 
         if (this.generateOnlyFragmentCode || state._emitVaryingFromString(this._positionUVWName, NodeMaterialBlockConnectionPointTypes.Vector3, this._defineSkyboxName)) {
             code += `#ifdef ${this._defineSkyboxName}\n`;
@@ -338,18 +356,18 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         if (
             this.generateOnlyFragmentCode ||
             state._emitVaryingFromString(
-                this._directionWName,
+                this._directionWname,
                 NodeMaterialBlockConnectionPointTypes.Vector3,
                 `defined(${this._defineEquirectangularFixedName}) || defined(${this._defineMirroredEquirectangularFixedName})`
             )
         ) {
             code += `#if defined(${this._defineEquirectangularFixedName}) || defined(${this._defineMirroredEquirectangularFixedName})\n`;
             if (this.generateOnlyFragmentCode) {
-                code += `${state._declareLocalVar(this._directionWName, NodeMaterialBlockConnectionPointTypes.Vector3)} = normalize(vec3${state.fSuffix}(${this.world.associatedVariableName} * vec4${state.fSuffix}(${
+                code += `${state._declareLocalVar(this._directionWname, NodeMaterialBlockConnectionPointTypes.Vector3)} = normalize(vec3${state.fSuffix}(${this.world.associatedVariableName} * vec4${state.fSuffix}(${
                     this.position.associatedVariableName
                 }.xyz, 0.0)));\n`;
             } else {
-                code += `${isWebGPU ? "vertexOutputs." : ""}${this._directionWName} = normalize(vec3${state.fSuffix}(${this.world.associatedVariableName} * vec4${state.fSuffix}(${
+                code += `${isWebGPU ? "vertexOutputs." : ""}${this._directionWname} = normalize(vec3${state.fSuffix}(${this.world.associatedVariableName} * vec4${state.fSuffix}(${
                     this.position.associatedVariableName
                 }.xyz, 0.0)));\n`;
             }
@@ -420,15 +438,17 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         onlyReflectionVector = false,
         doNotEmitInvertZ = false
     ): string {
-        if (!worldPos) {
-            worldPos = this.generateOnlyFragmentCode ? this._worldPositionNameInFragmentOnlyMode : `v_${this.worldPosition.associatedVariableName}`;
-        }
         const isWebGPU = state.shaderLanguage === ShaderLanguage.WGSL;
         const reflectionMatrix = (isWebGPU ? "uniforms." : "") + this._reflectionMatrixName;
-        const direction = `normalize(${this._directionWName})`;
+        const direction = `normalize(${this._directionWname})`;
         const positionUVW = `${this._positionUVWName}`;
         const vEyePosition = `${this.cameraPosition.associatedVariableName}`;
         const view = `${this.view.associatedVariableName}`;
+        const fragmentInputsPrefix = isWebGPU ? "fragmentInputs." : "";
+
+        if (!worldPos) {
+            worldPos = this.generateOnlyFragmentCode ? this._worldPositionNameInFragmentOnlyMode : `${fragmentInputsPrefix}v_${this.worldPosition.associatedVariableName}`;
+        }
 
         worldNormalVarName += ".xyz";
 
@@ -577,6 +597,10 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         return codeString;
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -589,6 +613,12 @@ export abstract class ReflectionTextureBaseBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - the serialization object
+     * @param scene - the scene
+     * @param rootUrl - the root url
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         super._deserialize(serializationObject, scene, rootUrl);
 

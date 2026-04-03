@@ -1,4 +1,4 @@
-import type { DeepImmutable, Flatten, FloatArray, Length, Tuple } from "../types";
+import { type DeepImmutable, type Flatten, type FloatArray, type Length, type Tuple } from "../types";
 /**
  * Computes the tensor dimension of a multi-dimensional array
  */
@@ -22,6 +22,7 @@ export type TensorLike<T> = T extends Tensor<TensorValue, infer I> ? I : never;
  * Describes a mathematical tensor.
  * @see https://wikipedia.org/wiki/Tensor
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface Tensor<V extends TensorValue, I> {
     /**
      * An array of the size of each dimension.

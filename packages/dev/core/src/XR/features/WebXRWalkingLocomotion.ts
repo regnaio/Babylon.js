@@ -1,12 +1,12 @@
-import type { Engine } from "../../Engines/engine";
+import { type Engine } from "../../Engines/engine";
 import { TmpVectors, Vector2, Vector3 } from "../../Maths/math.vector";
-import type { TransformNode } from "../../Meshes/transformNode";
+import { type TransformNode } from "../../Meshes/transformNode";
 import { Logger } from "../../Misc/logger";
 import { Observable } from "../../Misc/observable";
-import type { Nullable } from "../../types";
-import type { WebXRCamera } from "../webXRCamera";
+import { type Nullable } from "../../types";
+import { type WebXRCamera } from "../webXRCamera";
 import { WebXRFeatureName, WebXRFeaturesManager } from "../webXRFeaturesManager";
-import type { WebXRSessionManager } from "../webXRSessionManager";
+import { type WebXRSessionManager } from "../webXRSessionManager";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
 
 class CircleBuffer {
@@ -175,6 +175,7 @@ class WalkingTracker {
     private _steppingLeft = false;
     private _t = -1;
     private _maxT = -1;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     private _maxTPosition = new Vector2();
     private _vitality = 0;
 
@@ -207,6 +208,7 @@ class WalkingTracker {
         this._vitality = 1;
     }
 
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     private _updateTAndVitality(x: number, y: number) {
         this._currentPosition.copyFromFloats(x, y);
 
@@ -425,7 +427,7 @@ export class WebXRWalkingLocomotion extends WebXRAbstractFeature {
      * @returns true if attach succeeded, false otherwise
      */
     public override attach(): boolean {
-        if (!this.isCompatible || !super.attach()) {
+        if (!this.isCompatible() || !super.attach()) {
             return false;
         }
 

@@ -1,5 +1,5 @@
-import type { Nullable } from "../types";
-import type { Scene } from "../scene";
+import { type Nullable } from "../types";
+import { type Scene } from "../scene";
 
 /**
  * Enum defining the type of properties that can be edited in the property pages in the node editor
@@ -13,8 +13,26 @@ export const enum PropertyTypeForEdition {
     Int,
     /** property is a Vector2 */
     Vector2,
+    /** property is a Vector3 */
+    Vector3,
     /** property is a list of values */
     List,
+    /** property is a Color3 */
+    Color3,
+    /** property is a Color4 */
+    Color4,
+    /** property (int) should be edited as a combo box with a list of sampling modes */
+    SamplingMode,
+    /** property (int) should be edited as a combo box with a list of texture formats */
+    TextureFormat,
+    /** property (int) should be edited as a combo box with a list of texture types */
+    TextureType,
+    /** property is a string */
+    String,
+    /** property is a matrix */
+    Matrix,
+    /** property is a viewport */
+    Viewport,
 }
 
 /**
@@ -31,6 +49,10 @@ export interface IEditablePropertyListOption {
  * Interface that defines the options available for an editable property
  */
 export interface IEditablePropertyOption {
+    /**
+     * Define if the property is displayed inside the source block or in a separate property tab
+     */
+    embedded?: boolean;
     /** min value */
     min?: number;
     /** max value */
@@ -66,6 +88,8 @@ export interface IPropertyDescriptionForEdition {
     groupName: string;
     /** options for the property */
     options: IEditablePropertyOption;
+    /** name of the class that contains the property */
+    className: string;
 }
 
 /**
@@ -76,6 +100,7 @@ export interface IPropertyDescriptionForEdition {
  * @param options the options of the property
  * @returns the decorator
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function editableInPropertyPage(
     displayName: string,
     propertyType: PropertyTypeForEdition = PropertyTypeForEdition.Boolean,
@@ -94,6 +119,7 @@ export function editableInPropertyPage(
             type: propertyType,
             groupName: groupName,
             options: options ?? {},
+            className: target.getClassName(),
         });
     };
 }

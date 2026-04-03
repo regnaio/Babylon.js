@@ -1,13 +1,13 @@
 import * as React from "react";
-import type { GlobalState } from "../globalState";
+import { type GlobalState } from "../globalState";
 import { FooterButton } from "./footerButton";
 import { DropUpButton } from "./dropUpButton";
 import { EnvironmentTools } from "../tools/environmentTools";
 import { FooterFileButton } from "./footerFileButton";
 import { AnimationBar } from "./animationBar";
-import type { Nullable } from "core/types";
-import type { KHR_materials_variants } from "loaders/glTF/2.0/Extensions/KHR_materials_variants";
-import type { Mesh } from "core/Meshes/mesh";
+import { type Nullable } from "core/types";
+import { type KHR_materials_variants } from "loaders/glTF/2.0/Extensions/KHR_materials_variants";
+import { type Mesh } from "core/Meshes/mesh";
 
 import "../scss/footer.scss";
 import babylonIdentity from "../img/babylon-identity.svg";
@@ -21,7 +21,12 @@ interface IFooterProps {
     globalState: GlobalState;
 }
 
-export class Footer extends React.Component<IFooterProps> {
+interface IFooterState {}
+
+/**
+ * Footer
+ */
+export class Footer extends React.Component<IFooterProps, IFooterState> {
     private _cameraNames: string[] = [];
 
     public constructor(props: IFooterProps) {
@@ -38,7 +43,7 @@ export class Footer extends React.Component<IFooterProps> {
 
     showInspector() {
         if (this.props.globalState.currentScene) {
-            if (this.props.globalState.currentScene.debugLayer.isVisible()) {
+            if (this.props.globalState.isDebugLayerEnabled) {
                 this.props.globalState.hideDebugLayer();
             } else {
                 this.props.globalState.showDebugLayer();
@@ -47,13 +52,13 @@ export class Footer extends React.Component<IFooterProps> {
     }
 
     switchCamera(index: number) {
-        const camera = this.props.globalState.currentScene!.cameras[index];
+        const camera = this.props.globalState.currentScene.cameras[index];
 
         if (camera) {
-            if (this.props.globalState.currentScene!.activeCamera) {
-                this.props.globalState.currentScene!.activeCamera.detachControl();
+            if (this.props.globalState.currentScene.activeCamera) {
+                this.props.globalState.currentScene.activeCamera.detachControl();
             }
-            this.props.globalState.currentScene!.activeCamera = camera;
+            this.props.globalState.currentScene.activeCamera = camera;
             camera.attachControl();
         }
     }
@@ -90,7 +95,7 @@ export class Footer extends React.Component<IFooterProps> {
                     variantNames = variants;
 
                     activeEntry = () => {
-                        const lastPickedVariant = variantExtension!.getLastSelectedVariant(rootNode) || 0;
+                        const lastPickedVariant = variantExtension.getLastSelectedVariant(rootNode) || 0;
                         if (lastPickedVariant && Object.prototype.toString.call(lastPickedVariant) === "[object String]") {
                             return lastPickedVariant as string;
                         }
@@ -111,8 +116,16 @@ export class Footer extends React.Component<IFooterProps> {
 
         const hasCameras = this._cameraNames.length > 1;
 
+        // Determine footer class based on which controls are present
+        let footerClass = "footer";
+        if (hasCameras && hasVariants) {
+            footerClass += " longer";
+        } else if (hasCameras || hasVariants) {
+            footerClass += " long";
+        }
+
         return (
-            <div id="footer" className={"footer" + (hasCameras || hasVariants ? " long" : hasCameras && hasVariants ? " longer" : "")}>
+            <div id="footer" className={footerClass}>
                 <div className="footerLeft">
                     <img id="logoImg" src={babylonIdentity} />
                 </div>

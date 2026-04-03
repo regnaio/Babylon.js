@@ -1,11 +1,10 @@
-import type { Matrix } from "../../Maths/math.vector";
-import { Vector3 } from "../../Maths/math.vector";
-import { Scalar } from "../../Maths/math.scalar";
-import type { Particle } from "../../Particles/particle";
-import type { IParticleEmitterType } from "./IParticleEmitterType";
+import { type Matrix, Vector3 } from "../../Maths/math.vector";
+import { RandomRange } from "../../Maths/math.scalar.functions";
+import { type Particle } from "../../Particles/particle";
+import { type IParticleEmitterType } from "./IParticleEmitterType";
 import { DeepCopier } from "../../Misc/deepCopier";
-import type { UniformBufferEffectCommonAccessor } from "../../Materials/uniformBufferEffectCommonAccessor";
-import type { UniformBuffer } from "../../Materials/uniformBuffer";
+import { type UniformBufferEffectCommonAccessor } from "../../Materials/uniformBufferEffectCommonAccessor";
+import { type UniformBuffer } from "../../Materials/uniformBuffer";
 /**
  * Particle emitter emitting particles from the inside of a sphere.
  * It emits the particles alongside the sphere radius. The emission direction might be randomized.
@@ -41,9 +40,9 @@ export class SphereParticleEmitter implements IParticleEmitterType {
      */
     public startDirectionFunction(worldMatrix: Matrix, directionToUpdate: Vector3, particle: Particle, isLocal: boolean): void {
         const direction = particle.position.subtract(worldMatrix.getTranslation()).normalize();
-        const randX = Scalar.RandomRange(0, this.directionRandomizer);
-        const randY = Scalar.RandomRange(0, this.directionRandomizer);
-        const randZ = Scalar.RandomRange(0, this.directionRandomizer);
+        const randX = RandomRange(0, this.directionRandomizer);
+        const randY = RandomRange(0, this.directionRandomizer);
+        const randZ = RandomRange(0, this.directionRandomizer);
         direction.x += randX;
         direction.y += randY;
         direction.z += randZ;
@@ -65,9 +64,9 @@ export class SphereParticleEmitter implements IParticleEmitterType {
      * @param isLocal defines if the position should be set in local space
      */
     public startPositionFunction(worldMatrix: Matrix, positionToUpdate: Vector3, particle: Particle, isLocal: boolean): void {
-        const randRadius = this.radius - Scalar.RandomRange(0, this.radius * this.radiusRange);
-        const v = Scalar.RandomRange(0, 1.0);
-        const phi = Scalar.RandomRange(0, 2 * Math.PI);
+        const randRadius = this.radius - RandomRange(0, this.radius * this.radiusRange);
+        const v = RandomRange(0, 1.0);
+        const phi = RandomRange(0, 2 * Math.PI);
         const theta = Math.acos(2 * v - 1);
         const randX = randRadius * Math.cos(phi) * Math.sin(theta);
         const randY = randRadius * Math.cos(theta);
@@ -183,11 +182,19 @@ export class SphereDirectedParticleEmitter extends SphereParticleEmitter {
      * Called by the particle System when the direction is computed for the created particle.
      * @param worldMatrix is the world matrix of the particle system
      * @param directionToUpdate is the direction vector to update with the result
+     * @param particle is the particle we are computed the position for
+     * @param isLocal defines if the direction should be set in local space
      */
-    public override startDirectionFunction(worldMatrix: Matrix, directionToUpdate: Vector3): void {
-        const randX = Scalar.RandomRange(this.direction1.x, this.direction2.x);
-        const randY = Scalar.RandomRange(this.direction1.y, this.direction2.y);
-        const randZ = Scalar.RandomRange(this.direction1.z, this.direction2.z);
+    public override startDirectionFunction(worldMatrix: Matrix, directionToUpdate: Vector3, particle: Particle, isLocal: boolean): void {
+        const randX = RandomRange(this.direction1.x, this.direction2.x);
+        const randY = RandomRange(this.direction1.y, this.direction2.y);
+        const randZ = RandomRange(this.direction1.z, this.direction2.z);
+
+        if (isLocal) {
+            directionToUpdate.copyFromFloats(randX, randY, randZ);
+            return;
+        }
+
         Vector3.TransformNormalFromFloatsToRef(randX, randY, randZ, worldMatrix, directionToUpdate);
     }
 
@@ -260,7 +267,7 @@ export class SphereDirectedParticleEmitter extends SphereParticleEmitter {
      */
     public override parse(serializationObject: any): void {
         super.parse(serializationObject);
-        this.direction1.copyFrom(serializationObject.direction1);
-        this.direction2.copyFrom(serializationObject.direction2);
+        Vector3.FromArrayToRef(serializationObject.direction1, 0, this.direction1);
+        Vector3.FromArrayToRef(serializationObject.direction2, 0, this.direction2);
     }
 }

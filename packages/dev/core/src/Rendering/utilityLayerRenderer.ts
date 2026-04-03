@@ -1,18 +1,15 @@
-import type { IDisposable } from "../scene";
-import { Scene } from "../scene";
-import type { Nullable } from "../types";
-import type { Observer } from "../Misc/observable";
-import { Observable } from "../Misc/observable";
-import type { PointerInfoPre } from "../Events/pointerEvents";
-import { PointerInfo, PointerEventTypes } from "../Events/pointerEvents";
+import { type IDisposable, Scene } from "../scene";
+import { type Nullable } from "../types";
+import { type Observer, Observable } from "../Misc/observable";
+import { type PointerInfoPre, PointerInfo, PointerEventTypes } from "../Events/pointerEvents";
 import { PickingInfo } from "../Collisions/pickingInfo";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
 import { EngineStore } from "../Engines/engineStore";
 import { HemisphericLight } from "../Lights/hemisphericLight";
 import { Vector3 } from "../Maths/math.vector";
-import type { Camera } from "../Cameras/camera";
+import { type Camera } from "../Cameras/camera";
 import { Color3 } from "../Maths/math.color";
-import type { IPointerEvent } from "../Events/deviceInputEvents";
+import { type IPointerEvent } from "../Events/deviceInputEvents";
 
 /**
  * Renders a layer on top of an existing scene
@@ -41,7 +38,7 @@ export class UtilityLayerRenderer implements IDisposable {
             if (this.originalScene.activeCameras && this.originalScene.activeCameras.length > 1) {
                 activeCam = this.originalScene.activeCameras[this.originalScene.activeCameras.length - 1];
             } else {
-                activeCam = <Camera>this.originalScene.activeCamera!;
+                activeCam = this.originalScene.activeCamera!;
             }
 
             if (getRigParentIfPossible && activeCam && activeCam.isRigCamera) {
@@ -104,12 +101,23 @@ export class UtilityLayerRenderer implements IDisposable {
      */
     public static get DefaultKeepDepthUtilityLayer(): UtilityLayerRenderer {
         if (UtilityLayerRenderer._DefaultKeepDepthUtilityLayer == null) {
-            UtilityLayerRenderer._DefaultKeepDepthUtilityLayer = new UtilityLayerRenderer(EngineStore.LastCreatedScene!);
-            UtilityLayerRenderer._DefaultKeepDepthUtilityLayer.utilityLayerScene.autoClearDepthAndStencil = false;
-            UtilityLayerRenderer._DefaultKeepDepthUtilityLayer.originalScene.onDisposeObservable.addOnce(() => {
-                UtilityLayerRenderer._DefaultKeepDepthUtilityLayer = null;
-            });
+            return UtilityLayerRenderer._CreateDefaultKeepUtilityLayerFromScene(EngineStore.LastCreatedScene!);
         }
+        return UtilityLayerRenderer._DefaultKeepDepthUtilityLayer;
+    }
+
+    /**
+     * Creates an utility layer, and set it as a default utility layer (Depth map of the previous scene is not cleared before drawing on top of it)
+     * @param scene associated scene
+     * @internal
+     */
+    public static _CreateDefaultKeepUtilityLayerFromScene(scene: Scene): UtilityLayerRenderer {
+        UtilityLayerRenderer._DefaultKeepDepthUtilityLayer = new UtilityLayerRenderer(scene);
+        UtilityLayerRenderer._DefaultKeepDepthUtilityLayer.utilityLayerScene.autoClearDepthAndStencil = false;
+        UtilityLayerRenderer._DefaultKeepDepthUtilityLayer.originalScene.onDisposeObservable.addOnce(() => {
+            UtilityLayerRenderer._DefaultKeepDepthUtilityLayer = null;
+        });
+
         return UtilityLayerRenderer._DefaultKeepDepthUtilityLayer;
     }
 
@@ -152,14 +160,16 @@ export class UtilityLayerRenderer implements IDisposable {
      * Instantiates a UtilityLayerRenderer
      * @param originalScene the original scene that will be rendered on top of
      * @param handleEvents boolean indicating if the utility layer should handle events
+     * @param manualRender boolean indicating if the utility layer should render manually.
      */
     constructor(
         /** the original scene that will be rendered on top of */
         public originalScene: Scene,
-        handleEvents: boolean = true
+        public readonly handleEvents: boolean = true,
+        manualRender = false
     ) {
         // Create scene which will be rendered in the foreground and remove it from being referenced by engine to avoid interfering with existing app
-        this.utilityLayerScene = new Scene(originalScene.getEngine(), { virtual: true });
+        this.utilityLayerScene = new Scene(originalScene.getEngine(), { virtual: true, useFloatingOrigin: originalScene.floatingOriginMode });
         this.utilityLayerScene.useRightHandedSystem = originalScene.useRightHandedSystem;
         this.utilityLayerScene._allowPostProcessClearColor = false;
 
@@ -191,13 +201,13 @@ export class UtilityLayerRenderer implements IDisposable {
                 this.utilityLayerScene.pointerX = originalScene.pointerX;
                 this.utilityLayerScene.pointerY = originalScene.pointerY;
                 const pointerEvent = <IPointerEvent>prePointerInfo.event;
-                if (originalScene!.isPointerCaptured(pointerEvent.pointerId)) {
+                if (originalScene.isPointerCaptured(pointerEvent.pointerId)) {
                     this._pointerCaptures[pointerEvent.pointerId] = false;
                     return;
                 }
 
                 const getNearPickDataForScene = (scene: Scene) => {
-                    let scenePick = null;
+                    let scenePick: Nullable<PickingInfo>;
 
                     if (prePointerInfo.nearInteractionPickingInfo) {
                         if (prePointerInfo.nearInteractionPickingInfo.pickedMesh!.getScene() == scene) {
@@ -233,6 +243,11 @@ export class UtilityLayerRenderer implements IDisposable {
 
                 if (!prePointerInfo.ray && utilityScenePick) {
                     prePointerInfo.ray = utilityScenePick.ray;
+                }
+
+                if (prePointerInfo.originalPickingInfo?.aimTransform && utilityScenePick) {
+                    utilityScenePick.aimTransform = prePointerInfo.originalPickingInfo.aimTransform;
+                    utilityScenePick.gripTransform = prePointerInfo.originalPickingInfo.gripTransform;
                 }
 
                 // always fire the prepointer observable
@@ -277,6 +292,7 @@ export class UtilityLayerRenderer implements IDisposable {
                                 prePointerInfo.skipOnPointerObservable = true;
                             } else if (prePointerInfo.type === PointerEventTypes.POINTERDOWN) {
                                 this._pointerCaptures[pointerEvent.pointerId] = true;
+                                this._notifyObservers(prePointerInfo, originalScenePick, pointerEvent);
                             } else if (prePointerInfo.type === PointerEventTypes.POINTERMOVE || prePointerInfo.type === PointerEventTypes.POINTERUP) {
                                 if (this._lastPointerEvents[pointerEvent.pointerId]) {
                                     // We need to send a last pointerup to the utilityLayerScene to make sure animations can complete
@@ -327,12 +343,14 @@ export class UtilityLayerRenderer implements IDisposable {
         // Render directly on top of existing scene without clearing
         this.utilityLayerScene.autoClear = false;
 
-        this._afterRenderObserver = this.originalScene.onAfterRenderCameraObservable.add((camera) => {
-            // Only render when the render camera finishes rendering
-            if (this.shouldRender && camera == this.getRenderCamera()) {
-                this.render();
-            }
-        });
+        if (!manualRender) {
+            this._afterRenderObserver = this.originalScene.onAfterRenderCameraObservable.add((camera) => {
+                // Only render when the render camera finishes rendering
+                if (this.shouldRender && camera == this.getRenderCamera()) {
+                    this.render();
+                }
+            });
+        }
 
         this._sceneDisposeObserver = this.originalScene.onDisposeObservable.add(() => {
             this.dispose();

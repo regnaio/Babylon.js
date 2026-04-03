@@ -1,5 +1,5 @@
-import type { Nullable } from "../types";
-import type { IDisposable } from "../scene";
+import { type Nullable } from "../types";
+import { type IDisposable } from "../scene";
 
 /**
  * States of the webXR experience
@@ -44,6 +44,7 @@ export const enum WebXRTrackingState {
 /**
  * Abstraction of the XR render target
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface WebXRRenderTarget extends IDisposable {
     /**
      * xrpresent context of the canvas which can be used to display/mirror xr content

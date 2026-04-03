@@ -1,17 +1,18 @@
-import type { Nullable } from "core/types";
-import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { Material } from "core/Materials/material";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
-import type { IMaterial, ITextureInfo } from "../glTFLoaderInterfaces";
-import type { IGLTFLoaderExtension } from "../glTFLoaderExtension";
+/* eslint-disable github/no-then */
+import { type Nullable } from "core/types";
+import { type Material } from "core/Materials/material";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type IMaterial, type ITextureInfo } from "../glTFLoaderInterfaces";
+import { type IGLTFLoaderExtension } from "../glTFLoaderExtension";
 import { GLTFLoader } from "../glTFLoader";
-import type { IKHRMaterialsDiffuseTransmission } from "babylonjs-gltf2interface";
+import { type IKHRMaterialsDiffuseTransmission } from "babylonjs-gltf2interface";
 import { Color3 } from "core/Maths/math.color";
+import { registerGLTFExtension, unregisterGLTFExtension } from "../glTFLoaderExtensionRegistry";
 
 const NAME = "KHR_materials_diffuse_transmission";
 
 declare module "../../glTFFileLoader" {
-    // eslint-disable-next-line jsdoc/require-jsdoc
+    // eslint-disable-next-line jsdoc/require-jsdoc, @typescript-eslint/naming-convention
     export interface GLTFLoaderExtensionOptions {
         /**
          * Defines options for the KHR_materials_diffuse_transmission extension.
@@ -63,66 +64,40 @@ export class KHR_materials_diffuse_transmission implements IGLTFLoaderExtension 
     /**
      * @internal
      */
+    // eslint-disable-next-line no-restricted-syntax
     public loadMaterialPropertiesAsync(context: string, material: IMaterial, babylonMaterial: Material): Nullable<Promise<void>> {
-        return GLTFLoader.LoadExtensionAsync<IKHRMaterialsDiffuseTransmission>(context, material, this.name, (extensionContext, extension) => {
+        return GLTFLoader.LoadExtensionAsync<IKHRMaterialsDiffuseTransmission>(context, material, this.name, async (extensionContext, extension) => {
             const promises = new Array<Promise<any>>();
-            promises.push(this._loader.loadMaterialBasePropertiesAsync(context, material, babylonMaterial));
             promises.push(this._loader.loadMaterialPropertiesAsync(context, material, babylonMaterial));
             promises.push(this._loadTranslucentPropertiesAsync(extensionContext, material, babylonMaterial, extension));
-            return Promise.all(promises).then(() => {});
+            return await Promise.all(promises).then(() => {});
         });
     }
 
+    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/promise-function-async
     private _loadTranslucentPropertiesAsync(context: string, material: IMaterial, babylonMaterial: Material, extension: IKHRMaterialsDiffuseTransmission): Promise<void> {
-        if (!(babylonMaterial instanceof PBRMaterial)) {
-            throw new Error(`${context}: Material type not supported`);
-        }
-
-        const pbrMaterial = babylonMaterial as PBRMaterial;
-
-        // Enables "translucency" texture which represents diffusely-transmitted light.
-        pbrMaterial.subSurface.isTranslucencyEnabled = true;
-
-        // Since this extension models thin-surface transmission only, we must make the
-        // internal IOR == 1.0 and set the thickness to 0.
-        pbrMaterial.subSurface.volumeIndexOfRefraction = 1.0;
-        pbrMaterial.subSurface.minimumThickness = 0.0;
-        pbrMaterial.subSurface.maximumThickness = 0.0;
-
-        // Tint color will be used for transmission.
-        pbrMaterial.subSurface.useAlbedoToTintTranslucency = false;
-
-        if (extension.diffuseTransmissionFactor !== undefined) {
-            pbrMaterial.subSurface.translucencyIntensity = extension.diffuseTransmissionFactor;
-        } else {
-            pbrMaterial.subSurface.translucencyIntensity = 0.0;
-            pbrMaterial.subSurface.isTranslucencyEnabled = false;
-            return Promise.resolve();
-        }
+        const adapter = this._loader._getOrCreateMaterialAdapter(babylonMaterial);
+        adapter.configureSubsurface();
+        adapter.subsurfaceWeight = extension.diffuseTransmissionFactor ?? 0;
+        adapter.subsurfaceConstantTint = extension.diffuseTransmissionColorFactor !== undefined ? Color3.FromArray(extension.diffuseTransmissionColorFactor) : Color3.White();
 
         const promises = new Array<Promise<any>>();
-
-        pbrMaterial.subSurface.useGltfStyleTextures = true;
 
         if (extension.diffuseTransmissionTexture) {
             (extension.diffuseTransmissionTexture as ITextureInfo).nonColorData = true;
             promises.push(
                 this._loader.loadTextureInfoAsync(`${context}/diffuseTransmissionTexture`, extension.diffuseTransmissionTexture).then((texture: BaseTexture) => {
-                    pbrMaterial.subSurface.translucencyIntensityTexture = texture;
+                    texture.name = `${babylonMaterial.name} (Diffuse Transmission)`;
+                    adapter.subsurfaceWeightTexture = texture;
                 })
             );
-        }
-
-        if (extension.diffuseTransmissionColorFactor !== undefined) {
-            pbrMaterial.subSurface.translucencyColor = Color3.FromArray(extension.diffuseTransmissionColorFactor);
-        } else {
-            pbrMaterial.subSurface.translucencyColor = Color3.White();
         }
 
         if (extension.diffuseTransmissionColorTexture) {
             promises.push(
                 this._loader.loadTextureInfoAsync(`${context}/diffuseTransmissionColorTexture`, extension.diffuseTransmissionColorTexture).then((texture: BaseTexture) => {
-                    pbrMaterial.subSurface.translucencyColorTexture = texture;
+                    texture.name = `${babylonMaterial.name} (Diffuse Transmission Color)`;
+                    adapter.subsurfaceConstantTintTexture = texture;
                 })
             );
         }
@@ -131,4 +106,5 @@ export class KHR_materials_diffuse_transmission implements IGLTFLoaderExtension 
     }
 }
 
-GLTFLoader.RegisterExtension(NAME, (loader) => new KHR_materials_diffuse_transmission(loader));
+unregisterGLTFExtension(NAME);
+registerGLTFExtension(NAME, true, (loader) => new KHR_materials_diffuse_transmission(loader));

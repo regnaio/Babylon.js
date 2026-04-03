@@ -1,20 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { serializeAsColor4, serializeAsVector3, serialize } from "core/Misc/decorators";
 import { SerializationHelper } from "core/Misc/decorators.serialization";
-import type { Matrix } from "core/Maths/math.vector";
-import { Vector3, Vector4 } from "core/Maths/math.vector";
-import type { IAnimatable } from "core/Animations/animatable.interface";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type Matrix, Vector3, Vector4 } from "core/Maths/math.vector";
+import { type IAnimatable } from "core/Animations/animatable.interface";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 import { Texture } from "core/Materials/Textures/texture";
 import { MaterialDefines } from "core/Materials/materialDefines";
-import type { IEffectCreationOptions } from "core/Materials/effect";
+import { type IEffectCreationOptions } from "core/Materials/effect";
 import { PushMaterial } from "core/Materials/pushMaterial";
 import { VertexBuffer } from "core/Buffers/buffer";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { SubMesh } from "core/Meshes/subMesh";
-import type { Mesh } from "core/Meshes/mesh";
-import type { Scene } from "core/scene";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type SubMesh } from "core/Meshes/subMesh";
+import { type Mesh } from "core/Meshes/mesh";
+import { type Scene } from "core/scene";
 import { RegisterClass } from "core/Misc/typeStore";
 import { Color3, Color4 } from "core/Maths/math.color";
 import { EffectFallbacks } from "core/Materials/effectFallbacks";
@@ -23,6 +22,7 @@ import { Constants } from "core/Engines/constants";
 import "./shaders/fluentButton.fragment";
 import "./shaders/fluentButton.vertex";
 import { HandleFallbacksForShadows, PrepareAttributesForInstances, PrepareDefinesForAttributes, PrepareUniformsAndSamplersList } from "core/Materials/materialHelper.functions";
+import { Tools } from "core/Misc/tools";
 
 /** @internal */
 class FluentButtonMaterialDefines extends MaterialDefines {
@@ -45,7 +45,7 @@ export class FluentButtonMaterial extends PushMaterial {
     /**
      * URL pointing to the texture used to define the coloring for the fluent blob effect.
      */
-    public static BLOB_TEXTURE_URL = "https://assets.babylonjs.com/meshes/MRTK/mrtk-fluent-button-blob.png";
+    public static BLOB_TEXTURE_URL = "https://assets.babylonjs.com/core/MRTK/mrtk-fluent-button-blob.png";
 
     /**
      * Gets or sets the width of the glowing edge, relative to the scale of the button.
@@ -276,8 +276,8 @@ export class FluentButtonMaterial extends PushMaterial {
         this.alphaMode = Constants.ALPHA_ADD;
         this.disableDepthWrite = true;
         this.backFaceCulling = false;
-
-        this._blobTexture = new Texture(FluentButtonMaterial.BLOB_TEXTURE_URL, this.getScene(), true, false, Texture.NEAREST_SAMPLINGMODE);
+        const blobTextureUrl = Tools.GetAssetUrl(FluentButtonMaterial.BLOB_TEXTURE_URL);
+        this._blobTexture = new Texture(blobTextureUrl, this.getScene(), true, false, Texture.NEAREST_SAMPLINGMODE);
     }
 
     public override needAlphaBlending(): boolean {

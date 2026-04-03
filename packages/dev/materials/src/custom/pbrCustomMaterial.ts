@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Texture } from "core/Materials/Textures/texture";
+import { type Texture } from "core/Materials/Textures/texture";
 import { Effect } from "core/Materials/effect";
-import type { MaterialDefines } from "core/Materials/materialDefines";
+import { type MaterialDefines } from "core/Materials/materialDefines";
 import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { Mesh } from "core/Meshes/mesh";
-import type { Scene } from "core/scene";
+import { type Mesh } from "core/Meshes/mesh";
+import { type Scene } from "core/scene";
 import { RegisterClass } from "core/Misc/typeStore";
 import { ShaderCodeInliner } from "core/Engines/Processors/shaderCodeInliner";
-import type { ICustomShaderNameResolveOptions } from "core/Materials/material";
+import { type ICustomShaderNameResolveOptions } from "core/Materials/material";
 import { Color3, Color4 } from "core/Maths/math.color";
-import type { Nullable } from "core/types";
-import type { SubMesh } from "core/Meshes/subMesh";
+import { type Nullable } from "core/types";
+import { type SubMesh } from "core/Meshes/subMesh";
+
+import "core/Shaders/pbr.vertex";
+import "core/Shaders/pbr.fragment";
 
 /**
  * Albedo parts of the shader
@@ -341,8 +344,8 @@ export class PBRCustomMaterial extends PBRMaterial {
      */
     public AddUniform(name: string, kind: string, param: any): PBRCustomMaterial {
         if (!this._customUniform) {
-            this._customUniform = new Array();
-            this._newUniforms = new Array();
+            this._customUniform = [];
+            this._newUniforms = [];
             this._newSamplerInstances = {};
             this._newUniformInstances = {};
         }

@@ -1,16 +1,16 @@
-import type { AssetContainer } from "core/assetContainer";
+import { type AssetContainer } from "core/assetContainer";
 import { VertexBuffer } from "core/Buffers/buffer";
-import type { Material } from "core/Materials/material";
+import { type Material } from "core/Materials/material";
 import { StandardMaterial } from "core/Materials/standardMaterial";
 import { Color3, Color4 } from "core/Maths/math.color";
 import { Vector2, Vector3 } from "core/Maths/math.vector";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
 import { Geometry } from "core/Meshes/geometry";
 import { Mesh } from "core/Meshes/mesh";
 import { VertexData } from "core/Meshes/mesh.vertexData";
-import type { Scene } from "core/scene";
-import type { Nullable } from "core/types";
-import type { OBJLoadingOptions } from "./objLoadingOptions";
+import { type Scene } from "core/scene";
+import { type Nullable } from "core/types";
+import { type OBJLoadingOptions } from "./objLoadingOptions";
 import { Logger } from "core/Misc/logger";
 
 type MeshObject = {
@@ -72,6 +72,7 @@ export class SolidParser {
     private _normals: Array<Vector3> = []; //Values for the normals
     private _uvs: Array<Vector2> = []; //Values for the textures
     private _colors: Array<Color4> = [];
+    private _extColors: Array<Color4> = []; //Extension color
     private _meshesFromObj: Array<MeshObject> = []; //[mesh] Contains all the obj meshes
     private _handledMesh: MeshObject; //The current mesh of meshes array
     private _indicesForBabylon: Array<number> = []; //The list of indices for VertexData
@@ -81,7 +82,7 @@ export class SolidParser {
     private _wrappedNormalsForBabylon: Array<Vector3> = []; //Array with all value of normals to match with the indices
     private _tuplePosNorm: Array<{ normals: Array<number>; idx: Array<number>; uv: Array<number> }> = []; //Create a tuple with indice of Position, Normal, UV  [pos, norm, uvs]
     private _curPositionInIndices = 0;
-    private _hasMeshes: Boolean = false; //Meshes are defined in the file
+    private _hasMeshes: boolean = false; //Meshes are defined in the file
     private _unwrappedPositionsForBabylon: Array<number> = []; //Value of positionForBabylon w/o Vector3() [x,y,z]
     private _unwrappedColorsForBabylon: Array<number> = []; // Value of colorForBabylon w/o Color4() [r,g,b,a]
     private _unwrappedNormalsForBabylon: Array<number> = []; //Value of normalsForBabylon w/o Vector3()  [x,y,z]
@@ -146,29 +147,34 @@ export class SolidParser {
      * If a tuple of (position, normal) is not set, add the data into the corresponding array
      * If the tuple already exist, add only their indice
      *
-     * @param indicePositionFromObj Integer The index in positions array
-     * @param indiceUvsFromObj Integer The index in uvs array
-     * @param indiceNormalFromObj Integer The index in normals array
-     * @param positionVectorFromOBJ Vector3 The value of position at index objIndice
-     * @param textureVectorFromOBJ Vector3 The value of uvs
-     * @param normalsVectorFromOBJ Vector3 The value of normals at index objNormale
-     * @param positionColorsFromOBJ
+     * @param data The vertex's data
+     * * indicesPositionFromObj: The index in positions array
+     * * indicesUvsFromObj: The index in uvs array
+     * * indicesNormalFromObj: The index in normals array
+     * * positionVectorFromOBJ: The value of position at index objIndice
+     * * textureVectorFromOBJ: The value of uvs
+     * * normalsVectorFromOBJ: The value of normals at index objNormale
+     * * positionColorsFromOBJ: The value of color at index objIndice
      */
-    private _setData(
-        indicePositionFromObj: number,
-        indiceUvsFromObj: number,
-        indiceNormalFromObj: number,
-        positionVectorFromOBJ: Vector3,
-        textureVectorFromOBJ: Vector2,
-        normalsVectorFromOBJ: Vector3,
-        positionColorsFromOBJ?: Color4
-    ) {
+    private _setData(data: {
+        indicePositionFromObj: number;
+        indiceUvsFromObj?: number;
+        indiceNormalFromObj?: number;
+        positionVectorFromOBJ: Vector3;
+        textureVectorFromOBJ?: Vector2;
+        normalsVectorFromOBJ?: Vector3;
+        positionColorsFromOBJ?: Color4;
+    }) {
+        //Use default values if undefined
+        data.indiceUvsFromObj ??= -1;
+        data.indiceNormalFromObj ??= -1;
+
         //Check if this tuple already exists in the list of tuples
         let _index: number;
         if (this._loadingOptions.optimizeWithUV) {
-            _index = this._isInArrayUV(this._tuplePosNorm, [indicePositionFromObj, indiceNormalFromObj, indiceUvsFromObj]);
+            _index = this._isInArrayUV(this._tuplePosNorm, [data.indicePositionFromObj, data.indiceNormalFromObj, data.indiceUvsFromObj]);
         } else {
-            _index = this._isInArray(this._tuplePosNorm, [indicePositionFromObj, indiceNormalFromObj]);
+            _index = this._isInArray(this._tuplePosNorm, [data.indicePositionFromObj, data.indiceNormalFromObj]);
         }
 
         //If it not exists
@@ -179,27 +185,29 @@ export class SolidParser {
             this._indicesForBabylon.push(this._wrappedPositionForBabylon.length);
             //Push the position of vertice for Babylon
             //Each element is a Vector3(x,y,z)
-            this._wrappedPositionForBabylon.push(positionVectorFromOBJ);
-            //Push the uvs for Babylon
-            //Each element is a Vector2(u,v)
-            //If the UVs are missing, set (u,v)=(0,0)
-            textureVectorFromOBJ = textureVectorFromOBJ ?? new Vector2(0, 0);
-            this._wrappedUvsForBabylon.push(textureVectorFromOBJ);
-            //Push the normals for Babylon
-            //Each element is a Vector3(x,y,z)
-            this._wrappedNormalsForBabylon.push(normalsVectorFromOBJ);
+            this._wrappedPositionForBabylon.push(data.positionVectorFromOBJ);
 
-            if (positionColorsFromOBJ !== undefined) {
+            if (data.textureVectorFromOBJ !== undefined) {
+                //Push the uvs for Babylon
+                //Each element is a Vector2(u,v)
+                this._wrappedUvsForBabylon.push(data.textureVectorFromOBJ);
+            }
+            if (data.normalsVectorFromOBJ !== undefined) {
+                //Push the normals for Babylon
+                //Each element is a Vector3(x,y,z)
+                this._wrappedNormalsForBabylon.push(data.normalsVectorFromOBJ);
+            }
+            if (data.positionColorsFromOBJ !== undefined) {
                 //Push the colors for Babylon
                 //Each element is a BABYLON.Color4(r,g,b,a)
-                this._wrappedColorsForBabylon.push(positionColorsFromOBJ);
+                this._wrappedColorsForBabylon.push(data.positionColorsFromOBJ);
             }
 
             //Add the tuple in the comparison list
-            this._tuplePosNorm[indicePositionFromObj].normals.push(indiceNormalFromObj);
-            this._tuplePosNorm[indicePositionFromObj].idx.push(this._curPositionInIndices++);
+            this._tuplePosNorm[data.indicePositionFromObj].normals.push(data.indiceNormalFromObj);
+            this._tuplePosNorm[data.indicePositionFromObj].idx.push(this._curPositionInIndices++);
             if (this._loadingOptions.optimizeWithUV) {
-                this._tuplePosNorm[indicePositionFromObj].uv.push(indiceUvsFromObj);
+                this._tuplePosNorm[data.indicePositionFromObj].uv.push(data.indiceUvsFromObj);
             }
         } else {
             //The tuple already exists
@@ -213,38 +221,45 @@ export class SolidParser {
      * Transform Vector() and BABYLON.Color() objects into numbers in an array
      */
     private _unwrapData() {
-        //Every array has the same length
-        for (let l = 0; l < this._wrappedPositionForBabylon.length; l++) {
-            //Push the x, y, z values of each element in the unwrapped array
-            this._unwrappedPositionsForBabylon.push(
-                this._wrappedPositionForBabylon[l].x * this._handednessSign,
-                this._wrappedPositionForBabylon[l].y,
-                this._wrappedPositionForBabylon[l].z
-            );
-            this._unwrappedNormalsForBabylon.push(
-                this._wrappedNormalsForBabylon[l].x * this._handednessSign,
-                this._wrappedNormalsForBabylon[l].y,
-                this._wrappedNormalsForBabylon[l].z
-            );
-
-            this._unwrappedUVForBabylon.push(this._wrappedUvsForBabylon[l].x, this._wrappedUvsForBabylon[l].y); //z is an optional value not supported by BABYLON
-            if (this._loadingOptions.importVertexColors) {
-                //Push the r, g, b, a values of each element in the unwrapped array
-                this._unwrappedColorsForBabylon.push(
-                    this._wrappedColorsForBabylon[l].r,
-                    this._wrappedColorsForBabylon[l].g,
-                    this._wrappedColorsForBabylon[l].b,
-                    this._wrappedColorsForBabylon[l].a
+        try {
+            //Every array has the same length
+            for (let l = 0; l < this._wrappedPositionForBabylon.length; l++) {
+                //Push the x, y, z values of each element in the unwrapped array
+                this._unwrappedPositionsForBabylon.push(
+                    this._wrappedPositionForBabylon[l].x * this._handednessSign,
+                    this._wrappedPositionForBabylon[l].y,
+                    this._wrappedPositionForBabylon[l].z
                 );
+                if (this._wrappedNormalsForBabylon.length) {
+                    this._unwrappedNormalsForBabylon.push(
+                        this._wrappedNormalsForBabylon[l].x * this._handednessSign,
+                        this._wrappedNormalsForBabylon[l].y,
+                        this._wrappedNormalsForBabylon[l].z
+                    );
+                }
+                if (this._wrappedUvsForBabylon.length) {
+                    this._unwrappedUVForBabylon.push(this._wrappedUvsForBabylon[l].x, this._wrappedUvsForBabylon[l].y); //z is an optional value not supported by BABYLON
+                }
+                if (this._unwrappedColorsForBabylon.length) {
+                    //Push the r, g, b, a values of each element in the unwrapped array
+                    this._unwrappedColorsForBabylon.push(
+                        this._wrappedColorsForBabylon[l].r,
+                        this._wrappedColorsForBabylon[l].g,
+                        this._wrappedColorsForBabylon[l].b,
+                        this._wrappedColorsForBabylon[l].a
+                    );
+                }
             }
+            // Reset arrays for the next new meshes
+            this._wrappedPositionForBabylon.length = 0;
+            this._wrappedNormalsForBabylon.length = 0;
+            this._wrappedUvsForBabylon.length = 0;
+            this._wrappedColorsForBabylon.length = 0;
+            this._tuplePosNorm.length = 0;
+            this._curPositionInIndices = 0;
+        } catch (e) {
+            throw new Error("Unable to unwrap data while parsing OBJ data.", { cause: e });
         }
-        // Reset arrays for the next new meshes
-        this._wrappedPositionForBabylon.length = 0;
-        this._wrappedNormalsForBabylon.length = 0;
-        this._wrappedUvsForBabylon.length = 0;
-        this._wrappedColorsForBabylon.length = 0;
-        this._tuplePosNorm.length = 0;
-        this._curPositionInIndices = 0;
     }
 
     /**
@@ -276,6 +291,19 @@ export class SolidParser {
     }
 
     /**
+     * To get color between color and extension color
+     * @param index Integer The index of the element in the array
+     * @returns value of target color
+     */
+    private _getColor(index: number) {
+        if (this._loadingOptions.importVertexColors) {
+            return this._extColors[index] ?? this._colors[index];
+        } else {
+            return undefined;
+        }
+    }
+
+    /**
      * Create triangles and push the data for each polygon for the pattern 1
      * In this pattern we get vertice positions
      * @param face
@@ -290,15 +318,11 @@ export class SolidParser {
             // Set position indice
             const indicePositionFromObj = parseInt(this._triangles[k]) - 1;
 
-            this._setData(
+            this._setData({
                 indicePositionFromObj,
-                0,
-                0, // In the pattern 1, normals and uvs are not defined
-                this._positions[indicePositionFromObj], // Get the vectors data
-                Vector2.Zero(),
-                Vector3.Up(), // Create default vectors
-                this._loadingOptions.importVertexColors ? this._colors[indicePositionFromObj] : undefined
-            );
+                positionVectorFromOBJ: this._positions[indicePositionFromObj],
+                positionColorsFromOBJ: this._getColor(indicePositionFromObj),
+            });
         }
         //Reset variable for the next line
         this._triangles.length = 0;
@@ -322,15 +346,13 @@ export class SolidParser {
             //Set uv indice
             const indiceUvsFromObj = parseInt(point[1]) - 1;
 
-            this._setData(
+            this._setData({
                 indicePositionFromObj,
                 indiceUvsFromObj,
-                0, //Default value for normals
-                this._positions[indicePositionFromObj], //Get the values for each element
-                this._uvs[indiceUvsFromObj] ?? Vector2.Zero(),
-                Vector3.Up(), //Default value for normals
-                this._loadingOptions.importVertexColors ? this._colors[indicePositionFromObj] : undefined
-            );
+                positionVectorFromOBJ: this._positions[indicePositionFromObj],
+                textureVectorFromOBJ: this._uvs[indiceUvsFromObj],
+                positionColorsFromOBJ: this._getColor(indicePositionFromObj),
+            });
         }
 
         //Reset variable for the next line
@@ -358,14 +380,14 @@ export class SolidParser {
             // Set normal indice
             const indiceNormalFromObj = parseInt(point[2]) - 1;
 
-            this._setData(
+            this._setData({
                 indicePositionFromObj,
                 indiceUvsFromObj,
                 indiceNormalFromObj,
-                this._positions[indicePositionFromObj],
-                this._uvs[indiceUvsFromObj] ?? Vector2.Zero(),
-                this._normals[indiceNormalFromObj] ?? Vector3.Up() //Set the vector for each component
-            );
+                positionVectorFromOBJ: this._positions[indicePositionFromObj],
+                textureVectorFromOBJ: this._uvs[indiceUvsFromObj],
+                normalsVectorFromOBJ: this._normals[indiceNormalFromObj],
+            });
         }
         //Reset variable for the next line
         this._triangles.length = 0;
@@ -388,15 +410,13 @@ export class SolidParser {
             const indicePositionFromObj = parseInt(point[0]) - 1;
             const indiceNormalFromObj = parseInt(point[1]) - 1;
 
-            this._setData(
+            this._setData({
                 indicePositionFromObj,
-                1, //Default value for uv
                 indiceNormalFromObj,
-                this._positions[indicePositionFromObj], //Get each vector of data
-                Vector2.Zero(),
-                this._normals[indiceNormalFromObj],
-                this._loadingOptions.importVertexColors ? this._colors[indicePositionFromObj] : undefined
-            );
+                positionVectorFromOBJ: this._positions[indicePositionFromObj],
+                normalsVectorFromOBJ: this._normals[indiceNormalFromObj],
+                positionColorsFromOBJ: this._getColor(indicePositionFromObj),
+            });
         }
         //Reset variable for the next line
         this._triangles.length = 0;
@@ -423,15 +443,15 @@ export class SolidParser {
             // Set normal indice
             const indiceNormalFromObj = this._normals.length + parseInt(point[2]);
 
-            this._setData(
+            this._setData({
                 indicePositionFromObj,
                 indiceUvsFromObj,
                 indiceNormalFromObj,
-                this._positions[indicePositionFromObj],
-                this._uvs[indiceUvsFromObj],
-                this._normals[indiceNormalFromObj], //Set the vector for each component
-                this._loadingOptions.importVertexColors ? this._colors[indicePositionFromObj] : undefined
-            );
+                positionVectorFromOBJ: this._positions[indicePositionFromObj],
+                textureVectorFromOBJ: this._uvs[indiceUvsFromObj],
+                normalsVectorFromOBJ: this._normals[indiceNormalFromObj],
+                positionColorsFromOBJ: this._getColor(indicePositionFromObj),
+            });
         }
         //Reset variable for the next line
         this._triangles.length = 0;
@@ -456,13 +476,16 @@ export class SolidParser {
             //Slice the array to avoid rewriting because of the fact this is the same var which be rewrited
             this._handledMesh.indices = this._indicesForBabylon.slice();
             this._handledMesh.positions = this._unwrappedPositionsForBabylon.slice();
-            this._handledMesh.normals = this._unwrappedNormalsForBabylon.slice();
-            this._handledMesh.uvs = this._unwrappedUVForBabylon.slice();
-            this._handledMesh.hasLines = this._hasLineData;
-
-            if (this._loadingOptions.importVertexColors) {
+            if (this._unwrappedNormalsForBabylon.length) {
+                this._handledMesh.normals = this._unwrappedNormalsForBabylon.slice();
+            }
+            if (this._unwrappedUVForBabylon.length) {
+                this._handledMesh.uvs = this._unwrappedUVForBabylon.slice();
+            }
+            if (this._unwrappedColorsForBabylon.length) {
                 this._handledMesh.colors = this._unwrappedColorsForBabylon.slice();
             }
+            this._handledMesh.hasLines = this._hasLineData;
 
             //Reset the array for the next mesh
             this._indicesForBabylon.length = 0;
@@ -537,6 +560,32 @@ export class SolidParser {
         return line.startsWith("g");
     }
 
+    private static _GetZbrushMRGB(line: string, notParse: boolean) {
+        if (!line.startsWith("mrgb")) {
+            return null;
+        }
+        line = line.replace("mrgb", "").trim();
+        // if include vertex color , not load mrgb anymore
+        if (notParse) {
+            return [];
+        }
+        const regex = /[a-z0-9]/g;
+        const regArray = line.match(regex);
+        if (!regArray || regArray.length % 8 !== 0) {
+            return [];
+        }
+        const array: Color4[] = [];
+        for (let regIndex = 0; regIndex < regArray.length / 8; regIndex++) {
+            //each item is MMRRGGBB, m is material index
+            // const m = regArray[regIndex * 8 + 0] + regArray[regIndex * 8 + 1];
+            const r = regArray[regIndex * 8 + 2] + regArray[regIndex * 8 + 3];
+            const g = regArray[regIndex * 8 + 4] + regArray[regIndex * 8 + 5];
+            const b = regArray[regIndex * 8 + 6] + regArray[regIndex * 8 + 7];
+            array.push(new Color4(parseInt(r, 16) / 255, parseInt(g, 16) / 255, parseInt(b, 16) / 255, 1));
+        }
+        return array;
+    }
+
     /**
      * Function used to parse an OBJ string
      * @param meshesNames defines the list of meshes to load (all if not defined)
@@ -546,6 +595,10 @@ export class SolidParser {
      * @param onFileToLoadFound defines a callback that will be called if a MTL file is found
      */
     public parse(meshesNames: any, data: string, scene: Scene, assetContainer: Nullable<AssetContainer>, onFileToLoadFound: (fileToLoad: string) => void): void {
+        //Move Santitize here to forbid delete zbrush data
+        // Sanitize data
+        data = data.replace(/#MRGB/g, "mrgb");
+        data = data.replace(/#.*$/gm, "").trim();
         if (this._loadingOptions.useLegacyBehavior) {
             this._pushTriangle = (faces, faceIndex) => this._triangles.push(faces[0], faces[faceIndex], faces[faceIndex + 1]);
             this._handednessSign = 1;
@@ -590,12 +643,10 @@ export class SolidParser {
         }
 
         const lines = lineLines.flat();
-
         // Look at each line
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim().replace(/\s\s/g, " ");
             let result;
-
             // Comment or newLine
             if (line.length === 0 || line.charAt(0) === "#") {
                 continue;
@@ -711,6 +762,10 @@ export class SolidParser {
 
                 // Define a mesh or an object
                 // Each time this keyword is analyzed, create a new Object with all data for creating a babylonMesh
+            } else if ((result = SolidParser._GetZbrushMRGB(line, !this._loadingOptions.importVertexColors))) {
+                for (const element of result) {
+                    this._extColors.push(element);
+                }
             } else if ((result = SolidParser.LinePattern3.exec(line)) !== null) {
                 //Value of result
                 //["l 1/1/1 2/2/2"]
@@ -811,13 +866,16 @@ export class SolidParser {
             //Set array
             this._handledMesh.indices = this._indicesForBabylon;
             this._handledMesh.positions = this._unwrappedPositionsForBabylon;
-            this._handledMesh.normals = this._unwrappedNormalsForBabylon;
-            this._handledMesh.uvs = this._unwrappedUVForBabylon;
-            this._handledMesh.hasLines = this._hasLineData;
-
-            if (this._loadingOptions.importVertexColors) {
+            if (this._unwrappedNormalsForBabylon.length) {
+                this._handledMesh.normals = this._unwrappedNormalsForBabylon;
+            }
+            if (this._unwrappedUVForBabylon.length) {
+                this._handledMesh.uvs = this._unwrappedUVForBabylon;
+            }
+            if (this._unwrappedColorsForBabylon.length) {
                 this._handledMesh.colors = this._unwrappedColorsForBabylon;
             }
+            this._handledMesh.hasLines = this._hasLineData;
         }
 
         // If any o or g keyword not found, create a mesh with a random id
@@ -849,9 +907,15 @@ export class SolidParser {
                     }
                 }
 
-                if (this._colors.length) {
-                    for (const color of this._colors) {
+                if (this._extColors.length) {
+                    for (const color of this._extColors) {
                         this._unwrappedColorsForBabylon.push(color.r, color.g, color.b, color.a);
+                    }
+                } else {
+                    if (this._colors.length) {
+                        for (const color of this._colors) {
+                            this._unwrappedColorsForBabylon.push(color.r, color.g, color.b, color.a);
+                        }
                     }
                 }
 
@@ -937,17 +1001,20 @@ export class SolidParser {
 
             const vertexData: VertexData = new VertexData(); //The container for the values
             //Set the data for the babylonMesh
-            vertexData.uvs = this._handledMesh.uvs;
             vertexData.indices = this._handledMesh.indices;
             vertexData.positions = this._handledMesh.positions;
-            if (this._loadingOptions.computeNormals) {
+            if (this._loadingOptions.computeNormals || !this._handledMesh.normals) {
+                // Compute normals if requested or if normals are not defined
                 const normals: Array<number> = new Array<number>();
                 VertexData.ComputeNormals(this._handledMesh.positions, this._handledMesh.indices, normals);
                 vertexData.normals = normals;
             } else {
                 vertexData.normals = this._handledMesh.normals;
             }
-            if (this._loadingOptions.importVertexColors) {
+            if (this._handledMesh.uvs) {
+                vertexData.uvs = this._handledMesh.uvs;
+            }
+            if (this._handledMesh.colors) {
                 vertexData.colors = this._handledMesh.colors;
             }
             //Set the data from the VertexBuffer to the current Mesh

@@ -1,9 +1,9 @@
-import type { Nullable } from "../../../types";
+import { type Nullable } from "../../../types";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
-import type { NodeGeometryBuildState } from "../nodeGeometryBuildState";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryBuildState } from "../nodeGeometryBuildState";
 import { Vector2, Vector3, Vector4 } from "../../../Maths/math.vector";
 import { PropertyTypeForEdition, editableInPropertyPage } from "../../../Decorators/nodeDecorator";
 
@@ -63,6 +63,7 @@ export class GeometryTrigonometryBlock extends NodeGeometryBlock {
      * Gets or sets the operation applied by the block
      */
     @editableInPropertyPage("Operation", PropertyTypeForEdition.List, "ADVANCED", {
+        embedded: true,
         notifiers: { rebuild: true },
         options: [
             { label: "Cos", value: GeometryTrigonometryBlockOperations.Cos },
@@ -235,28 +236,28 @@ export class GeometryTrigonometryBlock extends NodeGeometryBlock {
             case NodeGeometryBlockConnectionPointTypes.Float: {
                 this.output._storedFunction = (state) => {
                     const source = this.input.getConnectedValue(state);
-                    return func!(source);
+                    return func(source);
                 };
                 break;
             }
             case NodeGeometryBlockConnectionPointTypes.Vector2: {
                 this.output._storedFunction = (state) => {
                     const source = this.input.getConnectedValue(state);
-                    return new Vector2(func!(source.x), func!(source.y));
+                    return new Vector2(func(source.x), func(source.y));
                 };
                 break;
             }
             case NodeGeometryBlockConnectionPointTypes.Vector3: {
                 this.output._storedFunction = (state) => {
                     const source = this.input.getConnectedValue(state);
-                    return new Vector3(func!(source.x), func!(source.y), func!(source.z));
+                    return new Vector3(func(source.x), func(source.y), func(source.z));
                 };
                 break;
             }
             case NodeGeometryBlockConnectionPointTypes.Vector4: {
                 this.output._storedFunction = (state) => {
                     const source = this.input.getConnectedValue(state);
-                    return new Vector4(func!(source.x), func!(source.y), func!(source.z), func!(source.w));
+                    return new Vector4(func(source.x), func(source.y), func(source.z), func(source.w));
                 };
                 break;
             }
@@ -265,6 +266,7 @@ export class GeometryTrigonometryBlock extends NodeGeometryBlock {
         return this;
     }
 
+    /** @internal */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -273,6 +275,7 @@ export class GeometryTrigonometryBlock extends NodeGeometryBlock {
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

@@ -1,13 +1,15 @@
 import { serialize } from "../Misc/decorators";
-import type { Camera } from "../Cameras/camera";
-import type { Scene } from "../scene";
+import { type Camera } from "../Cameras/camera";
+import { type Scene } from "../scene";
 import { Matrix, Vector3 } from "../Maths/math.vector";
 import { Node } from "../node";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
 import { Light } from "./light";
 import { ShadowLight } from "./shadowLight";
-import type { Effect } from "../Materials/effect";
+import { type Effect } from "../Materials/effect";
 import { RegisterClass } from "../Misc/typeStore";
+import { type Nullable } from "../types";
+import { Constants } from "core/Engines/constants";
 
 Node.AddNodeConstructor("Light_Type_1", (name, scene) => {
     return () => new DirectionalLight(name, Vector3.Zero(), scene);
@@ -132,9 +134,10 @@ export class DirectionalLight extends ShadowLight {
      * @param name The friendly name of the light
      * @param direction The direction of the light
      * @param scene The scene the light belongs to
+     * @param dontAddToScene True to not add the light to the scene
      */
-    constructor(name: string, direction: Vector3, scene?: Scene) {
-        super(name, scene);
+    constructor(name: string, direction: Vector3, scene?: Scene, dontAddToScene?: boolean) {
+        super(name, scene, dontAddToScene);
         this.position = direction.scale(-1.0);
         this.direction = direction;
     }
@@ -151,6 +154,7 @@ export class DirectionalLight extends ShadowLight {
      * Returns the integer 1.
      * @returns The light Type id as a constant defines in Light.LIGHTTYPEID_x
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public override getTypeID(): number {
         return Light.LIGHTTYPEID_DIRECTIONALLIGHT;
     }
@@ -178,15 +182,11 @@ export class DirectionalLight extends ShadowLight {
     protected _setDefaultFixedFrustumShadowProjectionMatrix(matrix: Matrix): void {
         const activeCamera = this.getScene().activeCamera;
 
-        if (!activeCamera) {
-            return;
-        }
-
         Matrix.OrthoLHToRef(
             this.shadowFrustumSize,
             this.shadowFrustumSize,
-            this.shadowMinZ !== undefined ? this.shadowMinZ : activeCamera.minZ,
-            this.shadowMaxZ !== undefined ? this.shadowMaxZ : activeCamera.maxZ,
+            this.shadowMinZ !== undefined ? this.shadowMinZ : activeCamera ? activeCamera.minZ : Constants.ShadowMinZ,
+            this.shadowMaxZ !== undefined ? this.shadowMaxZ : activeCamera ? activeCamera.maxZ : Constants.ShadowMaxZ,
             matrix,
             this.getScene().getEngine().isNDCHalfZRange
         );
@@ -201,10 +201,6 @@ export class DirectionalLight extends ShadowLight {
      */
     protected _setDefaultAutoExtendShadowProjectionMatrix(matrix: Matrix, viewMatrix: Matrix, renderList: Array<AbstractMesh>): void {
         const activeCamera = this.getScene().activeCamera;
-
-        if (!activeCamera) {
-            return;
-        }
 
         // Check extends
         if (this.autoUpdateExtends || this._orthoLeft === Number.MAX_VALUE) {
@@ -264,8 +260,8 @@ export class DirectionalLight extends ShadowLight {
         const xOffset = this._orthoRight - this._orthoLeft;
         const yOffset = this._orthoTop - this._orthoBottom;
 
-        const minZ = this.shadowMinZ !== undefined ? this.shadowMinZ : activeCamera.minZ;
-        const maxZ = this.shadowMaxZ !== undefined ? this.shadowMaxZ : activeCamera.maxZ;
+        const minZ = this.shadowMinZ !== undefined ? this.shadowMinZ : activeCamera?.minZ || Constants.ShadowMinZ;
+        const maxZ = this.shadowMaxZ !== undefined ? this.shadowMaxZ : activeCamera?.maxZ || Constants.ShadowMaxZ;
 
         const useReverseDepthBuffer = this.getScene().getEngine().useReverseDepthBuffer;
 
@@ -321,11 +317,11 @@ export class DirectionalLight extends ShadowLight {
      * Values are fixed on directional lights as it relies on an ortho projection hence the need to convert being
      * -1 and 1 to 0 and 1 doing (depth + min) / (min + max) -> (depth + 1) / (1 + 1) -> (depth * 0.5) + 0.5.
      * (when not using reverse depth buffer / NDC half Z range)
-     * @param activeCamera The camera we are returning the min for
+     * @param _activeCamera The camera we are returning the min for (not used)
      * @returns the depth min z
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public override getDepthMinZ(activeCamera: Camera): number {
+    public override getDepthMinZ(_activeCamera: Nullable<Camera>): number {
         const engine = this._scene.getEngine();
         return !engine.useReverseDepthBuffer && engine.isNDCHalfZRange ? 0 : 1;
     }
@@ -336,11 +332,11 @@ export class DirectionalLight extends ShadowLight {
      * Values are fixed on directional lights as it relies on an ortho projection hence the need to convert being
      * -1 and 1 to 0 and 1 doing (depth + min) / (min + max) -> (depth + 1) / (1 + 1) -> (depth * 0.5) + 0.5.
      * (when not using reverse depth buffer / NDC half Z range)
-     * @param activeCamera The camera we are returning the max for
+     * @param _activeCamera The camera we are returning the max for
      * @returns the depth max z
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public override getDepthMaxZ(activeCamera: Camera): number {
+    public override getDepthMaxZ(_activeCamera: Nullable<Camera>): number {
         const engine = this._scene.getEngine();
         return engine.useReverseDepthBuffer && engine.isNDCHalfZRange ? 0 : 1;
     }

@@ -1,11 +1,11 @@
-import type { IExplorerExtensibilityGroup } from "core/Debug/debugLayer";
-import type { Material } from "core/Materials/material";
+import { type IExplorerExtensibilityGroup } from "core/Debug/debugLayer";
+import { type Material } from "core/Materials/material";
 import { faBrush, faPen } from "@fortawesome/free-solid-svg-icons";
 import { TreeItemLabelComponent } from "../treeItemLabelComponent";
 import { ExtensionsComponent } from "../extensionsComponent";
 import * as React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { NodeMaterial } from "core/Materials/Node/nodeMaterial";
+import { type NodeMaterial } from "core/Materials/Node/nodeMaterial";
 
 interface IMaterialTreeItemComponentProps {
     material: Material | NodeMaterial;
@@ -24,6 +24,7 @@ export class MaterialTreeItemComponent extends React.Component<IMaterialTreeItem
                 <div
                     className="icon"
                     onClick={() => {
+                        // eslint-disable-next-line @typescript-eslint/no-floating-promises
                         (this.props.material as NodeMaterial).edit({ nodeEditorConfig: { backgroundColor: this.props.material.getScene().clearColor } });
                     }}
                     title="Node Material Editor"

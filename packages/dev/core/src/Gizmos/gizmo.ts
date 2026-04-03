@@ -1,26 +1,26 @@
-import type { Observer } from "../Misc/observable";
-import type { Nullable } from "../types";
-import type { Scene, IDisposable } from "../scene";
+import { type Observer } from "../Misc/observable";
+import { type Nullable } from "../types";
+import { type Scene, type IDisposable } from "../scene";
 import { Quaternion, Vector3, Matrix, TmpVectors } from "../Maths/math.vector";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
 import { Mesh } from "../Meshes/mesh";
 import { Camera } from "../Cameras/camera";
-import type { TargetCamera } from "../Cameras/targetCamera";
-import type { Node } from "../node";
-import type { Bone } from "../Bones/bone";
+import { type TargetCamera } from "../Cameras/targetCamera";
+import { type Node } from "../node";
+import { type Bone } from "../Bones/bone";
 import { UtilityLayerRenderer } from "../Rendering/utilityLayerRenderer";
-import type { TransformNode } from "../Meshes/transformNode";
-import type { StandardMaterial } from "../Materials/standardMaterial";
-import type { PointerInfo } from "../Events/pointerEvents";
-import { PointerEventTypes } from "../Events/pointerEvents";
-import type { LinesMesh } from "../Meshes/linesMesh";
-import type { PointerDragBehavior } from "../Behaviors/Meshes/pointerDragBehavior";
-import type { ShadowLight } from "../Lights/shadowLight";
+import { type TransformNode } from "../Meshes/transformNode";
+import { type StandardMaterial } from "../Materials/standardMaterial";
+import { type PointerInfo, PointerEventTypes } from "../Events/pointerEvents";
+import { type LinesMesh } from "../Meshes/linesMesh";
+import { type PointerDragBehavior } from "../Behaviors/Meshes/pointerDragBehavior";
+import { type ShadowLight } from "../Lights/shadowLight";
 import { Light } from "../Lights/light";
 
 /**
  * Cache built by each axis. Used for managing state between all elements of gizmo for enhanced UI
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface GizmoAxisCache {
     /** Mesh used to render the Gizmo */
     gizmoMeshes: Mesh[];
@@ -44,7 +44,7 @@ export interface GizmoAxisCache {
 export const enum GizmoAnchorPoint {
     /** The origin of the attached node */
     Origin,
-    /** The pivot point of the attached node*/
+    /** The pivot point of the attached node */
     Pivot,
 }
 
@@ -102,7 +102,7 @@ export interface IGizmo extends IDisposable {
      */
     updateScale: boolean;
     /**
-     * posture that the gizmo will be display
+     * Orientation that the gizmo will be displayed with.
      * When set null, default value will be used (Quaternion(0, 0, 0, 1))
      */
     customRotationQuaternion: Nullable<Quaternion>;
@@ -142,7 +142,7 @@ export class Gizmo implements IGizmo {
     protected _isHovered = false;
 
     /**
-     * When enabled, any gizmo operation will perserve scaling sign. Default is off.
+     * When enabled, any gizmo operation will preserve scaling sign. Default is off.
      * Only valid for TransformNode derived classes (Mesh, AbstractMesh, ...)
      */
     public static PreserveScaling = false;
@@ -214,9 +214,10 @@ export class Gizmo implements IGizmo {
             // eslint-disable-next-line no-throw-literal
             throw "When setting a custom mesh on a gizmo, the custom meshes scene must be the same as the gizmos (eg. gizmo.gizmoLayer.utilityLayerScene)";
         }
-        this._rootMesh.getChildMeshes().forEach((c) => {
+        const children = this._rootMesh.getChildMeshes();
+        for (const c of children) {
             c.dispose();
-        });
+        }
         mesh.parent = this._rootMesh;
         this._customMeshSet = true;
     }
@@ -321,7 +322,7 @@ export class Gizmo implements IGizmo {
     }
 
     /**
-     * posture that the gizmo will be display
+     * Orientation that the gizmo will be displayed with.
      * When set null, default value will be used (Quaternion(0, 0, 0, 1))
      */
     public get customRotationQuaternion(): Nullable<Quaternion> {
@@ -339,7 +340,7 @@ export class Gizmo implements IGizmo {
         if (this.attachedNode) {
             let effectiveNode = this.attachedNode;
             if (this.attachedMesh) {
-                effectiveNode = this.attachedMesh || this.attachedNode;
+                effectiveNode = this.attachedMesh;
             }
 
             // Position
@@ -376,7 +377,8 @@ export class Gizmo implements IGizmo {
             if (this.updateScale) {
                 const activeCamera = this.gizmoLayer.utilityLayerScene.activeCamera!;
                 const cameraPosition = activeCamera.globalPosition;
-                this._rootMesh.position.subtractToRef(cameraPosition, TmpVectors.Vector3[0]);
+                const offsetToCamera = TmpVectors.Vector3[0];
+                this._rootMesh.absolutePosition.subtractToRef(cameraPosition, offsetToCamera);
                 let scale = this.scaleRatio;
                 if (activeCamera.mode == Camera.ORTHOGRAPHIC_CAMERA) {
                     if (activeCamera.orthoTop && activeCamera.orthoBottom) {
@@ -386,7 +388,12 @@ export class Gizmo implements IGizmo {
                 } else {
                     const camForward = activeCamera.getScene().useRightHandedSystem ? Vector3.RightHandedForwardReadOnly : Vector3.LeftHandedForwardReadOnly;
                     const direction = activeCamera.getDirection(camForward);
-                    scale *= Vector3.Dot(TmpVectors.Vector3[0], direction);
+                    scale *= Vector3.Dot(offsetToCamera, direction);
+                }
+                if (this.additionalTransformNode) {
+                    this.additionalTransformNode.getWorldMatrix().decompose(TmpVectors.Vector3[1]);
+                    const maxScale = Math.max(Math.abs(TmpVectors.Vector3[1].x), Math.abs(TmpVectors.Vector3[1].y), Math.abs(TmpVectors.Vector3[1].z));
+                    scale *= 1 / maxScale;
                 }
                 this._rootMesh.scaling.setAll(scale);
 
@@ -433,7 +440,7 @@ export class Gizmo implements IGizmo {
         if ((<Camera>this._attachedNode)._isCamera) {
             const camera = this._attachedNode as Camera;
             let worldMatrix;
-            let worldMatrixUC;
+            let worldMatrixUc;
             if (camera.parent) {
                 const parentInv = TmpVectors.Matrix[1];
                 camera.parent._worldMatrix.invertToRef(parentInv);
@@ -446,12 +453,12 @@ export class Gizmo implements IGizmo {
             if (camera.getScene().useRightHandedSystem) {
                 // avoid desync with RH matrix computation. Otherwise, rotation of PI around Y axis happens each frame resulting in axis flipped because worldMatrix is computed as inverse of viewMatrix.
                 this._rightHandtoLeftHandMatrix.multiplyToRef(worldMatrix, TmpVectors.Matrix[1]);
-                worldMatrixUC = TmpVectors.Matrix[1];
+                worldMatrixUc = TmpVectors.Matrix[1];
             } else {
-                worldMatrixUC = worldMatrix;
+                worldMatrixUc = worldMatrix;
             }
 
-            worldMatrixUC.decompose(TmpVectors.Vector3[1], TmpVectors.Quaternion[0], TmpVectors.Vector3[0]);
+            worldMatrixUc.decompose(TmpVectors.Vector3[1], TmpVectors.Quaternion[0], TmpVectors.Vector3[0]);
 
             const inheritsTargetCamera =
                 this._attachedNode.getClassName() === "FreeCamera" ||
@@ -503,7 +510,7 @@ export class Gizmo implements IGizmo {
                     const scaleMatrix = TmpVectors.Matrix[2];
                     Matrix.ScalingToRef(transform.scaling.x, transform.scaling.y, transform.scaling.z, scaleMatrix);
 
-                    const rotationMatrix = TmpVectors.Matrix[2];
+                    const rotationMatrix = TmpVectors.Matrix[7];
                     r.toRotationMatrix(rotationMatrix);
 
                     const pivotMatrix = transform.getPivotMatrix();
@@ -588,12 +595,12 @@ export class Gizmo implements IGizmo {
      */
     protected _setGizmoMeshMaterial(gizmoMeshes: Mesh[], material: StandardMaterial) {
         if (gizmoMeshes) {
-            gizmoMeshes.forEach((m: Mesh) => {
+            for (const m of gizmoMeshes) {
                 m.material = material;
                 if ((<LinesMesh>m).color) {
                     (<LinesMesh>m).color = material.diffuseColor;
                 }
-            });
+            }
         }
     }
 
@@ -605,11 +612,32 @@ export class Gizmo implements IGizmo {
      */
     public static GizmoAxisPointerObserver(gizmoLayer: UtilityLayerRenderer, gizmoAxisCache: Map<Mesh, GizmoAxisCache>): Observer<PointerInfo> {
         let dragging = false;
+        let activeDragButton = -1;
+        let forcePointerUp = false;
 
         const pointerObserver = gizmoLayer.utilityLayerScene.onPointerObservable.add((pointerInfo) => {
             if (pointerInfo.pickInfo) {
-                // On Hover Logic
-                if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+                // If we are dragging and the user presses another button, end the drag.
+                // Otherwise, tracking when the drag should end becomes very complex.
+                // pointerDragBehavior.ts has similar logic.
+                forcePointerUp = dragging && pointerInfo.event.button !== -1 && pointerInfo.event.button !== activeDragButton;
+
+                if (forcePointerUp || pointerInfo.type === PointerEventTypes.POINTERUP) {
+                    // On Mouse Up
+
+                    gizmoAxisCache.forEach((cache) => {
+                        cache.active = false;
+                        dragging = false;
+                        activeDragButton = -1;
+                        for (const m of cache.gizmoMeshes) {
+                            m.material = cache.dragBehavior.enabled ? cache.material : cache.disableMaterial;
+                            if ((m as LinesMesh).color) {
+                                (m as LinesMesh).color = cache.material.diffuseColor;
+                            }
+                        }
+                    });
+                } else if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+                    // On Hover Logic
                     if (dragging) {
                         return;
                     }
@@ -617,53 +645,38 @@ export class Gizmo implements IGizmo {
                         if (cache.colliderMeshes && cache.gizmoMeshes) {
                             const isHovered = cache.colliderMeshes?.indexOf(pointerInfo?.pickInfo?.pickedMesh as Mesh) != -1;
                             const material = cache.dragBehavior.enabled ? (isHovered || cache.active ? cache.hoverMaterial : cache.material) : cache.disableMaterial;
-                            cache.gizmoMeshes.forEach((m: Mesh) => {
+                            for (const m of cache.gizmoMeshes) {
                                 m.material = material;
                                 if ((m as LinesMesh).color) {
                                     (m as LinesMesh).color = material.diffuseColor;
                                 }
-                            });
+                            }
                         }
                     });
-                }
-
-                // On Mouse Down
-                if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+                } else if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+                    // On Mouse Down
                     // If user Clicked Gizmo
                     if (gizmoAxisCache.has(pointerInfo.pickInfo.pickedMesh?.parent as Mesh)) {
                         dragging = true;
+                        activeDragButton = pointerInfo.event.button;
                         const statusMap = gizmoAxisCache.get(pointerInfo.pickInfo.pickedMesh?.parent as Mesh);
                         statusMap!.active = true;
                         gizmoAxisCache.forEach((cache) => {
                             const isHovered = cache.colliderMeshes?.indexOf(pointerInfo?.pickInfo?.pickedMesh as Mesh) != -1;
                             const material = (isHovered || cache.active) && cache.dragBehavior.enabled ? cache.hoverMaterial : cache.disableMaterial;
-                            cache.gizmoMeshes.forEach((m: Mesh) => {
+                            for (const m of cache.gizmoMeshes) {
                                 m.material = material;
                                 if ((m as LinesMesh).color) {
                                     (m as LinesMesh).color = material.diffuseColor;
                                 }
-                            });
-                        });
-                    }
-                }
-
-                // On Mouse Up
-                if (pointerInfo.type === PointerEventTypes.POINTERUP) {
-                    gizmoAxisCache.forEach((cache) => {
-                        cache.active = false;
-                        dragging = false;
-                        cache.gizmoMeshes.forEach((m: Mesh) => {
-                            m.material = cache.dragBehavior.enabled ? cache.material : cache.disableMaterial;
-                            if ((m as LinesMesh).color) {
-                                (m as LinesMesh).color = cache.material.diffuseColor;
                             }
                         });
-                    });
+                    }
                 }
             }
         });
 
-        return pointerObserver!;
+        return pointerObserver;
     }
 
     /**

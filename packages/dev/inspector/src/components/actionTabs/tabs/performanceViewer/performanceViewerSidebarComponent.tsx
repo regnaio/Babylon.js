@@ -1,12 +1,12 @@
 import { Color3 } from "core/Maths/math.color";
-import type { IPerfMetadata } from "core/Misc/interfaces/iPerfViewer";
-import type { PerformanceViewerCollector } from "core/Misc/PerformanceViewer/performanceViewerCollector";
+import { type IPerfMetadata } from "core/Misc/interfaces/iPerfViewer";
+import { type PerformanceViewerCollector } from "core/Misc/PerformanceViewer/performanceViewerCollector";
 import { useEffect, useState } from "react";
 import { ColorPickerLine } from "shared-ui-components/lines/colorPickerComponent";
 import { faSquare, faCheckSquare } from "@fortawesome/free-solid-svg-icons";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
-import type { Observable } from "core/Misc/observable";
-import type { IPerfMinMax, IVisibleRangeChangedObservableProps } from "../../../graph/graphSupportingTypes";
+import { type Observable } from "core/Misc/observable";
+import { type IPerfMinMax, type IVisibleRangeChangedObservableProps } from "../../../graph/graphSupportingTypes";
 import { Engine } from "core/Engines/engine";
 
 interface IPerformanceViewerSidebarComponentProps {
@@ -79,9 +79,12 @@ export const PerformanceViewerSidebarComponent = (props: IPerformanceViewerSideb
 
     const onCheckAllChange = (category: string) => (selected: boolean) => {
         const categoryIds = metadataCategoryId?.get(category);
-        categoryIds?.forEach((id) => {
+        if (!categoryIds) {
+            return;
+        }
+        for (const id of categoryIds) {
             collector.updateMetadata(id, "hidden", !selected);
-        });
+        }
     };
 
     const onColorChange = (id: string) => (color: string) => {

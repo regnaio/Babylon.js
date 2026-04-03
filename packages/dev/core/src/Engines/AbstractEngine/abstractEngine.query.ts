@@ -1,6 +1,5 @@
 import { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { PerfCounter } from "../../Misc/perfCounter";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { AbstractEngine } from "../abstractEngine";
 
 /** @internal */
@@ -29,21 +28,14 @@ export class _OcclusionDataStorage {
 
     /** @internal */
     public forceRenderingWhenOccluded = false;
+
+    /** @internal */
+    public occlusionForRenderPassId = -1;
 }
 
 declare module "../../Engines/abstractEngine" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractEngine {
-        /**
-         * Get the performance counter associated with the frame time computation
-         * @returns the perf counter
-         */
-        getGPUFrameTimeCounter(): Nullable<PerfCounter>;
-
-        /**
-         * Enable or disable the GPU frame time capture
-         * @param value True to enable, false to disable
-         */
-        captureGPUFrameTime(value: boolean): void;
         /**
          * Create a new webGL query (you must be sure that queries are supported by checking getCaps() function)
          * @returns the new query
@@ -83,13 +75,6 @@ declare module "../../Engines/abstractEngine" {
         endOcclusionQuery(algorithmType: number): AbstractEngine;
     }
 }
-AbstractEngine.prototype.getGPUFrameTimeCounter = function (): Nullable<PerfCounter> {
-    return null;
-};
-
-AbstractEngine.prototype.captureGPUFrameTime = function (value: boolean): void {
-    // Do nothing. Must be implemented by child classes
-};
 
 AbstractEngine.prototype.createQuery = function (): Nullable<OcclusionQuery> {
     return null;
@@ -121,6 +106,7 @@ AbstractEngine.prototype.endOcclusionQuery = function (algorithmType: number): A
 };
 
 declare module "../../Meshes/abstractMesh" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractMesh {
         /**
          * Backing filed
@@ -176,6 +162,12 @@ declare module "../../Meshes/abstractMesh" {
          * @see https://doc.babylonjs.com/features/featuresDeepDive/occlusionQueries
          */
         forceRenderingWhenOccluded: boolean;
+
+        /**
+         * This number indicates the render pass id used to run the occlusion query. The default value is -1, which means run the occlusion query in all render passes.
+         * @see https://doc.babylonjs.com/features/featuresDeepDive/occlusionQueries
+         */
+        occlusionForRenderPassId: number;
     }
 }
 Object.defineProperty(AbstractMesh.prototype, "isOcclusionQueryInProgress", {
@@ -255,8 +247,19 @@ Object.defineProperty(AbstractMesh.prototype, "forceRenderingWhenOccluded", {
     configurable: true,
 });
 
+Object.defineProperty(AbstractMesh.prototype, "occlusionForRenderPassId", {
+    get: function (this: AbstractMesh) {
+        return this._occlusionDataStorage.occlusionForRenderPassId;
+    },
+    set: function (this: AbstractMesh, value: number) {
+        this._occlusionDataStorage.occlusionForRenderPassId = value;
+    },
+    enumerable: true,
+    configurable: true,
+});
+
 // We also need to update AbstractMesh as there is a portion of the code there
-AbstractMesh.prototype._checkOcclusionQuery = function () {
+AbstractMesh.prototype._checkOcclusionQuery = function (checkOnly: boolean) {
     const dataStorage = this._occlusionDataStorage;
 
     if (dataStorage.occlusionType === AbstractMesh.OCCLUSION_TYPE_NONE) {
@@ -299,6 +302,10 @@ AbstractMesh.prototype._checkOcclusionQuery = function () {
                 return dataStorage.occlusionType === AbstractMesh.OCCLUSION_TYPE_OPTIMISTIC ? false : dataStorage.isOccluded;
             }
         }
+    }
+
+    if (checkOnly) {
+        return dataStorage.isOccluded;
     }
 
     const scene = this.getScene();

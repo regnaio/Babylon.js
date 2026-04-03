@@ -1,13 +1,14 @@
-import type { SmartArrayNoDuplicate } from "../../Misc/smartArray";
-import type { Scene } from "../../scene";
-import type { RenderTargetTexture } from "../../Materials/Textures/renderTargetTexture";
+import { type SmartArrayNoDuplicate } from "../../Misc/smartArray";
+import { type Scene } from "../../scene";
+import { type RenderTargetTexture } from "../../Materials/Textures/renderTargetTexture";
 import { ShadowGenerator } from "./shadowGenerator";
 import { CascadedShadowGenerator } from "./cascadedShadowGenerator";
-import type { ISceneSerializableComponent } from "../../sceneComponent";
-import { SceneComponentConstants } from "../../sceneComponent";
-import { AbstractScene } from "../../abstractScene";
+import { type ISceneSerializableComponent, SceneComponentConstants } from "../../sceneComponent";
+import { AddParser } from "core/Loading/Plugins/babylonFileParser.function";
+import { type IAssetContainer } from "core/IAssetContainer";
+
 // Adds the parser to the scene parsers.
-AbstractScene.AddParser(SceneComponentConstants.NAME_SHADOWGENERATOR, (parsedData: any, scene: Scene) => {
+AddParser(SceneComponentConstants.NAME_SHADOWGENERATOR, (parsedData: any, scene: Scene) => {
     // Shadows
     if (parsedData.shadowGenerators !== undefined && parsedData.shadowGenerators !== null) {
         for (let index = 0, cache = parsedData.shadowGenerators.length; index < cache; index++) {
@@ -69,11 +70,17 @@ export class ShadowGeneratorSceneComponent implements ISceneSerializableComponen
         serializationObject.shadowGenerators = [];
         const lights = this.scene.lights;
         for (const light of lights) {
+            if (light.doNotSerialize) {
+                continue;
+            }
             const shadowGenerators = light.getShadowGenerators();
             if (shadowGenerators) {
                 const iterator = shadowGenerators.values();
                 for (let key = iterator.next(); key.done !== true; key = iterator.next()) {
                     const shadowGenerator = key.value;
+                    if (shadowGenerator.doNotSerialize) {
+                        continue;
+                    }
                     serializationObject.shadowGenerators.push(shadowGenerator.serialize());
                 }
             }
@@ -85,7 +92,7 @@ export class ShadowGeneratorSceneComponent implements ISceneSerializableComponen
      * @param container the container holding the elements
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public addFromContainer(container: AbstractScene): void {
+    public addFromContainer(container: IAssetContainer): void {
         // Nothing To Do Here. (directly attached to a light)
     }
 
@@ -95,7 +102,7 @@ export class ShadowGeneratorSceneComponent implements ISceneSerializableComponen
      * @param dispose if the removed element should be disposed (default: false)
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public removeFromContainer(container: AbstractScene, dispose?: boolean): void {
+    public removeFromContainer(container: IAssetContainer, dispose?: boolean): void {
         // Nothing To Do Here. (directly attached to a light)
     }
 

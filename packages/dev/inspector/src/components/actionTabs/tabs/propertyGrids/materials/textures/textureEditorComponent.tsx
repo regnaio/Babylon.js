@@ -1,23 +1,21 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as React from "react";
-import type { IPixelData } from "./textureCanvasManager";
-import { TextureCanvasManager } from "./textureCanvasManager";
-import type { ITool } from "./toolBar";
-import { ToolBar } from "./toolBar";
+import { type IPixelData, TextureCanvasManager } from "./textureCanvasManager";
+import { type ITool, ToolBar } from "./toolBar";
 import { PropertiesBar } from "./propertiesBar";
-import type { IChannel } from "./channelsBar";
-import { ChannelsBar } from "./channelsBar";
+import { type IChannel, ChannelsBar } from "./channelsBar";
 import { BottomBar } from "./bottomBar";
 import { TextureCanvasComponent } from "./textureCanvasComponent";
 import defaultTools from "./defaultTools/defaultTools";
 
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 import { Tools } from "core/Misc/tools";
-import type { Scene } from "core/scene";
-import type { ISize } from "core/Maths/math.size";
-import type { Vector2 } from "core/Maths/math.vector";
-import type { PointerInfo } from "core/Events/pointerEvents";
+import { type Scene } from "core/scene";
+import { type ISize } from "core/Maths/math.size";
+import { type Vector2 } from "core/Maths/math.vector";
+import { type PointerInfo } from "core/Events/pointerEvents";
 
-import type { PopupComponent } from "../../../../../popupComponent";
+import { type PopupComponent } from "../../../../../popupComponent";
 import { ToolSettings } from "./toolSettings";
 import { Constants } from "core/Engines/constants";
 
@@ -185,7 +183,9 @@ export class TextureEditorComponent extends React.Component<ITextureEditorCompon
 
     override componentDidUpdate() {
         const channelsClone: IChannel[] = [];
-        this.state.channels.forEach((channel) => channelsClone.push({ ...channel }));
+        for (const channel of this.state.channels) {
+            channelsClone.push({ ...channel });
+        }
         this._textureCanvasManager.channels = channelsClone;
         this._textureCanvasManager.face = this.state.face;
         this._textureCanvasManager.mipLevel = this.state.mipLevel;
@@ -213,13 +213,13 @@ export class TextureEditorComponent extends React.Component<ITextureEditorCompon
 
     addTools(tools: IToolData[]) {
         let newTools: ITool[] = [];
-        tools.forEach((toolData) => {
+        for (const toolData of tools) {
             const tool: ITool = {
                 ...toolData,
                 instance: new toolData.type(() => this.getToolParameters()),
             };
             newTools = newTools.concat(tool);
-        });
+        }
         newTools = this.state.tools.concat(newTools);
         this.setState({ tools: newTools });
     }
@@ -230,7 +230,9 @@ export class TextureEditorComponent extends React.Component<ITextureEditorCompon
             canvas2D: this._textureCanvasManager.canvas2D,
             scene3D: this._textureCanvasManager.scene3D,
             size: this._textureCanvasManager.size,
+            // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-misused-promises, @typescript-eslint/promise-function-async
             updateTexture: () => this._textureCanvasManager.updateTexture(),
+            // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/promise-function-async
             startPainting: () => this._textureCanvasManager.startPainting(),
             stopPainting: () => this._textureCanvasManager.stopPainting(),
             updatePainting: () => this._textureCanvasManager.updatePainting(),
@@ -278,6 +280,7 @@ export class TextureEditorComponent extends React.Component<ITextureEditorCompon
     }
 
     resizeTexture(width: number, height: number) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._textureCanvasManager.resize({ width, height });
     }
 

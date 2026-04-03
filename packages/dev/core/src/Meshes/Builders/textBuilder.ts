@@ -1,13 +1,13 @@
-import type { Color4 } from "../../Maths/math.color";
+import { type Color4 } from "../../Maths/math.color";
 import { Path2 } from "../../Maths/math.path";
-import { Vector3 } from "../../Maths/math.vector";
-import type { Vector4 } from "../../Maths/math.vector";
-import type { Scene } from "../../scene";
-import type { Nullable } from "../../types";
+import { Vector3, type Vector4 } from "../../Maths/math.vector";
+import { type Scene } from "../../scene";
+import { type Nullable } from "../../types";
 import { Mesh } from "../mesh";
 import { TransformNode } from "../transformNode";
 import { ExtrudePolygon } from "./polygonBuilder";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 declare let earcut: any;
 
 /**
@@ -218,7 +218,7 @@ function CreateShapePath(
 export function CreateTextShapePaths(text: string, size: number, resolution: number, fontData: IFontData) {
     const chars = Array.from(text);
     const scale = size / fontData.resolution;
-    const line_height = (fontData.boundingBox.yMax - fontData.boundingBox.yMin + fontData.underlineThickness) * scale;
+    const lineHeight = (fontData.boundingBox.yMax - fontData.boundingBox.yMin + fontData.underlineThickness) * scale;
 
     const shapePaths: ShapePath[] = [];
 
@@ -230,7 +230,7 @@ export function CreateTextShapePaths(text: string, size: number, resolution: num
 
         if (char === "\n") {
             offsetX = 0;
-            offsetY -= line_height;
+            offsetY -= lineHeight;
         } else {
             const ret = CreateShapePath(char, scale, offsetX, offsetY, resolution, fontData);
 

@@ -1,18 +1,21 @@
 import { Constants } from "../../Engines/constants";
-import type { AbstractEngine } from "../../Engines/abstractEngine";
-import type { Scene } from "../../scene";
-import { Matrix, Vector2, Vector4 } from "../../Maths/math.vector";
-import "../../Shaders/iblShadowVoxelTracing.fragment";
-import "../../Shaders/iblShadowDebug.fragment";
-import { PostProcess } from "../../PostProcesses/postProcess";
-import type { PostProcessOptions } from "../../PostProcesses/postProcess";
-import type { IblShadowsRenderPipeline } from "./iblShadowsRenderPipeline";
-import type { Effect } from "../../Materials/effect";
-import type { Camera } from "../../Cameras/camera";
+import { type AbstractEngine } from "../../Engines/abstractEngine";
+import { type Scene } from "../../scene";
+import { Matrix, Vector4 } from "../../Maths/math.vector";
+import { PostProcess, type PostProcessOptions } from "../../PostProcesses/postProcess";
+import { type IblShadowsRenderPipeline } from "./iblShadowsRenderPipeline";
+import { type Camera } from "../../Cameras/camera";
+import { ShaderLanguage } from "core/Materials/shaderLanguage";
+import { GeometryBufferRenderer } from "../../Rendering/geometryBufferRenderer";
+import { ProceduralTexture, type IProceduralTextureCreationOptions } from "core/Materials/Textures/Procedurals/proceduralTexture";
+import { type CubeTexture } from "../../Materials/Textures/cubeTexture";
+import { Logger } from "../../Misc/logger";
+import { type EventState } from "../../Misc/observable";
+import { type Nullable } from "../../types";
 
 /**
  * Build cdf maps for IBL importance sampling during IBL shadow computation.
- * This should not be instanciated directly, as it is part of a scene component
+ * This should not be instantiated directly, as it is part of a scene component
  * @internal
  */
 export class _IblShadowsVoxelTracingPass {
@@ -35,7 +38,7 @@ export class _IblShadowsVoxelTracingPass {
     private _sssSamples: number = 16;
     private _sssStride: number = 8;
     private _sssMaxDist: number = 0.05;
-    private _sssThickness: number = 0.01;
+    private _sssThickness: number = 0.5;
 
     private _ssShadowOpacity: number = 1.0;
     /**
@@ -107,12 +110,42 @@ export class _IblShadowsVoxelTracingPass {
         this._sssThickness = value;
     }
 
-    private _outputPP: PostProcess;
+    private _outputTexture: ProceduralTexture;
     private _cameraInvView: Matrix = Matrix.Identity();
     private _cameraInvProj: Matrix = Matrix.Identity();
     private _invWorldScaleMatrix: Matrix = Matrix.Identity();
     private _frameId: number = 0;
     private _sampleDirections: number = 4;
+    private _shadowParameters: Vector4 = new Vector4(0.0, 0.0, 0.0, 0.0);
+    private _sssParameters: Vector4 = new Vector4(0.0, 0.0, 0.0, 0.0);
+    private _opacityParameters: Vector4 = new Vector4(0.0, 0.0, 0.0, 0.0);
+    private _voxelBiasParameters: Vector4 = new Vector4(0.0, 0.0, 0.0, 0.0);
+    private _voxelNormalBias: number = 1.4;
+    /**
+     * The bias to apply to the voxel sampling in the direction of the surface normal of the geometry.
+     */
+    public get voxelNormalBias(): number {
+        return this._voxelNormalBias;
+    }
+    public set voxelNormalBias(value: number) {
+        this._voxelNormalBias = value;
+    }
+
+    private _voxelDirectionBias: number = 1.75;
+    /**
+     * The bias to apply to the voxel sampling in the direction of the light.
+     */
+    public get voxelDirectionBias(): number {
+        return this._voxelDirectionBias;
+    }
+    public set voxelDirectionBias(value: number) {
+        this._voxelDirectionBias = value;
+    }
+
+    /**
+     * Is the effect enabled
+     */
+    public enabled: boolean = true;
 
     /**
      * The number of directions to sample for the voxel tracing.
@@ -146,11 +179,11 @@ export class _IblShadowsVoxelTracingPass {
     public debugEnabled: boolean = false;
 
     /**
-     * Gets the pass post process
-     * @returns The post process
+     * Returns the output texture of the pass.
+     * @returns The output texture.
      */
-    public getPassPP(): PostProcess {
-        return this._outputPP;
+    public getOutputTexture(): ProceduralTexture {
+        return this._outputTexture;
     }
 
     /**
@@ -176,7 +209,6 @@ export class _IblShadowsVoxelTracingPass {
 
     /** The default rotation of the environment map will align the shadows with the default lighting orientation */
     private _envRotation: number = 0.0;
-    private _downscale: number = 1.0;
 
     /**
      * Set the matrix to use for scaling the world space to voxel space
@@ -185,6 +217,19 @@ export class _IblShadowsVoxelTracingPass {
     public setWorldScaleMatrix(matrix: Matrix) {
         this._invWorldScaleMatrix = matrix;
     }
+
+    /**
+     * Render the shadows in color rather than black and white.
+     * This is slightly more expensive than black and white shadows but can be much
+     * more accurate when the strongest lights in the IBL are non-white.
+     */
+    public set coloredShadows(value: boolean) {
+        this._coloredShadows = value;
+    }
+    public get coloredShadows(): boolean {
+        return this._coloredShadows;
+    }
+    private _coloredShadows: boolean = false;
 
     private _debugVoxelMarchEnabled: boolean = false;
     private _debugPassPP: PostProcess;
@@ -205,6 +250,7 @@ export class _IblShadowsVoxelTracingPass {
      * Creates the debug post process effect for this pass
      */
     private _createDebugPass() {
+        const isWebGPU = this._engine.isWebGPU;
         if (!this._debugPassPP) {
             const debugOptions: PostProcessOptions = {
                 width: this._engine.getRenderWidth(),
@@ -212,13 +258,21 @@ export class _IblShadowsVoxelTracingPass {
                 uniforms: ["sizeParams"],
                 samplers: ["debugSampler"],
                 engine: this._engine,
-                reusable: false,
+                reusable: true,
+                shaderLanguage: isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
+                extraInitializations: (useWebGPU: boolean, list: Promise<any>[]) => {
+                    if (useWebGPU) {
+                        list.push(import("../../ShadersWGSL/iblShadowDebug.fragment"));
+                    } else {
+                        list.push(import("../../Shaders/iblShadowDebug.fragment"));
+                    }
+                },
             };
             this._debugPassPP = new PostProcess(this.debugPassName, "iblShadowDebug", debugOptions);
             this._debugPassPP.autoClear = false;
             this._debugPassPP.onApplyObservable.add((effect) => {
                 // update the caustic texture with what we just rendered.
-                effect.setTextureFromPostProcessOutput("debugSampler", this._outputPP);
+                effect.setTexture("debugSampler", this._outputTexture);
                 effect.setVector4("sizeParams", this._debugSizeParams);
             });
         }
@@ -238,74 +292,138 @@ export class _IblShadowsVoxelTracingPass {
     }
 
     private _createTextures() {
-        let defines = "";
-        if (this._debugVoxelMarchEnabled) {
-            defines += "#define VOXEL_MARCH_DIAGNOSTIC_INFO_OPTION 1u\n";
-        }
-        const ppOptions: PostProcessOptions = {
-            width: this._engine.getRenderWidth(),
-            height: this._engine.getRenderHeight(),
-            textureFormat: Constants.TEXTUREFORMAT_RG,
-            textureType: Constants.TEXTURETYPE_UNSIGNED_BYTE,
+        const defines = this._createDefines();
+        const isWebGPU = this._engine.isWebGPU;
+        const textureOptions: IProceduralTextureCreationOptions = {
+            type: Constants.TEXTURETYPE_UNSIGNED_BYTE,
+            format: Constants.TEXTUREFORMAT_RGBA,
             samplingMode: Constants.TEXTURE_NEAREST_SAMPLINGMODE,
-            uniforms: ["viewMtx", "projMtx", "invProjMtx", "invViewMtx", "wsNormalizationMtx", "shadowParameters", "offsetDataParameters", "sssParameters", "shadowOpacity"],
-            samplers: ["voxelGridSampler", "icdfySampler", "icdfxSampler", "blueNoiseSampler", "worldNormalSampler", "linearDepthSampler", "depthSampler", "worldPositionSampler"],
-            defines: defines,
-            engine: this._engine,
-            reusable: false,
+            generateDepthBuffer: false,
+            shaderLanguage: isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
+            extraInitializationsAsync: async () => {
+                if (isWebGPU) {
+                    await Promise.all([import("../../ShadersWGSL/iblShadowVoxelTracing.fragment")]);
+                } else {
+                    await Promise.all([import("../../Shaders/iblShadowVoxelTracing.fragment")]);
+                }
+            },
         };
-        this._outputPP = new PostProcess("voxelTracingPass", "iblShadowVoxelTracing", ppOptions);
-        this._outputPP.autoClear = false;
-        this._outputPP.onApplyObservable.add((effect) => {
-            this._updatePostProcess(effect, this._scene.activeCamera!);
+        this._outputTexture = new ProceduralTexture(
+            "voxelTracingPass",
+            {
+                width: this._engine.getRenderWidth(),
+                height: this._engine.getRenderHeight(),
+            },
+            "iblShadowVoxelTracing",
+            this._scene,
+            textureOptions
+        );
+        this._outputTexture.refreshRate = -1;
+        this._outputTexture.autoClear = false;
+        this._outputTexture.defines = defines;
+        // Need to set all the textures first so that the effect gets created with the proper uniforms.
+        this._setBindings(this._scene.activeCamera!);
+        this._renderWhenGBufferReady = this._render.bind(this);
+        // Don't start rendering until the first vozelization is done.
+        this._renderPipeline.onVoxelizationCompleteObservable.addOnce(() => {
+            if (this._scene.geometryBufferRenderer) {
+                this._scene.geometryBufferRenderer.getGBuffer().onAfterRenderObservable.add(this._renderWhenGBufferReady);
+            }
         });
     }
 
-    private _updatePostProcess(effect: Effect, camera: Camera) {
-        effect.setMatrix("viewMtx", camera.getViewMatrix());
-        effect.setMatrix("projMtx", camera.getProjectionMatrix());
+    private _createDefines(): string {
+        let defines = "";
+        if (this._scene.useRightHandedSystem) {
+            defines += "#define RIGHT_HANDED\n";
+        }
+        if (this._debugVoxelMarchEnabled) {
+            defines += "#define VOXEL_MARCH_DIAGNOSTIC_INFO_OPTION 1u\n";
+        }
+        if (this._coloredShadows) {
+            defines += "#define COLOR_SHADOWS 1u\n";
+        }
+        return defines;
+    }
+
+    private _setBindings(camera: Camera): boolean {
+        this._outputTexture.defines = this._createDefines();
+        this._outputTexture.setMatrix("viewMtx", camera.getViewMatrix());
+        this._outputTexture.setMatrix("projMtx", camera.getProjectionMatrix());
         camera.getProjectionMatrix().invertToRef(this._cameraInvProj);
         camera.getViewMatrix().invertToRef(this._cameraInvView);
-        effect.setMatrix("invProjMtx", this._cameraInvProj);
-        effect.setMatrix("invViewMtx", this._cameraInvView);
-        effect.setMatrix("wsNormalizationMtx", this._invWorldScaleMatrix);
+        this._outputTexture.setMatrix("invProjMtx", this._cameraInvProj);
+        this._outputTexture.setMatrix("invViewMtx", this._cameraInvView);
+        this._outputTexture.setMatrix("wsNormalizationMtx", this._invWorldScaleMatrix);
 
         this._frameId++;
 
-        const downscaleSquared = this._downscale * this._downscale;
-        let rotation = this._scene.useRightHandedSystem ? -this._envRotation - 0.5 * Math.PI : -this._envRotation - Math.PI;
+        let rotation = 0.0;
+        if (this._scene.environmentTexture) {
+            rotation = (this._scene.environmentTexture as CubeTexture).rotationY ?? 0;
+        }
+        rotation = this._scene.useRightHandedSystem ? -(rotation + 0.5 * Math.PI) : rotation - 0.5 * Math.PI;
         rotation = rotation % (2.0 * Math.PI);
-        effect.setVector4("shadowParameters", new Vector4(this._sampleDirections, this._frameId / downscaleSquared, this._downscale, rotation));
-        const offset = new Vector2(0.0, 0.0);
-        const voxelGrid = this._renderPipeline!.getVoxelGridTexture();
-        const highestMip = Math.floor(Math.log2(voxelGrid!.getSize().width));
-        effect.setVector4("offsetDataParameters", new Vector4(offset.x, offset.y, highestMip, 0.0));
+        this._shadowParameters.set(this._sampleDirections, this._frameId, 1.0, rotation);
+        this._outputTexture.setVector4("shadowParameters", this._shadowParameters);
+        const voxelGrid = this._renderPipeline._getVoxelGridTexture();
+        const highestMip = Math.floor(Math.log2(voxelGrid.getSize().width));
+        this._voxelBiasParameters.set(this._voxelNormalBias, this._voxelDirectionBias, highestMip, 0.0);
+        this._outputTexture.setVector4("voxelBiasParameters", this._voxelBiasParameters);
 
         // SSS Options.
-        const worldScale = (1.0 / this._invWorldScaleMatrix.m[0]) * 2.0;
-        const maxDist = this._sssMaxDist * worldScale;
-        const thickness = this._sssThickness * worldScale;
-        effect.setVector4("sssParameters", new Vector4(this._sssSamples, this._sssStride, maxDist, thickness));
-        effect.setVector4("shadowOpacity", new Vector4(this._voxelShadowOpacity, this._ssShadowOpacity, 0.0, 0.0));
-        effect.setTexture("voxelGridSampler", voxelGrid);
-        effect.setTexture("blueNoiseSampler", (this._renderPipeline as any)._noiseTexture);
-        effect.setTexture("icdfySampler", this._renderPipeline!.getIcdfyTexture());
-        effect.setTexture("icdfxSampler", this._renderPipeline!.getIcdfxTexture());
-        if (this._debugVoxelMarchEnabled) {
-            effect.defines = "#define VOXEL_MARCH_DIAGNOSTIC_INFO_OPTION 1u\n";
+        this._sssParameters.set(this._sssSamples, this._sssStride, this._sssMaxDist, this._sssThickness);
+        this._outputTexture.setVector4("sssParameters", this._sssParameters);
+        this._opacityParameters.set(this._voxelShadowOpacity, this._ssShadowOpacity, 0.0, 0.0);
+        this._outputTexture.setVector4("shadowOpacity", this._opacityParameters);
+        this._outputTexture.setTexture("voxelGridSampler", voxelGrid);
+        this._outputTexture.setTexture("blueNoiseSampler", this._renderPipeline._getNoiseTexture());
+        const cdfGenerator = this._scene.iblCdfGenerator;
+        if (!cdfGenerator) {
+            Logger.Warn("IBLShadowsVoxelTracingPass: Can't bind for render because iblCdfGenerator is not enabled.");
+            return false;
+        }
+        this._outputTexture.setTexture("icdfSampler", cdfGenerator.getIcdfTexture());
+        if (this._coloredShadows && this._scene.environmentTexture) {
+            this._outputTexture.setTexture("iblSampler", this._scene.environmentTexture);
         }
 
-        const prePassRenderer = this._scene.prePassRenderer;
-        if (prePassRenderer) {
-            const wnormalIndex = prePassRenderer.getIndex(Constants.PREPASS_WORLD_NORMAL_TEXTURE_TYPE);
-            const depthIndex = prePassRenderer.getIndex(Constants.PREPASS_DEPTH_TEXTURE_TYPE);
-            const clipDepthIndex = prePassRenderer.getIndex(Constants.PREPASS_NDC_DEPTH_TEXTURE_TYPE);
-            const wPositionIndex = prePassRenderer.getIndex(Constants.PREPASS_POSITION_TEXTURE_TYPE);
-            if (wnormalIndex >= 0) effect.setTexture("worldNormalSampler", prePassRenderer.getRenderTarget().textures[wnormalIndex]);
-            if (depthIndex >= 0) effect.setTexture("linearDepthSampler", prePassRenderer.getRenderTarget().textures[depthIndex]);
-            if (clipDepthIndex >= 0) effect.setTexture("depthSampler", prePassRenderer.getRenderTarget().textures[clipDepthIndex]);
-            if (wPositionIndex >= 0) effect.setTexture("worldPositionSampler", prePassRenderer.getRenderTarget().textures[wPositionIndex]);
+        const geometryBufferRenderer = this._scene.geometryBufferRenderer;
+        if (!geometryBufferRenderer) {
+            Logger.Warn("IBLShadowsVoxelTracingPass: Can't bind for render because GeometryBufferRenderer is not enabled.");
+            return false;
         }
+        const depthIndex = geometryBufferRenderer.getTextureIndex(GeometryBufferRenderer.SCREENSPACE_DEPTH_TEXTURE_TYPE);
+        this._outputTexture.setTexture("depthSampler", geometryBufferRenderer.getGBuffer().textures[depthIndex]);
+        const wnormalIndex = geometryBufferRenderer.getTextureIndex(GeometryBufferRenderer.NORMAL_TEXTURE_TYPE);
+        this._outputTexture.setTexture("worldNormalSampler", geometryBufferRenderer.getGBuffer().textures[wnormalIndex]);
+        return true;
+    }
+
+    private _render() {
+        if (this.enabled && this._outputTexture.isReady() && this._outputTexture.getEffect()?.isReady()) {
+            if (this._setBindings(this._scene.activeCamera!)) {
+                this._outputTexture.render();
+            }
+        }
+    }
+
+    private _renderWhenGBufferReady: Nullable<(eventData: number, eventState: EventState) => void> = null;
+
+    /**
+     * Called by render pipeline when canvas resized.
+     * @param scaleFactor The factor by which to scale the canvas size.
+     */
+    public resize(scaleFactor: number = 1.0) {
+        const newSize = {
+            width: Math.max(1.0, Math.floor(this._engine.getRenderWidth() * scaleFactor)),
+            height: Math.max(1.0, Math.floor(this._engine.getRenderHeight() * scaleFactor)),
+        };
+        // Don't resize if the size is the same as the current size.
+        if (this._outputTexture.getSize().width === newSize.width && this._outputTexture.getSize().height === newSize.height) {
+            return;
+        }
+        this._outputTexture.resize(newSize, false);
     }
 
     /**
@@ -314,11 +432,11 @@ export class _IblShadowsVoxelTracingPass {
      */
     public isReady() {
         return (
-            this._outputPP.isReady() &&
+            this._outputTexture.isReady() &&
             !(this._debugPassPP && !this._debugPassPP.isReady()) &&
-            this._renderPipeline!.getIcdfyTexture().isReady() &&
-            this._renderPipeline!.getIcdfxTexture().isReady() &&
-            this._renderPipeline!.getVoxelGridTexture().isReady()
+            this._scene.iblCdfGenerator &&
+            this._scene.iblCdfGenerator.getIcdfTexture().isReady() &&
+            this._renderPipeline._getVoxelGridTexture().isReady()
         );
     }
 
@@ -326,7 +444,11 @@ export class _IblShadowsVoxelTracingPass {
      * Disposes the associated resources
      */
     public dispose() {
-        this._outputPP.dispose();
+        if (this._scene.geometryBufferRenderer && this._renderWhenGBufferReady) {
+            const gBuffer = this._scene.geometryBufferRenderer.getGBuffer();
+            gBuffer.onAfterRenderObservable.removeCallback(this._renderWhenGBufferReady);
+        }
+        this._outputTexture.dispose();
         if (this._debugPassPP) {
             this._debugPassPP.dispose();
         }

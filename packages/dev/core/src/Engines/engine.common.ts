@@ -1,11 +1,10 @@
 import { IsDocumentAvailable } from "../Misc/domManagement";
-import type { Nullable } from "../types";
-import { AbstractEngine } from "./abstractEngine";
-import type { AbstractEngineOptions } from "./abstractEngine";
+import { type Nullable } from "../types";
+import { AbstractEngine, type AbstractEngineOptions } from "./abstractEngine";
 import { EngineStore } from "./engineStore";
 
 /** @internal */
-function _DisableTouchAction(canvas: Nullable<HTMLCanvasElement>): void {
+function DisableTouchAction(canvas: Nullable<HTMLCanvasElement>): void {
     if (!canvas || !canvas.setAttribute) {
         return;
     }
@@ -66,13 +65,14 @@ export function _CommonInit(commonEngine: AbstractEngine, canvas: HTMLCanvasElem
     canvas.addEventListener("pointerout", commonEngine._onCanvasPointerOut);
 
     if (!creationOptions.doNotHandleTouchAction) {
-        _DisableTouchAction(canvas);
+        DisableTouchAction(canvas);
     }
 
     // Create Audio Engine if needed.
     if (!AbstractEngine.audioEngine && creationOptions.audioEngine && AbstractEngine.AudioEngineFactory) {
         AbstractEngine.audioEngine = AbstractEngine.AudioEngineFactory(commonEngine.getRenderingCanvas(), commonEngine.getAudioContext(), commonEngine.getAudioDestination());
     }
+
     if (IsDocumentAvailable()) {
         // Fullscreen
         commonEngine._onFullscreenChange = () => {
@@ -160,8 +160,8 @@ export function GetFontOffset(font: string): { ascent: number; height: number; d
 
     document.body.appendChild(div);
 
-    let fontAscent = 0;
-    let fontHeight = 0;
+    let fontAscent: number;
+    let fontHeight: number;
     try {
         fontHeight = block.getBoundingClientRect().top - text.getBoundingClientRect().top;
         block.style.verticalAlign = "baseline";
@@ -173,24 +173,25 @@ export function GetFontOffset(font: string): { ascent: number; height: number; d
 }
 
 /** @internal */
-export function CreateImageBitmapFromSource(engine: AbstractEngine, imageSource: string, options?: ImageBitmapOptions): Promise<ImageBitmap> {
-    const promise = new Promise<ImageBitmap>((resolve, reject) => {
+export async function CreateImageBitmapFromSource(engine: AbstractEngine, imageSource: string, options?: ImageBitmapOptions): Promise<ImageBitmap> {
+    return await new Promise<ImageBitmap>((resolve, reject) => {
         const image = new Image();
         image.onload = () => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
             image.decode().then(() => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
                 engine.createImageBitmap(image, options).then((imageBitmap) => {
                     resolve(imageBitmap);
                 });
             });
         };
         image.onerror = () => {
+            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
             reject(`Error loading image ${image.src}`);
         };
 
         image.src = imageSource;
     });
-
-    return promise;
 }
 
 /** @internal */
@@ -219,7 +220,7 @@ export function RequestFullscreen(element: HTMLElement): void {
     if (!requestFunction) {
         return;
     }
-    requestFunction.call(element);
+    void requestFunction.call(element);
 }
 
 /**
@@ -229,6 +230,7 @@ export function ExitFullscreen(): void {
     const anyDoc = document as any;
 
     if (document.exitFullscreen) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         document.exitFullscreen();
     } else if (anyDoc.webkitCancelFullScreen) {
         anyDoc.webkitCancelFullScreen();
@@ -244,13 +246,17 @@ export function RequestPointerlock(element: HTMLElement): void {
         // In some browsers, requestPointerLock returns a promise.
         // Handle possible rejections to avoid an unhandled top-level exception.
         const promise: unknown = element.requestPointerLock();
-        if (promise instanceof Promise)
+        if (promise instanceof Promise) {
             promise
+                // eslint-disable-next-line github/no-then
                 .then(() => {
                     element.focus();
                 })
+                // eslint-disable-next-line github/no-then
                 .catch(() => {});
-        else element.focus();
+        } else {
+            element.focus();
+        }
     }
 }
 

@@ -1,5 +1,8 @@
 #ifdef BUMP
-varying vWorldView: mat4x4f;
+varying vWorldView0: vec4f;
+varying vWorldView1: vec4f;
+varying vWorldView2: vec4f;
+varying vWorldView3: vec4f;
 varying vNormalW: vec3f;
 #else
 varying vNormalV: vec3f;
@@ -11,7 +14,7 @@ varying vViewPos: vec4f;
 varying vPositionW: vec3f;
 #endif
 
-#ifdef VELOCITY
+#if defined(VELOCITY) || defined(VELOCITY_LINEAR)
 varying vCurrentPosition: vec4f;
 varying vPreviousPosition: vec4f;
 #endif
@@ -30,6 +33,17 @@ uniform vTangentSpaceParams: vec2f;
         var reflectivitySamplerSampler: sampler;
         var reflectivitySampler: texture_2d<f32>;
         varying vReflectivityUV: vec2f;
+    #else
+        #ifdef METALLIC_TEXTURE
+            var metallicSamplerSampler: sampler;
+            var metallicSampler: texture_2d<f32>;
+            varying vMetallicUV: vec2f;
+        #endif
+        #ifdef ROUGHNESS_TEXTURE
+            var roughnessSamplerSampler: sampler;
+            var roughnessSampler: texture_2d<f32>;
+            varying vRoughnessUV: vec2f;
+        #endif
     #endif
     #ifdef ALBEDOTEXTURE
         varying vAlbedoUV: vec2f;
@@ -79,11 +93,13 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         #ifdef NORMAL_WORLDSPACE
             normalOutput = normalW;
         #else
-            normalOutput = normalize( vec3f(input.vWorldView *  vec4f(normalW, 0.0)));
-
+            normalOutput = normalize( (mat4x4f(input.vWorldView0, input.vWorldView1, input.vWorldView2, input.vWorldView3) *  vec4f(normalW, 0.0)).xyz);
         #endif
-    #else
+    #elif defined(HAS_NORMAL_ATTRIBUTE)
         normalOutput = normalize(input.vNormalV);
+    #elif defined(POSITION)
+        // Derive normal from position
+	    normalOutput = normalize(-cross(dpdx(input.vPositionW), dpdy(input.vPositionW)));
     #endif
 
     #ifdef ENCODE_NORMAL
@@ -91,17 +107,14 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     #endif
     
     var fragData: array<vec4<f32>, SCENE_MRT_COUNT>;
-    #ifdef PREPASS    
-        #ifdef PREPASS_DEPTH
-            fragData[DEPTH_INDEX] =  vec4f(input.vViewPos.z / input.vViewPos.w, 0.0, 0.0, 1.0);
-        #endif
-
-        #if defined(PREPASS_NORMAL) || defined(PREPASS_WORLD_NORMAL)
-            fragData[NORMAL_INDEX] =  vec4f(normalOutput, 1.0);
-        #endif
-    #else
-        fragData[0] =  vec4f(input.vViewPos.z / input.vViewPos.w, 0.0, 0.0, 1.0);
-        fragData[1] =  vec4f(normalOutput, 1.0);
+    #ifdef DEPTH
+        fragData[DEPTH_INDEX] = vec4f(input.vViewPos.z / input.vViewPos.w, 0.0, 0.0, 1.0);
+    #endif
+    #ifdef NORMAL
+        fragData[NORMAL_INDEX] = vec4f(normalOutput, 1.0);
+    #endif
+    #ifdef SCREENSPACE_DEPTH
+        fragData[SCREENSPACE_DEPTH_INDEX] = vec4f(fragmentInputs.position.z, 0.0, 0.0, 1.0);
     #endif
 
     #ifdef POSITION
@@ -117,6 +130,14 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
         fragData[VELOCITY_INDEX] =  vec4f(velocity, 0.0, 1.0);
     #endif
+
+    #ifdef VELOCITY_LINEAR
+        var velocity : vec2f = vec2f(0.5) * ((input.vPreviousPosition.xy /
+                                          input.vPreviousPosition.w) -
+                                         (input.vCurrentPosition.xy /
+                                          input.vCurrentPosition.w));
+        fragData[VELOCITY_LINEAR_INDEX] = vec4f(velocity, 0.0, 1.0);
+#endif
 
     #ifdef REFLECTIVITY
         var reflectivity: vec4f =  vec4f(0.0, 0.0, 0.0, 1.0);
@@ -137,6 +158,13 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
                 // pbr.useMetallnessFromMetallicTextureBlue = true;
                 metal *= textureSample(reflectivitySampler, reflectivitySamplerSampler, input.vReflectivityUV).b;
                 roughness *= textureSample(reflectivitySampler, reflectivitySamplerSampler, input.vReflectivityUV).g;
+            #else
+                #ifdef METALLIC_TEXTURE
+                    metal *= textureSample(metallicSampler, metallicSamplerSampler, input.vMetallicUV).r;
+                #endif
+                #ifdef ROUGHNESS_TEXTURE
+                    roughness *= textureSample(roughnessSampler, roughnessSamplerSampler, input.vRoughnessUV).r;
+                #endif
             #endif
 
             #ifdef METALLIC

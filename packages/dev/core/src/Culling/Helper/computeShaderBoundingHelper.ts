@@ -1,17 +1,18 @@
-import type { IBoundingInfoHelperPlatform } from "./IBoundingInfoHelperPlatform";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
+import { type IBoundingInfoHelperPlatform } from "./IBoundingInfoHelperPlatform";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
 import { ComputeShader } from "core/Compute/computeShader";
 import { StorageBuffer } from "core/Buffers/storageBuffer";
-import type { WebGPUEngine } from "core/Engines/webgpuEngine";
-import type { AbstractEngine } from "core/Engines/abstractEngine";
-import type { Mesh } from "core/Meshes/mesh";
+import { type WebGPUEngine } from "core/Engines/webgpuEngine";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+import { type Mesh } from "core/Meshes/mesh";
 import { VertexBuffer } from "core/Buffers/buffer";
 import { Vector3 } from "core/Maths/math.vector";
 import { UniformBuffer } from "core/Materials/uniformBuffer";
-import type { DataBuffer } from "core/Buffers/dataBuffer";
-import type { ComputeBindingMapping } from "core/Engines/Extensions/engine.computeShader";
+import { type DataBuffer } from "core/Buffers/dataBuffer";
+import { type ComputeBindingMapping } from "core/Engines/Extensions/engine.computeShader";
 
 import "../../ShadersWGSL/boundingInfo.compute";
+import { _RetryWithInterval } from "core/Misc/timingTools";
 
 /** @internal */
 export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform {
@@ -78,6 +79,7 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
     private _getUBO() {
         if (this._uboIndex >= this._ubos.length) {
             const ubo = new UniformBuffer(this._engine);
+            ubo.addFloat2("boneTextureInfo", 0, 0);
             ubo.addFloat3("morphTargetTextureInfo", 0, 0, 0);
             ubo.addUniform("morphTargetCount", 1);
             ubo.addUniform("indexResult", 1);
@@ -125,6 +127,7 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
     }
 
     /** @internal */
+    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
     public registerMeshListAsync(meshes: AbstractMesh | AbstractMesh[]): Promise<void> {
         this._disposeForMeshList();
 
@@ -144,7 +147,7 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
             this._processedMeshes.push(mesh);
 
             const manager = (<Mesh>mesh).morphTargetManager;
-            if (manager) {
+            if (manager && manager.supportsPositions) {
                 maxNumInfluencers = Math.max(maxNumInfluencers, manager.numTargets);
             }
         }
@@ -164,7 +167,7 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
             this._uniqueComputeShaders.add(computeShaderWithoutMorph);
 
             const manager = (<Mesh>mesh).morphTargetManager;
-            if (manager) {
+            if (manager && manager.supportsPositions) {
                 defines = defines.slice();
                 defines.push("#define MORPHTARGETS");
                 defines.push("#define NUM_MORPH_INFLUENCERS " + maxNumInfluencers);
@@ -185,18 +188,16 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
         }
 
         return new Promise((resolve) => {
-            const check = () => {
+            _RetryWithInterval(() => {
                 const iterator = this._uniqueComputeShaders.keys();
                 for (let key = iterator.next(); key.done !== true; key = iterator.next()) {
                     const computeShader = key.value;
                     if (!computeShader.isReady()) {
-                        setTimeout(check, 10);
-                        return;
+                        return false;
                     }
                 }
-                resolve();
-            };
-            check();
+                return true;
+            }, resolve);
         });
     }
 
@@ -233,10 +234,13 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
             const [computeShaderWithoutMorph, computeShaderWithMorph] = this._computeShaders[i];
 
             const manager = (<Mesh>mesh).morphTargetManager;
-            const hasMorphs = manager && manager.numInfluencers > 0;
+            const hasMorphs = manager && manager.numInfluencers > 0 && manager.supportsPositions;
             const computeShader = hasMorphs ? computeShaderWithMorph : computeShaderWithoutMorph;
 
             this._extractDataAndLink(computeShader, mesh as Mesh, VertexBuffer.PositionKind, 3, "positionBuffer", this._positionBuffers);
+
+            const ubo = this._getUBO();
+            let uboNeedsUpdate = false;
 
             // Bones
             if (mesh && mesh.useBones && mesh.computeBonesUsingShaders && mesh.skeleton && mesh.skeleton.useTextureToStoreBoneMatrices) {
@@ -244,13 +248,13 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
                 this._extractDataAndLink(computeShader, mesh as Mesh, VertexBuffer.MatricesWeightsKind, 4, "weightBuffer", this._weightBuffers);
                 const boneSampler = mesh.skeleton.getTransformMatrixTexture(mesh);
                 computeShader.setTexture("boneSampler", boneSampler!, false);
+                ubo.updateFloat2("boneTextureInfo", mesh.skeleton._textureWidth, mesh.skeleton._textureHeight);
+                uboNeedsUpdate = true;
                 if (mesh.numBoneInfluencers > 4) {
                     this._extractDataAndLink(computeShader, mesh as Mesh, VertexBuffer.MatricesIndicesExtraKind, 4, "indexExtraBuffer", this._indexExtraBuffers);
                     this._extractDataAndLink(computeShader, mesh as Mesh, VertexBuffer.MatricesWeightsExtraKind, 4, "weightExtraBuffer", this._weightExtraBuffers);
                 }
             }
-
-            const ubo = this._getUBO();
 
             // Morphs
             if (hasMorphs) {
@@ -268,7 +272,11 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
                 );
 
                 ubo.updateFloat3("morphTargetTextureInfo", manager._textureVertexStride, manager._textureWidth, manager._textureHeight);
-                ubo.updateInt("morphTargetCount", manager.numInfluencers);
+                ubo.updateFloat("morphTargetCount", manager.numInfluencers);
+                uboNeedsUpdate = true;
+            }
+
+            if (uboNeedsUpdate) {
                 ubo.update();
             }
 
@@ -284,8 +292,8 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
     }
 
     /** @internal */
-    public fetchResultsForMeshListAsync(): Promise<void> {
-        return new Promise((resolve) => {
+    public async fetchResultsForMeshListAsync(): Promise<void> {
+        return await new Promise((resolve) => {
             const buffers: DataBuffer[] = [];
             let size = 0;
             for (let i = 0; i < this._resultBuffers.length; i++) {
@@ -301,6 +309,7 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
 
             const minmax = { minimum, maximum };
 
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
             (this._engine as WebGPUEngine).readFromMultipleStorageBuffers(buffers, 0, undefined, resultData, true).then(() => {
                 let resultDataOffset = 0;
                 for (let j = 0; j < this._resultBuffers.length; j++) {

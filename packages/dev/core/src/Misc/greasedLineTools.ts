@@ -1,14 +1,13 @@
 import { Curve3 } from "../Maths/math.path";
 import { VertexBuffer } from "../Buffers/buffer";
 import { TmpVectors, Vector3 } from "../Maths/math.vector";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
-import type { IFontData } from "../Meshes/Builders/textBuilder";
-import { CreateTextShapePaths } from "../Meshes/Builders/textBuilder";
-import type { FloatArray, IndicesArray } from "../types";
-import type { GreasedLinePoints } from "../Meshes/GreasedLine/greasedLineBaseMesh";
-import type { Color3 } from "../Maths/math.color";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
+import { type IFontData, CreateTextShapePaths } from "../Meshes/Builders/textBuilder";
+import { type FloatArray, type IndicesArray } from "../types";
+import { type GreasedLinePoints, type GreasedLinePointsOptions } from "../Meshes/GreasedLine/greasedLineBaseMesh";
+import { type Color3 } from "../Maths/math.color";
 import { RawTexture } from "../Materials/Textures/rawTexture";
-import type { Scene } from "../scene";
+import { type Scene } from "../scene";
 import { Engine } from "../Engines/engine";
 import { GreasedLineMaterialDefaults } from "../Materials/GreasedLine/greasedLineMaterialDefaults";
 
@@ -19,9 +18,10 @@ export class GreasedLineTools {
     /**
      * Converts GreasedLinePoints to number[][]
      * @param points GreasedLinePoints
+     * @param options GreasedLineToolsConvertPointsOptions
      * @returns number[][] with x, y, z coordinates of the points, like [[x, y, z, x, y, z, ...], [x, y, z, ...]]
      */
-    public static ConvertPoints(points: GreasedLinePoints): number[][] {
+    public static ConvertPoints(points: GreasedLinePoints, options?: GreasedLinePointsOptions): number[][] {
         if (points.length && Array.isArray(points) && typeof points[0] === "number") {
             return [<number[]>points];
         } else if (points.length && Array.isArray(points[0]) && typeof points[0][0] === "number") {
@@ -36,17 +36,31 @@ export class GreasedLineTools {
         } else if (points.length > 0 && Array.isArray(points[0]) && points[0].length > 0 && points[0][0] instanceof Vector3) {
             const positions: number[][] = [];
             const vectorPoints = points as Vector3[][];
-            vectorPoints.forEach((p) => {
+            for (const p of vectorPoints) {
                 positions.push(p.flatMap((p2) => [p2.x, p2.y, p2.z]));
-            });
+            }
             return positions;
         } else if (points instanceof Float32Array) {
-            return [Array.from(points)];
+            if (options?.floatArrayStride) {
+                const positions: number[][] = [];
+                const stride = options.floatArrayStride * 3;
+                for (let i = 0; i < points.length; i += stride) {
+                    const linePoints = new Array(stride); // Pre-allocate memory for the line
+                    for (let j = 0; j < stride; j++) {
+                        linePoints[j] = points[i + j];
+                    }
+                    positions.push(linePoints);
+                }
+                return positions;
+            } else {
+                return [Array.from(points)];
+            }
         } else if (points.length && points[0] instanceof Float32Array) {
             const positions: number[][] = [];
-            points.forEach((p) => {
+            for (const p of points) {
                 positions.push(Array.from(p as Float32Array));
-            });
+            }
+
             return positions;
         }
 
@@ -140,9 +154,10 @@ export class GreasedLineTools {
     ) {
         const points: Vector3[][] = [];
 
-        meshes.forEach((m, meshIndex) => {
-            const vertices = m.getVerticesData(VertexBuffer.PositionKind);
-            const indices = m.getIndices();
+        for (let meshIndex = 0; meshIndex < meshes.length; meshIndex++) {
+            const mesh = meshes[meshIndex];
+            const vertices = mesh.getVerticesData(VertexBuffer.PositionKind);
+            const indices = mesh.getIndices();
             if (vertices && indices) {
                 for (let i = 0, ii = 0; i < indices.length; i++) {
                     const vi1 = indices[ii++] * 3;
@@ -154,7 +169,7 @@ export class GreasedLineTools {
                     const p3 = new Vector3(vertices[vi3], vertices[vi3 + 1], vertices[vi3 + 2]);
 
                     if (predicate) {
-                        const pointsFromPredicate = predicate(p1, p2, p3, points, i, vi1, m, meshIndex, vertices, indices);
+                        const pointsFromPredicate = predicate(p1, p2, p3, points, i, vi1, mesh, meshIndex, vertices, indices);
                         if (pointsFromPredicate) {
                             for (const p of pointsFromPredicate) {
                                 points.push(p);
@@ -165,7 +180,7 @@ export class GreasedLineTools {
                     }
                 }
             }
-        });
+        }
 
         return points;
     }
@@ -252,12 +267,13 @@ export class GreasedLineTools {
     }
 
     /**
-     * Gets the the length from the beginning to each point of the line as array.
+     * Gets the length from the beginning to each point of the line as array.
      * @param data array of line points
+     * @param buf optional pre-allocated buffer to reduce memory pressure, should be at least `data.length * 4 / 3` bytes
      * @returns length array of the line
      */
-    public static GetLineLengthArray(data: number[]): Float32Array {
-        const out = new Float32Array(data.length / 3);
+    public static GetLineLengthArray(data: number[], buf?: ArrayBuffer): Float32Array {
+        const out = buf ? new Float32Array(buf, 0, data.length / 3) : new Float32Array(data.length / 3);
         let length = 0;
         for (let index = 0, pointsLength = data.length / 3 - 1; index < pointsLength; index++) {
             let x = data[index * 3 + 0];
@@ -314,17 +330,17 @@ export class GreasedLineTools {
                   ? GreasedLineTools.GetLineSegments(GreasedLineTools.ToVector3Array(what as number[]) as Vector3[])
                   : (what as { point1: Vector3; point2: Vector3; length: number }[]);
         const points: Vector3[] = [];
-        subLines.forEach((s) => {
+        for (const s of subLines) {
             if (s.length > segmentLength) {
                 const segments = GreasedLineTools.SegmentizeSegmentByCount(s.point1, s.point2, Math.ceil(s.length / segmentLength));
-                segments.forEach((seg) => {
+                for (const seg of segments) {
                     points.push(seg);
-                });
+                }
             } else {
                 points.push(s.point1);
                 points.push(s.point2);
             }
-        });
+        }
         return points;
     }
 
@@ -503,7 +519,7 @@ export class GreasedLineTools {
      * @param colors Arrray of Color3
      * @returns Uin8Array of colors [r, g, b, a, r, g, b, a, ...]
      */
-    public static Color3toRGBAUint8(colors: Color3[]) {
+    public static Color3toRGBAUint8(colors: Color3[]): Uint8Array {
         const colorTable: Uint8Array = new Uint8Array(colors.length * 4);
         for (let i = 0, j = 0; i < colors.length; i++) {
             colorTable[j++] = colors[i].r * 255;

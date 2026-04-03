@@ -1,8 +1,7 @@
 import { RegisterClass } from "../../../Misc/typeStore";
-import { editableInPropertyPage, PropertyTypeForEdition } from "../../../Decorators/nodeDecorator";
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
 import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
 
 /**
@@ -10,11 +9,22 @@ import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
  */
 export class GeometryClampBlock extends NodeGeometryBlock {
     /** Gets or sets the minimum range */
-    @editableInPropertyPage("Minimum", PropertyTypeForEdition.Float)
-    public minimum = 0.0;
+    public get minimum() {
+        return this.min.value;
+    }
+
+    public set minimum(value: number) {
+        this.min.value = value;
+    }
+
     /** Gets or sets the maximum range */
-    @editableInPropertyPage("Maximum", PropertyTypeForEdition.Float)
-    public maximum = 1.0;
+    public get maximum() {
+        return this.max.value;
+    }
+
+    public set maximum(value: number) {
+        this.max.value = value;
+    }
 
     /**
      * Creates a new GeometryClampBlock
@@ -24,6 +34,8 @@ export class GeometryClampBlock extends NodeGeometryBlock {
         super(name);
 
         this.registerInput("value", NodeGeometryBlockConnectionPointTypes.AutoDetect);
+        this.registerInput("min", NodeGeometryBlockConnectionPointTypes.Float, true, 0);
+        this.registerInput("max", NodeGeometryBlockConnectionPointTypes.Float, true, 1);
         this.registerOutput("output", NodeGeometryBlockConnectionPointTypes.BasedOnInput);
 
         this._outputs[0]._typeConnectionSource = this._inputs[0];
@@ -48,6 +60,20 @@ export class GeometryClampBlock extends NodeGeometryBlock {
     }
 
     /**
+     * Gets the min input component
+     */
+    public get min(): NodeGeometryConnectionPoint {
+        return this._inputs[1];
+    }
+
+    /**
+     * Gets the max input component
+     */
+    public get max(): NodeGeometryConnectionPoint {
+        return this._inputs[2];
+    }
+
+    /**
      * Gets the output component
      */
     public get output(): NodeGeometryConnectionPoint {
@@ -61,25 +87,28 @@ export class GeometryClampBlock extends NodeGeometryBlock {
             return;
         }
 
-        const func = (value: number) => {
-            return Math.max(this.minimum, Math.min(value, this.maximum));
+        const func = (value: number, min: number, max: number) => {
+            return Math.max(min, Math.min(value, max));
         };
 
         this.output._storedFunction = (state) => {
             const value = this.value.getConnectedValue(state);
+            const min = this.min.isConnected ? this.min.getConnectedValue(state) : this.minimum;
+            const max = this.max.isConnected ? this.max.getConnectedValue(state) : this.maximum;
+
             switch (this.value.type) {
                 case NodeGeometryBlockConnectionPointTypes.Int:
                 case NodeGeometryBlockConnectionPointTypes.Float: {
-                    return func!(value);
+                    return func(value, min, max);
                 }
                 case NodeGeometryBlockConnectionPointTypes.Vector2: {
-                    return new Vector2(func!(value.x), func!(value.y));
+                    return new Vector2(func(value.x, min, max), func(value.y, min, max));
                 }
                 case NodeGeometryBlockConnectionPointTypes.Vector3: {
-                    return new Vector3(func!(value.x), func!(value.y), func!(value.z));
+                    return new Vector3(func(value.x, min, max), func(value.y, min, max), func(value.z, min, max));
                 }
                 case NodeGeometryBlockConnectionPointTypes.Vector4: {
-                    return new Vector4(func!(value.x), func!(value.y), func!(value.z), func!(value.w));
+                    return new Vector4(func(value.x, min, max), func(value.y, min, max), func(value.z, min, max), func(value.w, min, max));
                 }
             }
 
@@ -89,21 +118,7 @@ export class GeometryClampBlock extends NodeGeometryBlock {
         return this;
     }
 
-    protected override _dumpPropertiesCode() {
-        let codeString = super._dumpPropertiesCode() + `${this._codeVariableName}.minimum = ${this.minimum};\n`;
-        codeString += `${this._codeVariableName}.maximum = ${this.maximum};\n`;
-        return codeString;
-    }
-
-    public override serialize(): any {
-        const serializationObject = super.serialize();
-
-        serializationObject.minimum = this.minimum;
-        serializationObject.maximum = this.maximum;
-
-        return serializationObject;
-    }
-
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

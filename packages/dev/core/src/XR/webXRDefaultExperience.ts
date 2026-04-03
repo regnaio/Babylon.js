@@ -1,19 +1,14 @@
 import { WebXRExperienceHelper } from "./webXRExperienceHelper";
-import type { Scene } from "../scene";
-import type { IWebXRInputOptions } from "./webXRInput";
-import { WebXRInput } from "./webXRInput";
-import type { IWebXRControllerPointerSelectionOptions } from "./features/WebXRControllerPointerSelection";
-import { WebXRControllerPointerSelection } from "./features/WebXRControllerPointerSelection";
-import type { IWebXRNearInteractionOptions } from "./features/WebXRNearInteraction";
-import { WebXRNearInteraction } from "./features/WebXRNearInteraction";
-import type { WebXRRenderTarget } from "./webXRTypes";
-import type { WebXREnterExitUIOptions } from "./webXREnterExitUI";
-import { WebXREnterExitUI } from "./webXREnterExitUI";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
-import type { WebXRManagedOutputCanvasOptions } from "./webXRManagedOutputCanvas";
-import type { IWebXRTeleportationOptions } from "./features/WebXRControllerTeleportation";
+import { type Scene } from "../scene";
+import { type IWebXRInputOptions, WebXRInput } from "./webXRInput";
+import { type IWebXRControllerPointerSelectionOptions, WebXRControllerPointerSelection } from "./features/WebXRControllerPointerSelection";
+import { type IWebXRNearInteractionOptions, WebXRNearInteraction } from "./features/WebXRNearInteraction";
+import { type WebXRRenderTarget } from "./webXRTypes";
+import { type WebXREnterExitUIOptions, WebXREnterExitUI } from "./webXREnterExitUI";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
+import { type WebXRManagedOutputCanvasOptions } from "./webXRManagedOutputCanvas";
+import { type IWebXRTeleportationOptions, WebXRMotionControllerTeleportation } from "./features/WebXRControllerTeleportation";
 import { WebXRHandTracking, type IWebXRHandTrackingOptions } from "./features/WebXRHandTracking";
-import { WebXRMotionControllerTeleportation } from "./features/WebXRControllerTeleportation";
 import { Logger } from "../Misc/logger";
 
 /**
@@ -141,7 +136,7 @@ export class WebXRDefaultExperience {
      * @param options options for basic configuration
      * @returns resulting WebXRDefaultExperience
      */
-    public static CreateAsync(scene: Scene, options: WebXRDefaultExperienceOptions = {}) {
+    public static async CreateAsync(scene: Scene, options: WebXRDefaultExperienceOptions = {}) {
         const result = new WebXRDefaultExperience();
         scene.onDisposeObservable.addOnce(() => {
             result.dispose();
@@ -162,103 +157,97 @@ export class WebXRDefaultExperience {
             result.enterExitUI = new WebXREnterExitUI(scene, uiOptions);
         }
 
-        // Create base experience
-        return WebXRExperienceHelper.CreateAsync(scene)
-            .then((xrHelper) => {
-                result.baseExperience = xrHelper;
+        try {
+            // Create base experience
+            const xrHelper = await WebXRExperienceHelper.CreateAsync(scene);
+            // eslint-disable-next-line require-atomic-updates
+            result.baseExperience = xrHelper;
 
-                if (options.ignoreNativeCameraTransformation) {
-                    result.baseExperience.camera.compensateOnFirstFrame = false;
-                }
+            if (options.ignoreNativeCameraTransformation) {
+                // eslint-disable-next-line require-atomic-updates
+                result.baseExperience.camera.compensateOnFirstFrame = false;
+            }
 
-                // Add controller support
-                result.input = new WebXRInput(xrHelper.sessionManager, xrHelper.camera, {
-                    controllerOptions: {
-                        renderingGroupId: options.renderingGroupId,
-                    },
-                    ...(options.inputOptions || {}),
-                });
+            // Add controller support
+            // eslint-disable-next-line require-atomic-updates
+            result.input = new WebXRInput(xrHelper.sessionManager, xrHelper.camera, {
+                controllerOptions: {
+                    renderingGroupId: options.renderingGroupId,
+                },
+                ...(options.inputOptions || {}),
+            });
 
-                if (!options.disablePointerSelection) {
-                    // Add default pointer selection
-                    const pointerSelectionOptions = {
-                        ...options.pointerSelectionOptions,
-                        xrInput: result.input,
-                        renderingGroupId: options.renderingGroupId,
-                    };
+            if (!options.disablePointerSelection) {
+                // Add default pointer selection
+                const pointerSelectionOptions = {
+                    ...options.pointerSelectionOptions,
+                    xrInput: result.input,
+                    renderingGroupId: options.renderingGroupId,
+                };
 
-                    result.pointerSelection = <WebXRControllerPointerSelection>(
-                        result.baseExperience.featuresManager.enableFeature(
-                            WebXRControllerPointerSelection.Name,
-                            options.useStablePlugins ? "stable" : "latest",
-                            <IWebXRControllerPointerSelectionOptions>pointerSelectionOptions
-                        )
-                    );
+                result.pointerSelection = result.baseExperience.featuresManager.enableFeature(
+                    WebXRControllerPointerSelection.Name,
+                    options.useStablePlugins ? "stable" : "latest",
+                    <IWebXRControllerPointerSelectionOptions>pointerSelectionOptions
+                );
 
-                    if (!options.disableTeleportation) {
-                        // Add default teleportation, including rotation
-                        result.teleportation = <WebXRMotionControllerTeleportation>result.baseExperience.featuresManager.enableFeature(
-                            WebXRMotionControllerTeleportation.Name,
-                            options.useStablePlugins ? "stable" : "latest",
-                            <IWebXRTeleportationOptions>{
-                                floorMeshes: options.floorMeshes,
-                                xrInput: result.input,
-                                renderingGroupId: options.renderingGroupId,
-                                ...options.teleportationOptions,
-                            }
-                        );
-                        result.teleportation.setSelectionFeature(result.pointerSelection);
-                    }
-                }
-
-                if (!options.disableNearInteraction) {
-                    // Add default pointer selection
-                    result.nearInteraction = <WebXRNearInteraction>result.baseExperience.featuresManager.enableFeature(
-                        WebXRNearInteraction.Name,
+                if (!options.disableTeleportation) {
+                    // Add default teleportation, including rotation
+                    result.teleportation = result.baseExperience.featuresManager.enableFeature(
+                        WebXRMotionControllerTeleportation.Name,
                         options.useStablePlugins ? "stable" : "latest",
-                        <IWebXRNearInteractionOptions>{
+                        <IWebXRTeleportationOptions>{
+                            floorMeshes: options.floorMeshes,
                             xrInput: result.input,
-                            farInteractionFeature: result.pointerSelection,
                             renderingGroupId: options.renderingGroupId,
-                            useUtilityLayer: true,
-                            enableNearInteractionOnAllControllers: true,
-                            ...options.nearInteractionOptions,
+                            ...options.teleportationOptions,
                         }
                     );
+                    result.teleportation.setSelectionFeature(result.pointerSelection);
                 }
+            }
 
-                if (!options.disableHandTracking) {
-                    // Add default hand tracking
-                    result.baseExperience.featuresManager.enableFeature(
-                        WebXRHandTracking.Name,
-                        options.useStablePlugins ? "stable" : "latest",
-                        <IWebXRHandTrackingOptions>{
-                            xrInput: result.input,
-                            ...options.handSupportOptions,
-                        },
-                        undefined,
-                        false
-                    );
-                }
+            if (!options.disableNearInteraction) {
+                // Add default pointer selection
+                result.nearInteraction = result.baseExperience.featuresManager.enableFeature(WebXRNearInteraction.Name, options.useStablePlugins ? "stable" : "latest", <
+                    IWebXRNearInteractionOptions
+                >{
+                    xrInput: result.input,
+                    farInteractionFeature: result.pointerSelection,
+                    renderingGroupId: options.renderingGroupId,
+                    useUtilityLayer: true,
+                    enableNearInteractionOnAllControllers: true,
+                    ...options.nearInteractionOptions,
+                });
+            }
 
-                // Create the WebXR output target
-                result.renderTarget = result.baseExperience.sessionManager.getWebXRRenderTarget(options.outputCanvasOptions);
+            if (!options.disableHandTracking) {
+                // Add default hand tracking
+                result.baseExperience.featuresManager.enableFeature(
+                    WebXRHandTracking.Name,
+                    options.useStablePlugins ? "stable" : "latest",
+                    <IWebXRHandTrackingOptions>{
+                        xrInput: result.input,
+                        ...options.handSupportOptions,
+                    },
+                    undefined,
+                    false
+                );
+            }
 
-                if (!options.disableDefaultUI) {
-                    // Create ui for entering/exiting xr
-                    return result.enterExitUI.setHelperAsync(result.baseExperience, result.renderTarget);
-                } else {
-                    return;
-                }
-            })
-            .then(() => {
-                return result;
-            })
-            .catch((error) => {
-                Logger.Error("Error initializing XR");
-                Logger.Error(error);
-                return result;
-            });
+            // Create the WebXR output target
+            result.renderTarget = result.baseExperience.sessionManager.getWebXRRenderTarget(options.outputCanvasOptions);
+
+            if (!options.disableDefaultUI) {
+                // Create ui for entering/exiting xr
+                await result.enterExitUI.setHelperAsync(result.baseExperience, result.renderTarget);
+            }
+            return result;
+        } catch (error) {
+            Logger.Error("Error initializing XR");
+            Logger.Error(error);
+            return result;
+        }
     }
 
     /**

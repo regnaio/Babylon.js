@@ -1,9 +1,9 @@
-import type { Scene } from "../../scene";
-import type { Vector4 } from "../../Maths/math.vector";
+import { type Scene } from "../../scene";
+import { type Vector4 } from "../../Maths/math.vector";
 import { Mesh } from "../mesh";
 import { VertexData } from "../mesh.vertexData";
-import type { Nullable } from "../../types";
-import type { Plane } from "../../Maths/math.plane";
+import { type Nullable } from "../../types";
+import { type Plane } from "../../Maths/math.plane";
 import { useOpenGLOrientationForUV } from "../../Compat/compatibilityOptions";
 
 /**
@@ -23,8 +23,8 @@ export function CreatePlaneVertexData(options: { size?: number; width?: number; 
     const normals = [];
     const uvs = [];
 
-    const width: number = options.width || options.size || 1;
-    const height: number = options.height || options.size || 1;
+    const width: number = options.width !== undefined ? options.width : options.size !== undefined ? options.size : 1;
+    const height: number = options.height !== undefined ? options.height : options.size !== undefined ? options.size : 1;
     const sideOrientation = options.sideOrientation === 0 ? 0 : options.sideOrientation || VertexData.DEFAULTSIDE;
 
     // Vertices

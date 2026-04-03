@@ -1,9 +1,8 @@
-import type { NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
-import type { IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
-import type { INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
-import type { CurveBlock } from "core/Materials/Node/Blocks/curveBlock";
-import { CurveBlockTypes } from "core/Materials/Node/Blocks/curveBlock";
-import styles from "./curveDisplayManager.modules.scss";
+import { type NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
+import { type IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
+import { type INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
+import { type CurveBlock, CurveBlockTypes } from "core/Materials/Node/Blocks/curveBlock";
+import * as styles from "./curveDisplayManager.module.scss";
 
 export class CurveDisplayManager implements IDisplayManager {
     public getHeaderClass() {

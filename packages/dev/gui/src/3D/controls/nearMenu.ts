@@ -1,13 +1,14 @@
-import type { Scene } from "core/scene";
-import type { TransformNode } from "core/Meshes/transformNode";
-import type { Nullable } from "core/types";
-import type { Mesh } from "core/Meshes/mesh";
+import { type Scene } from "core/scene";
+import { type TransformNode } from "core/Meshes/transformNode";
+import { type Nullable } from "core/types";
+import { type Mesh } from "core/Meshes/mesh";
 import { TouchHolographicButton } from "./touchHolographicButton";
 import { DefaultBehavior } from "../behaviors/defaultBehavior";
 import { TouchHolographicMenu } from "./touchHolographicMenu";
-import type { Observer } from "core/Misc/observable";
-import type { Vector3 } from "core/Maths/math.vector";
-import type { PickingInfo } from "core/Collisions/pickingInfo";
+import { type Observer } from "core/Misc/observable";
+import { type Vector3 } from "core/Maths/math.vector";
+import { type PickingInfo } from "core/Collisions/pickingInfo";
+import { Tools } from "core/Misc/tools";
 
 /**
  * NearMenu that displays buttons and follows the camera
@@ -17,7 +18,7 @@ export class NearMenu extends TouchHolographicMenu {
     /**
      * Base Url for the assets.
      */
-    private static _ASSETS_BASE_URL: string = "https://assets.babylonjs.com/meshes/MRTK/";
+    private static _ASSETS_BASE_URL: string = "https://assets.babylonjs.com/core/MRTK/";
     /**
      * File name for the close icon.
      */
@@ -66,7 +67,8 @@ export class NearMenu extends TouchHolographicMenu {
 
     private _createPinButton(parent: TransformNode) {
         const control = new TouchHolographicButton("pin" + this.name, false);
-        control.imageUrl = NearMenu._ASSETS_BASE_URL + NearMenu._PIN_ICON_FILENAME;
+        const baseUrl = Tools.GetAssetUrl(NearMenu._ASSETS_BASE_URL);
+        control.imageUrl = baseUrl + NearMenu._PIN_ICON_FILENAME;
         control.parent = this;
         control._host = this._host;
         control.isToggleButton = true;

@@ -1,15 +1,14 @@
 import { DeepCopier } from "../../Misc/deepCopier";
-import type { Matrix } from "../../Maths/math.vector";
-import { Vector3, TmpVectors } from "../../Maths/math.vector";
-import { Scalar } from "../../Maths/math.scalar";
-import type { Particle } from "../../Particles/particle";
-import type { IParticleEmitterType } from "./IParticleEmitterType";
-import type { IndicesArray, Nullable, FloatArray } from "../../types";
+import { type Matrix, Vector3, TmpVectors } from "../../Maths/math.vector";
+import { RandomRange } from "../../Maths/math.scalar.functions";
+import { type Particle } from "../../Particles/particle";
+import { type IParticleEmitterType } from "./IParticleEmitterType";
+import { type IndicesArray, type Nullable, type FloatArray } from "../../types";
 import { VertexBuffer } from "../../Buffers/buffer";
-import type { Scene } from "../../scene";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
-import type { UniformBufferEffectCommonAccessor } from "../../Materials/uniformBufferEffectCommonAccessor";
-import type { UniformBuffer } from "../../Materials/uniformBuffer";
+import { type Scene } from "../../scene";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
+import { type UniformBufferEffectCommonAccessor } from "../../Materials/uniformBufferEffectCommonAccessor";
+import { type UniformBuffer } from "../../Materials/uniformBuffer";
 /**
  * Particle emitter emitting particles from the inside of a box.
  * It emits the particles randomly between 2 given directions.
@@ -79,9 +78,9 @@ export class MeshParticleEmitter implements IParticleEmitterType {
             return;
         }
 
-        const randX = Scalar.RandomRange(this.direction1.x, this.direction2.x);
-        const randY = Scalar.RandomRange(this.direction1.y, this.direction2.y);
-        const randZ = Scalar.RandomRange(this.direction1.z, this.direction2.z);
+        const randX = RandomRange(this.direction1.x, this.direction2.x);
+        const randY = RandomRange(this.direction1.y, this.direction2.y);
+        const randZ = RandomRange(this.direction1.z, this.direction2.z);
 
         if (isLocal) {
             directionToUpdate.copyFromFloats(randX, randY, randZ);
@@ -103,7 +102,7 @@ export class MeshParticleEmitter implements IParticleEmitterType {
             return;
         }
 
-        const randomFaceIndex = (3 * Math.random() * (this._indices.length / 3)) | 0;
+        const randomFaceIndex = 3 * ((Math.random() * (this._indices.length / 3)) | 0);
         const bu = Math.random();
         const bv = Math.random() * (1.0 - bu);
         const bw = 1.0 - bu - bv;

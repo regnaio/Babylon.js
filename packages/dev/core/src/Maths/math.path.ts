@@ -1,7 +1,6 @@
-import type { DeepImmutable, Nullable } from "../types";
-import { Scalar } from "./math.scalar";
-import { Vector2, Vector3, Quaternion, Matrix } from "./math.vector";
-import type { Vector4 } from "./math.vector";
+import { type DeepImmutable, type Nullable } from "../types";
+import { Clamp, WithinEpsilon } from "./math.scalar.functions";
+import { Vector2, Vector3, Quaternion, Matrix, type Vector4 } from "./math.vector";
 import { Epsilon } from "./math.constants";
 
 /**
@@ -28,6 +27,9 @@ export class BezierCurve {
      * @returns the interpolated value
      */
     public static Interpolate(t: number, x1: number, y1: number, x2: number, y2: number): number {
+        if (t === 0) {
+            return 0;
+        }
         // Extract X (which is equal to time here)
         const f0 = 1 - 3 * x2 + 3 * x1;
         const f1 = 3 * x2 - 6 * x1;
@@ -102,10 +104,12 @@ export class Angle {
      */
     public static BetweenTwoVectors<Vec extends Vector2 | Vector3 | Vector4>(a: DeepImmutable<Vec>, b: DeepImmutable<Vec>): Angle {
         let product = a.lengthSquared() * b.lengthSquared();
-        if (product === 0) return new Angle(Math.PI / 2);
+        if (product === 0) {
+            return new Angle(Math.PI / 2);
+        }
         product = Math.sqrt(product);
         let cosVal = a.dot(b as any) / product;
-        cosVal = Scalar.Clamp(cosVal, -1, 1);
+        cosVal = Clamp(cosVal, -1, 1);
         const angle = Math.acos(cosVal);
         return new Angle(angle);
     }
@@ -850,12 +854,12 @@ export class Path3D {
 
         if (va === undefined || va === null) {
             let point: Vector3;
-            if (!Scalar.WithinEpsilon(Math.abs(vt.y) / tgl, 1.0, Epsilon)) {
+            if (!WithinEpsilon(Math.abs(vt.y) / tgl, 1.0, Epsilon)) {
                 // search for a point in the plane
                 point = new Vector3(0.0, -1.0, 0.0);
-            } else if (!Scalar.WithinEpsilon(Math.abs(vt.x) / tgl, 1.0, Epsilon)) {
+            } else if (!WithinEpsilon(Math.abs(vt.x) / tgl, 1.0, Epsilon)) {
                 point = new Vector3(1.0, 0.0, 0.0);
-            } else if (!Scalar.WithinEpsilon(Math.abs(vt.z) / tgl, 1.0, Epsilon)) {
+            } else if (!WithinEpsilon(Math.abs(vt.z) / tgl, 1.0, Epsilon)) {
                 point = new Vector3(0.0, 0.0, 1.0);
             } else {
                 point = Vector3.Zero();
@@ -1063,7 +1067,7 @@ export class Curve3 {
         } else {
             const totalPoints: Vector3[] = [];
             totalPoints.push(points[0].clone());
-            Array.prototype.push.apply(totalPoints, points);
+            totalPoints.push(...points);
             totalPoints.push(points[points.length - 1].clone());
             let i = 0;
             for (; i < totalPoints.length - 3; i++) {
@@ -1100,10 +1104,10 @@ export class Curve3 {
         if (len4 < Math.pow(10, -8)) {
             return new Curve3(arc); // colinear points arc is empty
         }
-        const len1_sq = vec1.lengthSquared();
-        const len2_sq = vec2.lengthSquared();
-        const len3_sq = vec3.lengthSquared();
-        const len4_sq = zAxis.lengthSquared();
+        const len1Sq = vec1.lengthSquared();
+        const len2Sq = vec2.lengthSquared();
+        const len3Sq = vec3.lengthSquared();
+        const len4Sq = zAxis.lengthSquared();
         const len1 = vec1.length();
         const len2 = vec2.length();
         const len3 = vec3.length();
@@ -1111,9 +1115,9 @@ export class Curve3 {
         const dot1 = Vector3.Dot(vec1, vec3);
         const dot2 = Vector3.Dot(vec1, vec2);
         const dot3 = Vector3.Dot(vec2, vec3);
-        const a = (-0.5 * len2_sq * dot1) / len4_sq;
-        const b = (-0.5 * len3_sq * dot2) / len4_sq;
-        const c = (-0.5 * len1_sq * dot3) / len4_sq;
+        const a = (-0.5 * len2Sq * dot1) / len4Sq;
+        const b = (-0.5 * len3Sq * dot2) / len4Sq;
+        const c = (-0.5 * len1Sq * dot3) / len4Sq;
         const center = first.scale(a).add(second.scale(b)).add(third.scale(c));
         const radiusVec = first.subtract(center);
         const xAxis = radiusVec.normalize();
@@ -1127,7 +1131,7 @@ export class Curve3 {
         } else {
             const dStep = 1 / steps;
             let theta = 0;
-            let point = Vector3.Zero();
+            let point: Vector3;
             do {
                 point = center.add(xAxis.scale(radius * Math.cos(theta)).add(yAxis.scale(radius * Math.sin(theta))));
                 arc.push(point);

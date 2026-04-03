@@ -1,19 +1,7 @@
 import { Tools } from "../../../Misc/tools";
-import type { Scene } from "../../../scene";
-import type { ISceneComponent } from "../../../sceneComponent";
-import { SceneComponentConstants } from "../../../sceneComponent";
+import { type Scene } from "../../../scene";
+import { type ISceneComponent, SceneComponentConstants } from "../../../sceneComponent";
 
-import type { ProceduralTexture } from "./proceduralTexture";
-
-declare module "../../../abstractScene" {
-    export interface AbstractScene {
-        /**
-         * The list of procedural textures added to the scene
-         * @see https://doc.babylonjs.com/features/featuresDeepDive/materials/using/proceduralTextures
-         */
-        proceduralTextures: Array<ProceduralTexture>;
-    }
-}
 /**
  * Defines the Procedural Texture scene component responsible to manage any Procedural Texture
  * in a given scene.
@@ -35,7 +23,6 @@ export class ProceduralTextureSceneComponent implements ISceneComponent {
      */
     constructor(scene: Scene) {
         this.scene = scene;
-        this.scene.proceduralTextures = [] as ProceduralTexture[];
     }
 
     /**

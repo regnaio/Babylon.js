@@ -1,10 +1,9 @@
 import { NodeMaterialBlockConnectionPointTypes } from "./Enums/nodeMaterialBlockConnectionPointTypes";
 import { NodeMaterialBlockTargets } from "./Enums/nodeMaterialBlockTargets";
-import type { Nullable } from "../../types";
-import type { InputBlock } from "./Blocks/Input/inputBlock";
-import { Observable } from "../../Misc/observable";
-import type { Observer } from "../../Misc/observable";
-import type { NodeMaterialBlock } from "./nodeMaterialBlock";
+import { type Nullable } from "../../types";
+import { type InputBlock } from "./Blocks/Input/inputBlock";
+import { Observable, type Observer } from "../../Misc/observable";
+import { type NodeMaterialBlock } from "./nodeMaterialBlock";
 
 /**
  * Enum used to define the compatibility state between two connection points
@@ -72,6 +71,19 @@ export class NodeMaterialConnectionPoint {
     }
 
     /** @internal */
+    public _isInactive: boolean = false;
+
+    /**
+     * Boolean used to provide visual clue to users when some ports are not active in the current block configuration
+     */
+    public get isInactive(): boolean {
+        return this._isInactive;
+    }
+
+    /** @internal */
+    public _preventBubbleUp = false;
+
+    /** @internal */
     public readonly _ownerBlock: NodeMaterialBlock;
 
     private _connectedPointBackingField: Nullable<NodeMaterialConnectionPoint> = null;
@@ -98,6 +110,9 @@ export class NodeMaterialConnectionPoint {
     private readonly _endpoints = new Array<NodeMaterialConnectionPoint>();
     private _associatedVariableName: string;
     private readonly _direction: NodeMaterialConnectionPointDirection;
+
+    /** @internal */
+    public _redirectedSource: Nullable<NodeMaterialConnectionPoint> = null;
 
     private _typeConnectionSourceBackingField: Nullable<NodeMaterialConnectionPoint> = null;
     private _typeConnectionSourceTypeChangedObserver: Nullable<Observer<NodeMaterialBlockConnectionPointTypes>>;
@@ -134,6 +149,9 @@ export class NodeMaterialConnectionPoint {
         this._updateTypeDependentState(() => (this._defaultConnectionPointTypeBackingField = value));
     }
 
+    /** @internal */
+    public _isMainLinkSource = false;
+
     private _linkedConnectionSourceBackingField: Nullable<NodeMaterialConnectionPoint> = null;
     private _linkedConnectionSourceTypeChangedObserver: Nullable<Observer<NodeMaterialBlockConnectionPointTypes>>;
 
@@ -150,6 +168,7 @@ export class NodeMaterialConnectionPoint {
 
         this._linkedConnectionSourceTypeChangedObserver?.remove();
         this._updateTypeDependentState(() => (this._linkedConnectionSourceBackingField = value));
+        this._isMainLinkSource = false;
         if (this._linkedConnectionSourceBackingField) {
             this._linkedConnectionSourceTypeChangedObserver = this._linkedConnectionSourceBackingField.onTypeChangedObservable.add(() => {
                 this._notifyTypeChanged();
@@ -164,6 +183,9 @@ export class NodeMaterialConnectionPoint {
 
     /** @internal */
     public _enforceAssociatedVariableName = false;
+
+    /** @internal */
+    public _forPostBuild = false;
 
     /** Gets the direction of the point */
     public get direction() {
@@ -235,7 +257,7 @@ export class NodeMaterialConnectionPoint {
 
     /** Get the inner type (ie AutoDetect for instance instead of the inferred one) */
     public get innerType() {
-        if (this._linkedConnectionSource && this._linkedConnectionSource.isConnected) {
+        if (this._linkedConnectionSource && !this._isMainLinkSource && this._linkedConnectionSource.isConnected) {
             return this.type;
         }
         return this._type;
@@ -254,8 +276,20 @@ export class NodeMaterialConnectionPoint {
                 return this._connectedPoint.type;
             }
 
-            if (this._linkedConnectionSource && this._linkedConnectionSource.isConnected) {
-                return this._linkedConnectionSource.type;
+            if (this._linkedConnectionSource) {
+                if (this._linkedConnectionSource.isConnected) {
+                    if (this._linkedConnectionSource.connectedPoint!._redirectedSource && this._linkedConnectionSource.connectedPoint!._redirectedSource.isConnected) {
+                        return this._linkedConnectionSource.connectedPoint!._redirectedSource.type;
+                    }
+                    return this._linkedConnectionSource.type;
+                }
+                if (this._linkedConnectionSource._defaultConnectionPointType) {
+                    return this._linkedConnectionSource._defaultConnectionPointType;
+                }
+            }
+
+            if (this._defaultConnectionPointType) {
+                return this._defaultConnectionPointType;
             }
         }
 
@@ -577,8 +611,9 @@ export class NodeMaterialConnectionPoint {
      */
     public connectTo(connectionPoint: NodeMaterialConnectionPoint, ignoreConstraints = false): NodeMaterialConnectionPoint {
         if (!ignoreConstraints && !this.canConnectTo(connectionPoint)) {
-            // eslint-disable-next-line no-throw-literal
-            throw "Cannot connect these two connectors.";
+            throw new Error(
+                `Cannot connect these two connectors. source: "${this.ownerBlock.name}".${this.name}, target: "${connectionPoint.ownerBlock.name}".${connectionPoint.name}`
+            );
         }
 
         this._endpoints.push(connectionPoint);
@@ -638,7 +673,9 @@ export class NodeMaterialConnectionPoint {
         const serializationObject: any = {};
 
         serializationObject.name = this.name;
-        serializationObject.displayName = this.displayName;
+        if (this.displayName) {
+            serializationObject.displayName = this.displayName;
+        }
 
         if (isInput && this.connectedPoint) {
             serializationObject.inputName = this.name;

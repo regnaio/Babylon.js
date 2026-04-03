@@ -1,7 +1,11 @@
-import type { IMinimalMotionControllerObject, MotionControllerHandedness, IMotionControllerLayoutMap } from "./webXRAbstractMotionController";
-import { WebXRAbstractMotionController } from "./webXRAbstractMotionController";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
-import type { Scene } from "../../scene";
+import {
+    type IMinimalMotionControllerObject,
+    type MotionControllerHandedness,
+    type IMotionControllerLayoutMap,
+    WebXRAbstractMotionController,
+} from "./webXRAbstractMotionController";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
+import { type Scene } from "../../scene";
 import { Mesh } from "../../Meshes/mesh";
 import { Quaternion } from "../../Maths/math.vector";
 
@@ -39,12 +43,12 @@ export class WebXRGenericTriggerMotionController extends WebXRAbstractMotionCont
     protected _setRootMesh(meshes: AbstractMesh[]): void {
         this.rootMesh = new Mesh(this.profileId + " " + this.handedness, this.scene);
 
-        meshes.forEach((mesh) => {
+        for (const mesh of meshes) {
             mesh.isPickable = false;
             if (!mesh.parent) {
                 mesh.setParent(this.rootMesh);
             }
-        });
+        }
 
         this.rootMesh.rotationQuaternion = Quaternion.FromEulerAngles(0, Math.PI, 0);
     }

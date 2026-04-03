@@ -1,12 +1,13 @@
 import { HDRCubeTexture } from "core/Materials/Textures/hdrCubeTexture";
 import { CubeTexture } from "core/Materials/Textures/cubeTexture";
-import type { Scene } from "core/scene";
+import { type Scene } from "core/scene";
 import { LocalStorageHelper } from "./localStorageHelper";
-import type { GlobalState } from "../globalState";
-import type { StandardMaterial } from "core/Materials/standardMaterial";
-import type { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
+import { type GlobalState } from "../globalState";
+import { type StandardMaterial } from "core/Materials/standardMaterial";
+import { type PBRMaterial } from "core/Materials/PBR/pbrMaterial";
 import { Texture } from "core/Materials/Textures/texture";
 import { EngineStore } from "core/Engines/engineStore";
+import { EXRCubeTexture } from "core/Materials/Textures/exrCubeTexture";
 
 export class EnvironmentTools {
     public static SkyboxPath = "";
@@ -31,7 +32,11 @@ export class EnvironmentTools {
         }
 
         if (path.indexOf(".hdr") === path.length - 4) {
-            return new HDRCubeTexture(path, scene, 256, false, true, false, true);
+            return new HDRCubeTexture(path, scene, 256, false, true, false, true, undefined, undefined, undefined, true, true);
+        }
+
+        if (path.indexOf(".exr") === path.length - 4) {
+            return new EXRCubeTexture(path, scene, 256, false, true, false, true, undefined, undefined, undefined, true, true);
         }
 
         const envTexture = CubeTexture.CreateFromPrefilteredData(path, scene);
@@ -46,6 +51,9 @@ export class EnvironmentTools {
 
     public static ResetEnvironmentTexture() {
         const currentScene = EngineStore.LastCreatedScene!;
+        if (!currentScene) {
+            return;
+        }
 
         if (currentScene.environmentTexture) {
             currentScene.environmentTexture.dispose();
@@ -60,9 +68,12 @@ export class EnvironmentTools {
                     if (material.reflectionTexture) {
                         material.reflectionTexture.dispose();
                     }
-                    material.reflectionTexture = currentScene.environmentTexture.clone();
-                    if (material.reflectionTexture) {
-                        material.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+
+                    if (currentScene.environmentTexture) {
+                        material.reflectionTexture = currentScene.environmentTexture.clone();
+                        if (material.reflectionTexture) {
+                            material.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+                        }
                     }
                 }
             }

@@ -5,20 +5,20 @@
 varying vec4 vColor;
 varying vec2 vPosition;
 
-void main () {    
+#define CUSTOM_FRAGMENT_DEFINITIONS
+
+#include<gaussianSplattingFragmentDeclaration>
+
+void main () {
+#define CUSTOM_FRAGMENT_MAIN_BEGIN
+
 #include<clipPlaneFragment>
 
-    float A = -dot(vPosition, vPosition);
-    if (A < -4.0) discard;
-    float B = exp(A) * vColor.a;
+    vec4 finalColor = gaussianColor(vColor);
 
-#include<logDepthFragment>
+#define CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR
 
-    vec3 color = vColor.rgb;
+    gl_FragColor = finalColor;
 
-#ifdef FOG
-    #include<fogFragment>
-#endif
-
-    gl_FragColor = vec4(color, B);
+#define CUSTOM_FRAGMENT_MAIN_END
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Button } from "./Button";
+import { ButtonComponent } from "./Button";
 import { Icon } from "./Icon";
-import style from "./TextInputWithSubmit.modules.scss";
+import * as style from "./TextInputWithSubmit.module.scss";
 
 import submitIcon from "../imgs/confirmGridElementDark.svg";
 import cancelIcon from "../imgs/deleteGridElementDark.svg";
@@ -46,12 +46,12 @@ export const TextInputWithSubmit = (props: ITextInputProps) => {
             {props.label && <label>{props.label}</label>}
             <input className={style.input} type="text" placeholder={props.placeholder} value={value} onChange={onChange} />
             <div>
-                <Button color="light" size="smaller" backgroundColor="inherit" onClick={onClickSubmit} disabled={!valid}>
+                <ButtonComponent color="light" size="smaller" backgroundColor="inherit" onClick={onClickSubmit} disabled={!valid}>
                     <Icon icon={submitIcon} color="dark"></Icon>
-                </Button>
-                <Button color="light" size="smaller" backgroundColor="inherit" onClick={onClickCancel}>
+                </ButtonComponent>
+                <ButtonComponent color="light" size="smaller" backgroundColor="inherit" onClick={onClickCancel}>
                     <Icon icon={cancelIcon} color="dark"></Icon>
-                </Button>
+                </ButtonComponent>
             </div>
         </div>
     );

@@ -1,39 +1,39 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Engine } from "core/Engines/engine";
 import { Scene } from "core/scene";
 import { Vector3, Vector2 } from "core/Maths/math.vector";
 import { Color4, Color3 } from "core/Maths/math.color";
 import { FreeCamera } from "core/Cameras/freeCamera";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { CreatePlane } from "core/Meshes/Builders/planeBuilder";
-import type { Mesh } from "core/Meshes/mesh";
+import { type Mesh } from "core/Meshes/mesh";
 import { Camera } from "core/Cameras/camera";
 
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 import { HtmlElementTexture } from "core/Materials/Textures/htmlElementTexture";
-import type { InternalTexture } from "core/Materials/Textures/internalTexture";
+import { type InternalTexture } from "core/Materials/Textures/internalTexture";
 import { Texture } from "core/Materials/Textures/texture";
-import type { RawCubeTexture } from "core/Materials/Textures/rawCubeTexture";
-import type { CubeTexture } from "core/Materials/Textures/cubeTexture";
+import { type RawCubeTexture } from "core/Materials/Textures/rawCubeTexture";
+import { type CubeTexture } from "core/Materials/Textures/cubeTexture";
 import { ShaderMaterial } from "core/Materials/shaderMaterial";
 import { StandardMaterial } from "core/Materials/standardMaterial";
 
-import type { ISize } from "core/Maths/math.size";
+import { type ISize } from "core/Maths/math.size";
 import { Tools } from "core/Misc/tools";
 
-import type { PointerInfo } from "core/Events/pointerEvents";
-import { PointerEventTypes } from "core/Events/pointerEvents";
+import { type PointerInfo, PointerEventTypes } from "core/Events/pointerEvents";
 import { KeyboardEventTypes } from "core/Events/keyboardEvents";
 
 import { TextureHelper } from "../../../../../../textureHelper";
 
-import type { ITool } from "./toolBar";
-import type { IChannel } from "./channelsBar";
-import type { IMetadata } from "./textureEditorComponent";
+import { type ITool } from "./toolBar";
+import { type IChannel } from "./channelsBar";
+import { type IMetadata } from "./textureEditorComponent";
 
 import { canvasShader } from "./canvasShader";
 
-import type { IWheelEvent } from "core/Events/deviceInputEvents";
+import { type IWheelEvent } from "core/Events/deviceInputEvents";
 
 export interface IPixelData {
     x?: number;
@@ -342,7 +342,7 @@ export class TextureCanvasManager {
 
     public async updateTexture() {
         if (this._mipLevel !== 0) {
-            await this._setMipLevel(0);
+            this._setMipLevel(0);
         }
         this._didEdit = true;
         const element = this._editing3D ? this._3DCanvas : this._2DCanvas;
@@ -399,7 +399,7 @@ export class TextureCanvasManager {
 
     public async startPainting(): Promise<CanvasRenderingContext2D> {
         if (this._mipLevel != 0) {
-            await this._setMipLevel(0);
+            this._setMipLevel(0);
         }
         let x = 0,
             y = 0,
@@ -431,11 +431,11 @@ export class TextureCanvasManager {
             h = this._metadata.select.y2 - this._metadata.select.y1;
         }
         let editingAllChannels = true;
-        this._channels.forEach((channel) => {
+        for (const channel of this._channels) {
             if (!channel.editable) {
                 editingAllChannels = false;
             }
-        });
+        }
         let oldData: Uint8ClampedArray;
         if (!editingAllChannels) {
             oldData = this._2DCanvas.getContext("2d")!.getImageData(x, y, w, h).data;
@@ -451,13 +451,14 @@ export class TextureCanvasManager {
         if (!editingAllChannels) {
             const newData = ctx.getImageData(0, 0, w, h);
             const nd = newData.data;
-            this._channels.forEach((channel, index) => {
+            for (let index = 0; index < this._channels.length; index++) {
+                const channel = this._channels[index];
                 if (!channel.editable) {
                     for (let i = index; i < w * h * 4; i += 4) {
-                        nd[i] = oldData[i];
+                        nd[i] = oldData![i];
                     }
                 }
-            });
+            }
             ctx2D.globalCompositeOperation = "source-over";
             ctx2D.globalAlpha = 1.0;
             ctx2D.putImageData(newData, x, y);
@@ -485,12 +486,13 @@ export class TextureCanvasManager {
         if (channels.length !== this._channels.length) {
             needsRender = true;
         } else {
-            channels.forEach((channel, index) => {
-                if (channel.visible !== this._channels[index].visible) {
+            for (let i = 0; i < channels.length; i++) {
+                const channel = channels[i];
+                if (channel.visible !== this._channels[i].visible) {
                     needsRender = true;
                     this._planeMaterial.setFloat(channel.id.toLowerCase(), channel.visible ? 1.0 : 0.0);
                 }
-            });
+            }
         }
         this._channels = channels;
         if (needsRender) {
@@ -666,9 +668,11 @@ export class TextureCanvasManager {
                     const base64data = reader.result as string;
 
                     if (extension === ".dds" || extension === ".env") {
-                        (this._originalTexture as CubeTexture).updateURL(base64data, extension, () => this.grabOriginalTexture());
+                        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                        (this._originalTexture as CubeTexture).updateURL(base64data, extension, async () => await this.grabOriginalTexture());
                     } else {
                         const texture = new Texture(base64data, this._scene, this._originalTexture.noMipmap, false, Texture.NEAREST_SAMPLINGMODE, () => {
+                            // eslint-disable-next-line github/no-then
                             TextureHelper.GetTextureDataAsync(texture, texture.getSize().width, texture.getSize().height, 0, { R: true, G: true, B: true, A: true }).then(
                                 async (pixels) => {
                                     if (this._tool && this._tool.instance.onReset) {

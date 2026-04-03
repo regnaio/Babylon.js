@@ -1,22 +1,22 @@
-import type { Engine } from "../../Engines/engine";
-import type { WebGLRenderTargetWrapper } from "../../Engines/WebGL/webGLRenderTargetWrapper";
+import { type Engine } from "../../Engines/engine";
+import { type WebGLRenderTargetWrapper } from "../../Engines/WebGL/webGLRenderTargetWrapper";
 import { WebXRFeatureName, WebXRFeaturesManager } from "../webXRFeaturesManager";
-import type { WebXRSessionManager } from "../webXRSessionManager";
+import { type WebXRSessionManager } from "../webXRSessionManager";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
-import type { Nullable } from "../../types";
-import type { IWebXRRenderTargetTextureProvider } from "../webXRRenderTargetTextureProvider";
-import type { Viewport } from "../../Maths/math.viewport";
-import type { Scene } from "../../scene";
+import { type Nullable } from "../../types";
+import { type IWebXRRenderTargetTextureProvider } from "../webXRRenderTargetTextureProvider";
+import { type Viewport } from "../../Maths/math.viewport";
+import { type Scene } from "../../scene";
 import { Matrix } from "../../Maths/math.vector";
 import { RenderTargetTexture } from "../../Materials/Textures/renderTargetTexture";
 import { Constants } from "../../Engines/constants";
 import { ShaderMaterial } from "../../Materials/shaderMaterial";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
-import type { Material } from "../../Materials/material";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
+import { type Material } from "../../Materials/material";
 import "../../Shaders/velocity.fragment";
 import "../../Shaders/velocity.vertex";
-import type { Observer } from "../../Misc/observable";
-import type { ThinEngine } from "../../Engines/thinEngine";
+import { type Observer } from "../../Misc/observable";
+import { type ThinEngine } from "../../Engines/thinEngine";
 
 /**
  * Used for Space Warp render process
@@ -94,9 +94,9 @@ export class XRSpaceWarpRenderTarget extends RenderTargetTexture {
         super.render(useCameraPostProcess, dumpForDebug);
 
         // Restore original materials
-        this._originalPairing.forEach((tuple) => {
+        for (const tuple of this._originalPairing) {
             tuple[0].material = tuple[1];
-        });
+        }
     }
 
     /**

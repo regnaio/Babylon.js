@@ -1,11 +1,11 @@
-import type { FlowGraphDataConnection } from "../../flowGraphDataConnection";
-import type { IFlowGraphBlockConfiguration } from "../../flowGraphBlock";
-import type { RichType } from "../../flowGraphRichTypes";
-import type { FlowGraphContext } from "../../flowGraphContext";
+import { type FlowGraphDataConnection } from "../../flowGraphDataConnection";
+import { type IFlowGraphBlockConfiguration } from "../../flowGraphBlock";
+import { type RichType } from "../../flowGraphRichTypes";
+import { type FlowGraphContext } from "../../flowGraphContext";
 import { FlowGraphCachedOperationBlock } from "./flowGraphCachedOperationBlock";
 
 /**
- * @experimental
+ * @internal
  * The base block for all unary operation blocks. Receives an input of type InputT, and outputs a value of type ResultT.
  */
 export class FlowGraphUnaryOperationBlock<InputT, ResultT> extends FlowGraphCachedOperationBlock<ResultT> {

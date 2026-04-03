@@ -1,24 +1,21 @@
 import { NodeMaterialBlockConnectionPointTypes } from "../../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../../nodeMaterialBuildState";
-import type { NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
-import { NodeMaterialConnectionPointDirection } from "../../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialBuildState } from "../../nodeMaterialBuildState";
+import { type NodeMaterialConnectionPoint, NodeMaterialConnectionPointDirection } from "../../nodeMaterialBlockConnectionPoint";
 import { NodeMaterialBlockTargets } from "../../Enums/nodeMaterialBlockTargets";
-import type { NodeMaterial, NodeMaterialDefines } from "../../nodeMaterial";
+import { type NodeMaterial, type NodeMaterialDefines } from "../../nodeMaterial";
 import { RegisterClass } from "../../../../Misc/typeStore";
 import { InputBlock } from "../Input/inputBlock";
 import { NodeMaterialConnectionPointCustomObject } from "../../nodeMaterialConnectionPointCustomObject";
-import type { AbstractMesh } from "../../../../Meshes/abstractMesh";
-import type { Nullable } from "../../../../types";
-import type { BaseTexture } from "../../../Textures/baseTexture";
-import type { Mesh } from "../../../../Meshes/mesh";
-import type { Effect } from "../../../effect";
+import { type Nullable } from "../../../../types";
+import { type BaseTexture } from "../../../Textures/baseTexture";
+import { type Mesh } from "../../../../Meshes/mesh";
+import { type Effect } from "../../../effect";
 import { editableInPropertyPage, PropertyTypeForEdition } from "../../../../Decorators/nodeDecorator";
-import type { Scene } from "../../../../scene";
+import { type Scene } from "../../../../scene";
 import { NodeMaterialBlock } from "../../nodeMaterialBlock";
 import { CubeTexture } from "../../../Textures/cubeTexture";
 import { Texture } from "../../../Textures/texture";
 import { NodeMaterialSystemValues } from "../../Enums/nodeMaterialSystemValues";
-import { Scalar } from "../../../../Maths/math.scalar";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
 /**
@@ -64,19 +61,19 @@ export class RefractionBlock extends NodeMaterialBlock {
      * This parameters will make the material used its opacity to control how much it is refracting against not.
      * Materials half opaque for instance using refraction could benefit from this control.
      */
-    @editableInPropertyPage("Link refraction to transparency", PropertyTypeForEdition.Boolean, "ADVANCED", { notifiers: { update: true } })
+    @editableInPropertyPage("Link refraction to transparency", PropertyTypeForEdition.Boolean, "ADVANCED", { embedded: true, notifiers: { update: true } })
     public linkRefractionWithTransparency: boolean = false;
 
     /**
      * Controls if refraction needs to be inverted on Y. This could be useful for procedural texture.
      */
-    @editableInPropertyPage("Invert refraction Y", PropertyTypeForEdition.Boolean, "ADVANCED", { notifiers: { update: true } })
+    @editableInPropertyPage("Invert refraction Y", PropertyTypeForEdition.Boolean, "ADVANCED", { embedded: true, notifiers: { update: true } })
     public invertRefractionY: boolean = false;
 
     /**
      * Controls if refraction needs to be inverted on Y. This could be useful for procedural texture.
      */
-    @editableInPropertyPage("Use thickness as depth", PropertyTypeForEdition.Boolean, "ADVANCED", { notifiers: { update: true } })
+    @editableInPropertyPage("Use thickness as depth", PropertyTypeForEdition.Boolean, "ADVANCED", { embedded: true, notifiers: { update: true } })
     public useThicknessAsDepth: boolean = false;
 
     /**
@@ -172,6 +169,11 @@ export class RefractionBlock extends NodeMaterialBlock {
         return this._scene.environmentTexture;
     }
 
+    /**
+     * Auto configure the block based on the material
+     * @param material - the node material
+     * @param additionalFilteringInfo - additional filtering info
+     */
     public override autoConfigure(material: NodeMaterial, additionalFilteringInfo: (node: NodeMaterialBlock) => boolean = () => true) {
         if (!this.intensity.isConnected) {
             const intensityInput = new InputBlock("Refraction intensity", NodeMaterialBlockTargets.Fragment, NodeMaterialBlockConnectionPointTypes.Float);
@@ -190,9 +192,11 @@ export class RefractionBlock extends NodeMaterialBlock {
         }
     }
 
-    public override prepareDefines(mesh: AbstractMesh, nodeMaterial: NodeMaterial, defines: NodeMaterialDefines) {
-        super.prepareDefines(mesh, nodeMaterial, defines);
-
+    /**
+     * Prepare the list of defines
+     * @param defines - the list of defines
+     */
+    public override prepareDefines(defines: NodeMaterialDefines) {
         const refractionTexture = this._getTexture();
         const refraction = refractionTexture && refractionTexture.getTextureMatrix;
 
@@ -202,18 +206,22 @@ export class RefractionBlock extends NodeMaterialBlock {
             return;
         }
 
-        defines.setValue(this._define3DName, refractionTexture!.isCube, true);
-        defines.setValue(this._defineLODRefractionAlpha, refractionTexture!.lodLevelInAlpha, true);
-        defines.setValue(this._defineLinearSpecularRefraction, refractionTexture!.linearSpecularLOD, true);
-        defines.setValue(this._defineOppositeZ, this._scene.useRightHandedSystem && refractionTexture.isCube ? !refractionTexture!.invertZ : refractionTexture!.invertZ, true);
+        defines.setValue(this._define3DName, refractionTexture.isCube, true);
+        defines.setValue(this._defineLODRefractionAlpha, refractionTexture.lodLevelInAlpha, true);
+        defines.setValue(this._defineLinearSpecularRefraction, refractionTexture.linearSpecularLOD, true);
+        defines.setValue(this._defineOppositeZ, this._scene.useRightHandedSystem && refractionTexture.isCube ? !refractionTexture.invertZ : refractionTexture.invertZ, true);
 
         defines.setValue("SS_LINKREFRACTIONTOTRANSPARENCY", this.linkRefractionWithTransparency, true);
-        defines.setValue("SS_GAMMAREFRACTION", refractionTexture!.gammaSpace, true);
-        defines.setValue("SS_RGBDREFRACTION", refractionTexture!.isRGBD, true);
+        defines.setValue("SS_GAMMAREFRACTION", refractionTexture.gammaSpace, true);
+        defines.setValue("SS_RGBDREFRACTION", refractionTexture.isRGBD, true);
         defines.setValue("SS_USE_LOCAL_REFRACTIONMAP_CUBIC", (<any>refractionTexture).boundingBoxSize ? true : false, true);
         defines.setValue("SS_USE_THICKNESS_AS_DEPTH", this.useThicknessAsDepth, true);
     }
 
+    /**
+     * Checks if the block is ready
+     * @returns true if ready
+     */
     public override isReady() {
         const texture = this._getTexture();
 
@@ -224,6 +232,12 @@ export class RefractionBlock extends NodeMaterialBlock {
         return true;
     }
 
+    /**
+     * Bind data to effect
+     * @param effect - the effect to bind to
+     * @param nodeMaterial - the node material
+     * @param mesh - the mesh
+     */
     public override bind(effect: Effect, nodeMaterial: NodeMaterial, mesh?: Mesh) {
         super.bind(effect, nodeMaterial, mesh);
 
@@ -262,7 +276,7 @@ export class RefractionBlock extends NodeMaterialBlock {
 
         const width = refractionTexture.getSize().width;
 
-        effect.setFloat2(this._vRefractionFilteringInfoName, width, Scalar.Log2(width));
+        effect.setFloat2(this._vRefractionFilteringInfoName, width, Math.log2(width));
 
         if ((<any>refractionTexture).boundingBoxSize) {
             const cubeTexture = <CubeTexture>refractionTexture;
@@ -379,6 +393,10 @@ export class RefractionBlock extends NodeMaterialBlock {
         return codeString;
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -393,6 +411,12 @@ export class RefractionBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - the serialization object
+     * @param scene - the scene
+     * @param rootUrl - the root URL
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         super._deserialize(serializationObject, scene, rootUrl);
 

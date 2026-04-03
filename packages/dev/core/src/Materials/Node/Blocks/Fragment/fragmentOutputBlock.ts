@@ -1,17 +1,28 @@
 import { NodeMaterialBlock } from "../../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../../nodeMaterialBuildState";
+import { type NodeMaterialBuildState } from "../../nodeMaterialBuildState";
 import { NodeMaterialBlockTargets } from "../../Enums/nodeMaterialBlockTargets";
-import type { NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
-import type { Scene } from "../../../../scene";
-import type { AbstractMesh } from "../../../../Meshes/abstractMesh";
-import type { NodeMaterialDefines, NodeMaterial } from "../../nodeMaterial";
+import { type Scene } from "../../../../scene";
+import { type NodeMaterialDefines, type NodeMaterial } from "../../nodeMaterial";
 import { editableInPropertyPage, PropertyTypeForEdition } from "../../../../Decorators/nodeDecorator";
-import type { Effect } from "../../../effect";
-import type { Mesh } from "../../../../Meshes/mesh";
+import { type Effect } from "../../../effect";
+import { type Mesh } from "../../../../Meshes/mesh";
 import { BindLogDepth } from "../../../materialHelper.functions";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
+
+/**
+ * Color spaces supported by the fragment output block
+ */
+export enum FragmentOutputBlockColorSpace {
+    /** Unspecified */
+    NoColorSpace,
+    /** Gamma */
+    Gamma,
+    /** Linear */
+    Linear,
+}
 
 /**
  * Block used to output the final color
@@ -19,33 +30,64 @@ import { ShaderLanguage } from "core/Materials/shaderLanguage";
 export class FragmentOutputBlock extends NodeMaterialBlock {
     private _linearDefineName: string;
     private _gammaDefineName: string;
+    private _additionalColorDefineName: string;
+    protected _outputString: string;
 
     /**
      * Create a new FragmentOutputBlock
      * @param name defines the block name
      */
     public constructor(name: string) {
-        super(name, NodeMaterialBlockTargets.Fragment, true);
+        super(name, NodeMaterialBlockTargets.Fragment, true, true);
 
         this.registerInput("rgba", NodeMaterialBlockConnectionPointTypes.Color4, true);
-        this.registerInput("rgb", NodeMaterialBlockConnectionPointTypes.AutoDetect, true);
+        this.registerInput("rgb", NodeMaterialBlockConnectionPointTypes.Color3, true);
         this.registerInput("a", NodeMaterialBlockConnectionPointTypes.Float, true);
-        this.rgb.addExcludedConnectionPointFromAllowedTypes(
-            NodeMaterialBlockConnectionPointTypes.Color3 | NodeMaterialBlockConnectionPointTypes.Vector3 | NodeMaterialBlockConnectionPointTypes.Float
-        );
+        this.registerInput("glow", NodeMaterialBlockConnectionPointTypes.Color3, true);
+
+        this.rgb.acceptedConnectionPointTypes.push(NodeMaterialBlockConnectionPointTypes.Vector3);
+        this.rgb.acceptedConnectionPointTypes.push(NodeMaterialBlockConnectionPointTypes.Float);
+
+        this.additionalColor.acceptedConnectionPointTypes.push(NodeMaterialBlockConnectionPointTypes.Vector3);
+        this.additionalColor.acceptedConnectionPointTypes.push(NodeMaterialBlockConnectionPointTypes.Float);
     }
 
     /** Gets or sets a boolean indicating if content needs to be converted to gamma space */
-    @editableInPropertyPage("Convert to gamma space", PropertyTypeForEdition.Boolean, "PROPERTIES", { notifiers: { update: true } })
     public convertToGammaSpace = false;
 
     /** Gets or sets a boolean indicating if content needs to be converted to linear space */
-    @editableInPropertyPage("Convert to linear space", PropertyTypeForEdition.Boolean, "PROPERTIES", { notifiers: { update: true } })
     public convertToLinearSpace = false;
 
     /** Gets or sets a boolean indicating if logarithmic depth should be used */
-    @editableInPropertyPage("Use logarithmic depth", PropertyTypeForEdition.Boolean, "PROPERTIES")
+    @editableInPropertyPage("Use logarithmic depth", PropertyTypeForEdition.Boolean, "PROPERTIES", { embedded: true })
     public useLogarithmicDepth = false;
+
+    /**
+     * Gets or sets the color space used for the block
+     */
+    @editableInPropertyPage("Color space", PropertyTypeForEdition.List, "ADVANCED", {
+        notifiers: { rebuild: true },
+        embedded: true,
+        options: [
+            { label: "No color space", value: FragmentOutputBlockColorSpace.NoColorSpace },
+            { label: "To Gamma", value: FragmentOutputBlockColorSpace.Gamma },
+            { label: "To Linear", value: FragmentOutputBlockColorSpace.Linear },
+        ],
+    })
+    public get colorSpace() {
+        if (this.convertToGammaSpace) {
+            return FragmentOutputBlockColorSpace.Gamma;
+        }
+        if (this.convertToLinearSpace) {
+            return FragmentOutputBlockColorSpace.Linear;
+        }
+        return FragmentOutputBlockColorSpace.NoColorSpace;
+    }
+
+    public set colorSpace(value: FragmentOutputBlockColorSpace) {
+        this.convertToGammaSpace = value === FragmentOutputBlockColorSpace.Gamma;
+        this.convertToLinearSpace = value === FragmentOutputBlockColorSpace.Linear;
+    }
 
     /**
      * Gets the current class name
@@ -85,11 +127,41 @@ export class FragmentOutputBlock extends NodeMaterialBlock {
         return this._inputs[2];
     }
 
-    public override prepareDefines(mesh: AbstractMesh, nodeMaterial: NodeMaterial, defines: NodeMaterialDefines) {
-        defines.setValue(this._linearDefineName, this.convertToLinearSpace, true);
-        defines.setValue(this._gammaDefineName, this.convertToGammaSpace, true);
+    /**
+     * Gets the additionalColor input component (named glow in the UI for now)
+     */
+    public get additionalColor(): NodeMaterialConnectionPoint {
+        return this._inputs[3];
     }
 
+    /**
+     * Gets the glow input component
+     */
+    public get glow(): NodeMaterialConnectionPoint {
+        return this._inputs[3];
+    }
+
+    protected _getOutputString(state: NodeMaterialBuildState): string {
+        return state.shaderLanguage === ShaderLanguage.WGSL ? "fragmentOutputsColor" : "gl_FragColor";
+    }
+
+    /**
+     * Prepare the list of defines
+     * @param defines - the material defines
+     * @param nodeMaterial - the node material
+     */
+    public override prepareDefines(defines: NodeMaterialDefines, nodeMaterial: NodeMaterial) {
+        defines.setValue(this._linearDefineName, this.convertToLinearSpace, true);
+        defines.setValue(this._gammaDefineName, this.convertToGammaSpace, true);
+        defines.setValue(this._additionalColorDefineName, this.additionalColor.connectedPoint && nodeMaterial._useAdditionalColor, true);
+    }
+
+    /**
+     * Bind data to effect
+     * @param effect - the effect to bind to
+     * @param nodeMaterial - the node material
+     * @param mesh - the mesh to bind for
+     */
     public override bind(effect: Effect, nodeMaterial: NodeMaterial, mesh?: Mesh) {
         if ((this.useLogarithmicDepth || nodeMaterial.useLogarithmicDepth) && mesh) {
             BindLogDepth(undefined, effect, mesh.getScene());
@@ -102,28 +174,51 @@ export class FragmentOutputBlock extends NodeMaterialBlock {
         const rgba = this.rgba;
         const rgb = this.rgb;
         const a = this.a;
+        const additionalColor = this.additionalColor;
 
         const isWebGPU = state.shaderLanguage === ShaderLanguage.WGSL;
         state.sharedData.hints.needAlphaBlending = rgba.isConnected || a.isConnected;
         state.sharedData.blocksWithDefines.push(this);
+
         if (this.useLogarithmicDepth || state.sharedData.nodeMaterial.useLogarithmicDepth) {
             state._emitUniformFromString("logarithmicDepthConstant", NodeMaterialBlockConnectionPointTypes.Float);
             state._emitVaryingFromString("vFragmentDepth", NodeMaterialBlockConnectionPointTypes.Float);
             state.sharedData.bindableBlocks.push(this);
         }
+
+        if (additionalColor.connectedPoint) {
+            state._excludeVariableName("useAdditionalColor");
+            state._emitUniformFromString("useAdditionalColor", NodeMaterialBlockConnectionPointTypes.Float);
+            this._additionalColorDefineName = state._getFreeDefineName("USEADDITIONALCOLOR");
+        }
+
         this._linearDefineName = state._getFreeDefineName("CONVERTTOLINEAR");
         this._gammaDefineName = state._getFreeDefineName("CONVERTTOGAMMA");
 
         const comments = `//${this.name}`;
         state._emitFunctionFromInclude("helperFunctions", comments);
 
-        let outputString = "gl_FragColor";
+        const outputString = this._getOutputString(state);
         if (state.shaderLanguage === ShaderLanguage.WGSL) {
-            state.compilationString += `var fragmentOutputsColor : vec4<f32>;\r\n`;
-            outputString = "fragmentOutputsColor";
+            state.compilationString += `var ${outputString} : vec4<f32>;\r\n`;
         }
 
         const vec4 = state._getShaderType(NodeMaterialBlockConnectionPointTypes.Vector4);
+
+        if (additionalColor.connectedPoint) {
+            let aValue = "1.0";
+
+            if (a.connectedPoint) {
+                aValue = a.associatedVariableName;
+            }
+            state.compilationString += `#ifdef ${this._additionalColorDefineName}\n`;
+            if (additionalColor.connectedPoint.type === NodeMaterialBlockConnectionPointTypes.Float) {
+                state.compilationString += `${outputString}  = ${vec4}(${additionalColor.associatedVariableName}, ${additionalColor.associatedVariableName}, ${additionalColor.associatedVariableName}, ${aValue});\n`;
+            } else {
+                state.compilationString += `${outputString}  = ${vec4}(${additionalColor.associatedVariableName}, ${aValue});\n`;
+            }
+            state.compilationString += `#else\n`;
+        }
 
         if (rgba.connectedPoint) {
             if (a.isConnected) {
@@ -147,8 +242,12 @@ export class FragmentOutputBlock extends NodeMaterialBlock {
             state.sharedData.checks.notConnectedNonOptionalInputs.push(rgba);
         }
 
+        if (additionalColor.connectedPoint) {
+            state.compilationString += `#endif\n`;
+        }
+
         state.compilationString += `#ifdef ${this._linearDefineName}\n`;
-        state.compilationString += `${outputString}  = toLinearSpace(${outputString});\n`;
+        state.compilationString += `${outputString}  = toLinearSpace${state.shaderLanguage === ShaderLanguage.WGSL ? "Vec4" : ""}(${outputString});\n`;
         state.compilationString += `#endif\n`;
 
         state.compilationString += `#ifdef ${this._gammaDefineName}\n`;
@@ -157,7 +256,7 @@ export class FragmentOutputBlock extends NodeMaterialBlock {
 
         if (state.shaderLanguage === ShaderLanguage.WGSL) {
             state.compilationString += `#if !defined(PREPASS)\r\n`;
-            state.compilationString += `fragmentOutputs.color = fragmentOutputsColor;\r\n`;
+            state.compilationString += `fragmentOutputs.color = ${outputString};\r\n`;
             state.compilationString += `#endif\r\n`;
         }
 
@@ -185,6 +284,10 @@ export class FragmentOutputBlock extends NodeMaterialBlock {
         return codeString;
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -195,6 +298,12 @@ export class FragmentOutputBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - the serialization object
+     * @param scene - the scene
+     * @param rootUrl - the root url
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         super._deserialize(serializationObject, scene, rootUrl);
 

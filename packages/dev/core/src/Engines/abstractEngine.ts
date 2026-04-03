@@ -1,43 +1,42 @@
-import type { Observer } from "../Misc/observable";
-import type { DataArray, FloatArray, IndicesArray, Nullable } from "../types";
-import type { PerfCounter } from "../Misc/perfCounter";
-import type { PostProcess } from "../PostProcesses/postProcess";
-import type { Scene } from "../scene";
-import type { IColor4Like, IViewportLike } from "../Maths/math.like";
-import type { ICanvas, IImage } from "./ICanvas";
-import type { HardwareTextureWrapper } from "../Materials/Textures/hardwareTextureWrapper";
-import type { EngineCapabilities } from "./engineCapabilities";
-import type { DataBuffer } from "../Buffers/dataBuffer";
-import type { RenderTargetWrapper } from "./renderTargetWrapper";
-import type { IShaderProcessor } from "./Processors/iShaderProcessor";
-import type { ShaderLanguage } from "../Materials/shaderLanguage";
-import type { IAudioEngineOptions } from "../Audio/Interfaces/IAudioEngineOptions";
-import type { EngineFeatures } from "./engineFeatures";
-import type { UniformBuffer } from "../Materials/uniformBuffer";
-import type { StorageBuffer } from "../Buffers/storageBuffer";
-import type { IEffectCreationOptions, IShaderPath } from "../Materials/effect";
-import type { IOfflineProvider } from "../Offline/IOfflineProvider";
-import type { IWebRequest } from "../Misc/interfaces/iWebRequest";
-import type { IFileRequest } from "../Misc/fileRequest";
-import type { Texture } from "../Materials/Textures/texture";
-import type { LoadFileError } from "../Misc/fileTools";
-import type { ShaderProcessingContext } from "./Processors/shaderProcessingOptions";
-import type { IPipelineContext } from "./IPipelineContext";
-import type { ThinTexture } from "../Materials/Textures/thinTexture";
-import type { InternalTextureCreationOptions, TextureSize } from "../Materials/Textures/textureCreationOptions";
-import type { EffectFallbacks } from "../Materials/effectFallbacks";
-import type { IMaterialContext } from "./IMaterialContext";
-import type { IStencilState } from "../States/IStencilState";
-import type { DrawWrapper } from "../Materials/drawWrapper";
-import type { IDrawContext } from "./IDrawContext";
-import type { VertexBuffer } from "../Meshes/buffer";
-import type { IAudioEngine } from "../Audio/Interfaces/IAudioEngine";
-import type { WebRequest } from "core/Misc/webRequest";
-import type { PerformanceMonitor } from "core/Misc/performanceMonitor";
-import type { ILoadingScreen } from "../Loading/loadingScreen";
+import { type Observer, Observable } from "../Misc/observable";
+import { type DataArray, type FloatArray, type IndicesArray, type Nullable } from "../types";
+import { type PerfCounter } from "../Misc/perfCounter";
+import { type PostProcess } from "../PostProcesses/postProcess";
+import { type Scene } from "../scene";
+import { type IColor4Like, type IViewportLike } from "../Maths/math.like";
+import { type ICanvas, type IImage, type IPath2D } from "./ICanvas";
+import { type IHardwareTextureWrapper } from "../Materials/Textures/hardwareTextureWrapper";
+import { type EngineCapabilities } from "./engineCapabilities";
+import { type DataBuffer } from "../Buffers/dataBuffer";
+import { type RenderTargetWrapper } from "./renderTargetWrapper";
+import { type IShaderProcessor } from "./Processors/iShaderProcessor";
+import { type ShaderLanguage } from "../Materials/shaderLanguage";
+import { type IAudioEngineOptions } from "../Audio/Interfaces/IAudioEngineOptions";
+import { type EngineFeatures } from "./engineFeatures";
+import { type UniformBuffer } from "../Materials/uniformBuffer";
+import { type StorageBuffer } from "../Buffers/storageBuffer";
+import { type IEffectCreationOptions, type IShaderPath, Effect } from "../Materials/effect";
+import { type IOfflineProvider } from "../Offline/IOfflineProvider";
+import { type IWebRequest } from "../Misc/interfaces/iWebRequest";
+import { type IFileRequest } from "../Misc/fileRequest";
+import { type Texture } from "../Materials/Textures/texture";
+import { type LoadFileError } from "../Misc/fileTools";
+import { type _IShaderProcessingContext } from "./Processors/shaderProcessingOptions";
+import { type IPipelineContext } from "./IPipelineContext";
+import { type ThinTexture } from "../Materials/Textures/thinTexture";
+import { type InternalTextureCreationOptions, type TextureSize } from "../Materials/Textures/textureCreationOptions";
+import { type EffectFallbacks } from "../Materials/effectFallbacks";
+import { type IMaterialContext } from "./IMaterialContext";
+import { type IStencilStateProperties, type IStencilState } from "../States/IStencilState";
+import { type DrawWrapper } from "../Materials/drawWrapper";
+import { type IDrawContext } from "./IDrawContext";
+import { type VertexBuffer } from "../Meshes/buffer";
+import { type IAudioEngine } from "../Audio/Interfaces/IAudioEngine";
+import { type WebRequest } from "core/Misc/webRequest";
+import { type PerformanceMonitor } from "core/Misc/performanceMonitor";
+import { type ILoadingScreen } from "../Loading/loadingScreen";
 import { EngineStore } from "./engineStore";
 import { Logger } from "../Misc/logger";
-import { Effect } from "../Materials/effect";
 import { PerformanceConfigurator } from "./performanceConfigurator";
 import { PrecisionDate } from "../Misc/precisionDate";
 import { DepthCullingState } from "../States/depthCullingState";
@@ -48,10 +47,9 @@ import { _WarnImport } from "../Misc/devTools";
 import { InternalTexture, InternalTextureSource } from "../Materials/Textures/internalTexture";
 import { IsDocumentAvailable, IsNavigatorAvailable, IsWindowObjectExist } from "../Misc/domManagement";
 import { Constants } from "./constants";
-import { Observable } from "../Misc/observable";
-import { EngineFunctionContext, _loadFile } from "./abstractEngine.functions";
-import type { Material } from "core/Materials/material";
-import { _GetCompatibleTextureLoader } from "core/Materials/Textures/Loaders/textureLoaderManager";
+import { EngineFunctionContext, _LoadFile } from "./abstractEngine.functions";
+import { type Material } from "core/Materials/material";
+import { type IInternalTextureLoader } from "../Materials/Textures/Loaders/internalTextureLoader";
 
 /**
  * Defines the interface used by objects working like Scene
@@ -82,7 +80,7 @@ export function QueueNewFrame(func: () => void, requester?: any): number {
             return requestAnimationFrame(func);
         }
     } else {
-        const { requestAnimationFrame } = requester || window;
+        const { requestAnimationFrame } = (requester || window) as { requestAnimationFrame: (callback: FrameRequestCallback) => number };
         if (typeof requestAnimationFrame === "function") {
             return requestAnimationFrame(func);
         }
@@ -94,6 +92,7 @@ export function QueueNewFrame(func: () => void, requester?: any): number {
 }
 
 /** Interface defining initialization parameters for AbstractEngine class */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface AbstractEngineOptions {
     /**
      * Defines if the engine should no exceed a specified device ratio
@@ -131,9 +130,20 @@ export interface AbstractEngineOptions {
     doNotHandleTouchAction?: boolean;
 
     /**
-     * Make the matrix computations to be performed in 64 bits instead of 32 bits. False by default
+     * Make the matrix computations to be performed in 64 bits instead of 32 bits. False by default.
+     * Note that setting useLargeWorldRendering will also set high precision matrices
      */
     useHighPrecisionMatrix?: boolean;
+
+    /**
+     * LargeWorldRendering helps avoid floating point imprecision of rendering large worlds by
+     * 1. Forcing highPrecisionMatrices (matrix computations in 64 bits instead of 32)
+     * 2. Enabling floatingOriginMode in all scenes -- offsetting position-related uniform and attribute values before passing to shader so that active camera is centered at origin and world is offset by active camera position
+     *
+     * NOTE that if this mode is set during engineCreation, all scenes will have floatingOrigin offset and you do not need to send floatingOriginMode option to each scene creation.
+     * If you'd like to have only specific scenes using the offset logic, you can set the flag on those scenes directly -- however, to achieve proper large world rendering, you must also set the useHighPrecisionMatrix option on engine.
+     */
+    readonly useLargeWorldRendering?: boolean;
 
     /**
      * Defines whether to adapt to the device's viewport characteristics (default: false)
@@ -164,6 +174,7 @@ export interface AbstractEngineOptions {
 /**
  * Information about the current host
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface HostInformation {
     /**
      * Defines if the current host is a mobile
@@ -208,11 +219,11 @@ export abstract class AbstractEngine {
     /** @internal */
     public _stencilState = new StencilState();
     /** @internal */
-    public _alphaState = new AlphaState();
+    public _alphaState = new AlphaState(false);
     /** @internal */
-    public _alphaMode = Constants.ALPHA_ADD;
+    public _alphaMode = Array(8).fill(-1);
     /** @internal */
-    public _alphaEquation = Constants.ALPHA_DISABLE;
+    public _alphaEquation = Array(8).fill(-1);
 
     protected _activeRequests: IFileRequest[] = [];
 
@@ -247,6 +258,8 @@ export abstract class AbstractEngine {
     protected _cachedViewport: Nullable<IViewportLike>;
     /** @internal */
     public _currentDrawContext: IDrawContext;
+    /** @internal */
+    public _currentMaterialContext: IMaterialContext;
 
     /** @internal */
     protected _boundTexturesCache: { [key: string]: Nullable<InternalTexture> } = {};
@@ -259,6 +272,9 @@ export abstract class AbstractEngine {
 
     /** @internal */
     protected _isWebGPU: boolean = false;
+
+    /** @internal */
+    public _enableGPUDebugMarkers: boolean = false;
 
     // Focus
     /** @internal */
@@ -301,6 +317,11 @@ export abstract class AbstractEngine {
     public onCanvasPointerOutObservable = new Observable<PointerEvent>();
 
     /**
+     * Observable event triggered each time an effect compilation fails
+     */
+    public onEffectErrorObservable = new Observable<{ effect: Effect; errors: string }>();
+
+    /**
      * Turn this value on if you want to pause FPS computation when in background
      */
     public disablePerformanceMonitorInBackground = false;
@@ -330,8 +351,16 @@ export abstract class AbstractEngine {
     /**
      * @internal
      */
-    public _getShaderProcessor(shaderLanguage: ShaderLanguage): Nullable<IShaderProcessor> {
+    public _getShaderProcessor(_shaderLanguage: ShaderLanguage): Nullable<IShaderProcessor> {
         return this._shaderProcessor;
+    }
+
+    /**
+     * @internal
+     */
+    public _resetAlphaMode(): void {
+        this._alphaMode.fill(-1);
+        this._alphaEquation.fill(-1);
     }
 
     /**
@@ -378,7 +407,7 @@ export abstract class AbstractEngine {
     /**
      * @internal
      */
-    public abstract _preparePipelineContext(
+    public abstract _preparePipelineContextAsync(
         pipelineContext: IPipelineContext,
         vertexSourceCode: string,
         fragmentSourceCode: string,
@@ -615,7 +644,7 @@ export abstract class AbstractEngine {
 
     private _rebuildEffects(): void {
         for (const key in this._compiledEffects) {
-            const effect = <Effect>this._compiledEffects[key];
+            const effect = this._compiledEffects[key];
 
             effect._pipelineContext = null; // because _prepareEffect will try to dispose this pipeline before recreating it and that would lead to webgl errors
             effect._prepareEffect();
@@ -657,7 +686,7 @@ export abstract class AbstractEngine {
 
     protected _restoreEngineAfterContextLost(initEngine: () => void): void {
         // Adding a timeout to avoid race condition at browser level
-        setTimeout(async () => {
+        setTimeout(() => {
             this._clearEmptyResources();
 
             const depthTest = this._depthCullingState.depthTest; // backup those values because the call to initEngine / wipeCaches will reset them
@@ -666,7 +695,7 @@ export abstract class AbstractEngine {
             const stencilTest = this._stencilState.stencilTest;
 
             // Rebuild context
-            await initEngine();
+            initEngine();
             this._rebuildGraphicsResources();
 
             this._depthCullingState.depthTest = depthTest;
@@ -794,7 +823,7 @@ export abstract class AbstractEngine {
                 cubeData,
                 1,
                 Constants.TEXTUREFORMAT_RGBA,
-                Constants.TEXTURETYPE_UNSIGNED_INT,
+                Constants.TEXTURETYPE_UNSIGNED_BYTE,
                 false,
                 false,
                 Constants.TEXTURE_NEAREST_SAMPLINGMODE
@@ -884,16 +913,69 @@ export abstract class AbstractEngine {
     public abstract get performanceMonitor(): PerformanceMonitor;
 
     /** @internal */
-    public _boundRenderFunction: any = () => this._renderLoop();
+    public _boundRenderFunction: any = (timestamp: number) => this._renderLoop(timestamp);
 
-    /** @internal */
-    public _renderLoop(): void {
-        // Reset the frame handler before rendering a frame to determine if a new frame has been queued.
+    protected _maxFPS: number | undefined;
+    protected _minFrameTime: number;
+    protected _lastFrameTime: number = 0;
+    protected _renderAccumulator: number = 0;
+
+    /**
+     * Skip frame rendering but keep the frame heartbeat (begin/end frame).
+     * This is useful if you need all the plumbing but not the rendering work.
+     * (for instance when capturing a screenshot where you do not want to mix rendering to the screen and to the screenshot)
+     */
+    public skipFrameRender = false;
+
+    /** Gets or sets max frame per second allowed. Will return undefined if not capped */
+    public get maxFPS(): number | undefined {
+        return this._maxFPS;
+    }
+
+    public set maxFPS(value: number | undefined) {
+        this._maxFPS = value;
+
+        if (value === undefined) {
+            return;
+        }
+
+        if (value <= 0) {
+            this._minFrameTime = Number.MAX_VALUE;
+            return;
+        }
+
+        this._minFrameTime = 1000 / value;
+    }
+
+    protected _isOverFrameTime(timestamp?: number): boolean {
+        if (!timestamp || this._maxFPS === undefined) {
+            return false;
+        }
+
+        const elapsedTime = timestamp - this._lastFrameTime;
+        this._lastFrameTime = timestamp;
+
+        this._renderAccumulator += elapsedTime;
+
+        if (this._renderAccumulator < this._minFrameTime) {
+            return true;
+        }
+
+        this._renderAccumulator -= this._minFrameTime;
+
+        if (this._renderAccumulator > this._minFrameTime) {
+            this._renderAccumulator = this._minFrameTime;
+        }
+
+        return false;
+    }
+
+    protected _processFrame(timestamp?: number) {
         this._frameHandler = 0;
 
-        if (!this._contextWasLost) {
+        if (!this._contextWasLost && !this._isOverFrameTime(timestamp)) {
             let shouldRender = true;
-            if (this._isDisposed || (!this.renderEvenInBackground && this._windowIsBackground)) {
+            if (this.isDisposed || (!this.renderEvenInBackground && this._windowIsBackground)) {
                 shouldRender = false;
             }
 
@@ -902,7 +984,7 @@ export abstract class AbstractEngine {
                 this.beginFrame();
 
                 // Child canvases
-                if (!this._renderViews()) {
+                if (!this.skipFrameRender && !this._renderViews()) {
                     // Main frame
                     this._renderFrame();
                 }
@@ -911,6 +993,11 @@ export abstract class AbstractEngine {
                 this.endFrame();
             }
         }
+    }
+
+    /** @internal */
+    public _renderLoop(timestamp: number | undefined): void {
+        this._processFrame(timestamp);
 
         // The first condition prevents queuing another frame if we no longer have active render loops (e.g., if
         // `stopRenderLoop` is called mid frame). The second condition prevents queuing another frame if one has
@@ -1055,7 +1142,7 @@ export abstract class AbstractEngine {
     public onBeginFrameObservable = new Observable<AbstractEngine>();
 
     /**
-     * Observable raised when the engine ends the current frame
+     * Observable raised when the engine ends the current frame (requires a render loop, e.g. 'engine.runRenderLoop(...)')
      */
     public onEndFrameObservable = new Observable<AbstractEngine>();
 
@@ -1107,6 +1194,9 @@ export abstract class AbstractEngine {
         useTextureWidthAndHeight?: boolean
     ): void;
 
+    /** @internal */
+    public abstract _unpackFlipY(value: boolean): void;
+
     /**
      * Reads pixels from the current frame buffer. Please note that this function can be slow
      * @param x defines the x coordinate of the rectangle where pixels must be read
@@ -1121,7 +1211,13 @@ export abstract class AbstractEngine {
     public abstract readPixels(x: number, y: number, width: number, height: number, hasAlpha?: boolean, flushRenderer?: boolean): Promise<ArrayBufferView>;
 
     /**
-     * Force a WebGPU flush (ie. a flush of all waiting commands)
+     * Generates mipmaps for a texture
+     * @param texture The texture to generate the mipmaps for
+     */
+    public abstract generateMipmaps(texture: InternalTexture): void;
+
+    /**
+     * Force a flush (ie. a flush of all waiting commands)
      */
     public abstract flushFramebuffer(): void;
 
@@ -1178,8 +1274,9 @@ export abstract class AbstractEngine {
 
     /**
      * Unbind the current render target and bind the default framebuffer
+     * @param unbindOnly defines a boolean indicating that the function should only unbind the current render target without binding the default framebuffer
      */
-    public abstract restoreDefaultFramebuffer(): void;
+    public abstract restoreDefaultFramebuffer(unbindOnly?: boolean): void;
 
     /**
      * Draw a list of indexed primitives
@@ -1197,6 +1294,19 @@ export abstract class AbstractEngine {
      * @param onBeforeUnbind defines a function which will be called before the effective unbind
      */
     public abstract unBindFramebuffer(texture: RenderTargetWrapper, disableGenerateMipMaps?: boolean, onBeforeUnbind?: () => void): void;
+
+    /**
+     * Generates mipmaps for the texture of the (single) render target
+     * @param texture The render target containing the texture to generate the mipmaps for
+     */
+    public abstract generateMipMapsFramebuffer(texture: RenderTargetWrapper): void;
+
+    /**
+     * Resolves the MSAA texture of the (single) render target into its non-MSAA version.
+     * Note that if "texture" is not a MSAA render target, no resolve is performed.
+     * @param texture The render target texture containing the MSAA texture to resolve
+     */
+    public abstract resolveFramebuffer(texture: RenderTargetWrapper): void;
 
     /**Gets driver info if available */
     public abstract extractDriverInfo(): string;
@@ -1226,10 +1336,17 @@ export abstract class AbstractEngine {
     }
 
     /**
-     * Activates an effect, making it the current one (ie. the one used for rendering)
+     * Activates an effect, making it the current one (i.e. the one used for rendering)
      * @param effect defines the effect to activate
      */
     public abstract enableEffect(effect: Nullable<Effect | DrawWrapper>): void;
+
+    /**
+     * Sets the type of faces to cull
+     * @param cullBackFaces true to cull back faces, false to cull front faces (if culling is enabled)
+     * @param force defines if states must be applied even if cache is up to date
+     */
+    public abstract setStateCullFaceType(cullBackFaces?: boolean, force?: boolean): void;
 
     /**
      * Set various states to the webGL context
@@ -1247,7 +1364,7 @@ export abstract class AbstractEngine {
         force?: boolean,
         reverseSide?: boolean,
         cullBackFaces?: boolean,
-        stencil?: IStencilState,
+        stencil?: IStencilState | IStencilStateProperties,
         zOffsetUnits?: number
     ): void;
 
@@ -1298,8 +1415,9 @@ export abstract class AbstractEngine {
      * @param backBuffer defines if the back buffer must be cleared
      * @param depth defines if the depth buffer must be cleared
      * @param stencil defines if the stencil buffer must be cleared
+     * @param stencilClearValue defines the value to use to clear the stencil buffer
      */
-    public abstract clear(color: Nullable<IColor4Like>, backBuffer: boolean, depth: boolean, stencil?: boolean): void;
+    public abstract clear(color: Nullable<IColor4Like>, backBuffer: boolean, depth: boolean, stencil?: boolean, stencilClearValue?: number): void;
 
     /**
      * Gets a boolean indicating that only power of 2 textures are supported
@@ -1399,6 +1517,15 @@ export abstract class AbstractEngine {
     }
 
     /**
+     * Create a 2D path to use with canvas
+     * @returns IPath2D interface
+     * @param d SVG path string
+     */
+    public createCanvasPath2D(d?: string): IPath2D {
+        return new Path2D(d);
+    }
+
+    /**
      * Returns a string describing the current engine
      */
     public get description(): string {
@@ -1430,8 +1557,8 @@ export abstract class AbstractEngine {
         useSRGBBuffer?: boolean
     ): InternalTexture {
         url = url || "";
-        const fromData = url.substr(0, 5) === "data:";
-        const fromBlob = url.substr(0, 5) === "blob:";
+        const fromData = url.substring(0, 5) === "data:";
+        const fromBlob = url.substring(0, 5) === "blob:";
         const isBase64 = fromData && url.indexOf(";base64,") !== -1;
 
         const texture = fallback ? fallback : new InternalTexture(this, InternalTextureSource.Url);
@@ -1460,7 +1587,7 @@ export abstract class AbstractEngine {
             extension = extension.split("?")[0];
         }
 
-        const loaderPromise = _GetCompatibleTextureLoader(extension, mimeType);
+        const loaderPromise = AbstractEngine.GetCompatibleTextureLoader(extension, mimeType);
 
         if (scene) {
             scene.addPendingData(texture);
@@ -1542,7 +1669,7 @@ export abstract class AbstractEngine {
 
         // processing for non-image formats
         if (loaderPromise) {
-            const callback = async (data: ArrayBufferView) => {
+            const callbackAsync = async (data: ArrayBufferView) => {
                 const loader = await loaderPromise;
                 loader.loadData(
                     data,
@@ -1574,7 +1701,13 @@ export abstract class AbstractEngine {
             if (!buffer) {
                 this._loadFile(
                     url,
-                    (data) => callback(new Uint8Array(data as ArrayBuffer)),
+                    async (data) => {
+                        try {
+                            await callbackAsync(new Uint8Array(data as ArrayBuffer));
+                        } catch (reason) {
+                            onInternalError("Failed to parse texture data", reason);
+                        }
+                    },
                     undefined,
                     scene ? scene.offlineProvider : undefined,
                     true,
@@ -1583,10 +1716,17 @@ export abstract class AbstractEngine {
                     }
                 );
             } else {
+                const processBufferAsync = async (data: ArrayBufferView) => {
+                    try {
+                        await callbackAsync(data);
+                    } catch (reason) {
+                        onInternalError("Failed to parse texture data", reason);
+                    }
+                };
                 if (buffer instanceof ArrayBuffer) {
-                    callback(new Uint8Array(buffer));
+                    void processBufferAsync(new Uint8Array(buffer));
                 } else if (ArrayBuffer.isView(buffer)) {
-                    callback(buffer);
+                    void processBufferAsync(buffer);
                 } else {
                     if (onError) {
                         onError("Unable to load: only ArrayBuffer or ArrayBufferView is supported", null);
@@ -1616,7 +1756,8 @@ export abstract class AbstractEngine {
                         onInternalError,
                         scene ? scene.offlineProvider : null,
                         mimeType,
-                        texture.invertY && this._features.needsInvertingBitmap ? { imageOrientation: "flipY" } : undefined
+                        texture.invertY && this._features.needsInvertingBitmap ? { imageOrientation: "flipY" } : undefined,
+                        this
                     );
                 }
             } else if (typeof buffer === "string" || buffer instanceof ArrayBuffer || ArrayBuffer.isView(buffer) || buffer instanceof Blob) {
@@ -1626,7 +1767,8 @@ export abstract class AbstractEngine {
                     onInternalError,
                     scene ? scene.offlineProvider : null,
                     mimeType,
-                    texture.invertY && this._features.needsInvertingBitmap ? { imageOrientation: "flipY" } : undefined
+                    texture.invertY && this._features.needsInvertingBitmap ? { imageOrientation: "flipY" } : undefined,
+                    this
                 );
             } else if (buffer) {
                 onload(buffer);
@@ -1641,7 +1783,7 @@ export abstract class AbstractEngine {
      * @param shaderProcessingContext defines the shader processing context used during the processing if available
      * @returns the new pipeline
      */
-    public abstract createPipelineContext(shaderProcessingContext: Nullable<ShaderProcessingContext>): IPipelineContext;
+    public abstract createPipelineContext(shaderProcessingContext: Nullable<_IShaderProcessingContext>): IPipelineContext;
 
     /**
      * Inline functions in shader code that are marked to be inlined
@@ -1700,7 +1842,7 @@ export abstract class AbstractEngine {
     /**
      * @internal
      */
-    public abstract _getShaderProcessingContext(shaderLanguage: ShaderLanguage, pureMode: boolean): Nullable<ShaderProcessingContext>;
+    public abstract _getShaderProcessingContext(shaderLanguage: ShaderLanguage, pureMode: boolean): Nullable<_IShaderProcessingContext>;
 
     /**
      * Gets host document
@@ -1786,14 +1928,14 @@ export abstract class AbstractEngine {
      */
     // Not mixed with Version for tooling purpose.
     public static get NpmPackage(): string {
-        return "babylonjs@7.23.0";
+        return "babylonjs@9.0.0";
     }
 
     /**
      * Returns the current version of the framework
      */
     public static get Version(): string {
-        return "7.23.0";
+        return "9.0.0";
     }
 
     /**
@@ -1815,6 +1957,7 @@ export abstract class AbstractEngine {
 
     /**
      * Gets the audio context specified in engine initialization options
+     * @deprecated please use AudioEngineV2 instead
      * @returns an Audio Context
      */
     public getAudioContext(): Nullable<AudioContext> {
@@ -1823,6 +1966,7 @@ export abstract class AbstractEngine {
 
     /**
      * Gets the audio destination specified in engine initialization options
+     * @deprecated please use AudioEngineV2 instead
      * @returns an audio destination node
      */
     public getAudioDestination(): Nullable<AudioDestinationNode | MediaStreamAudioDestinationNode> {
@@ -1896,6 +2040,7 @@ export abstract class AbstractEngine {
 
     /**
      * Gets the options used for engine creation
+     * NOTE that modifying the object after engine creation will have no effect
      * @returns EngineOptions object
      */
     public getCreationOptions() {
@@ -1914,7 +2059,9 @@ export abstract class AbstractEngine {
 
         this._stencilStateComposer.stencilGlobal = this._stencilState;
 
-        PerformanceConfigurator.SetMatrixPrecision(!!options.useHighPrecisionMatrix);
+        // LargeWorldRendering set to true will set high precision matrix, regardless of useHighPrecisionMatrix value
+        // It will also set all scenes to use floatingOriginMode upon their creation
+        PerformanceConfigurator.SetMatrixPrecision(!!options.useLargeWorldRendering || !!options.useHighPrecisionMatrix);
 
         if (IsNavigatorAvailable() && navigator.userAgent) {
             // Detect if we are running on a faulty buggy OS.
@@ -1931,7 +2078,6 @@ export abstract class AbstractEngine {
         options.deterministicLockstep = options.deterministicLockstep ?? false;
         options.lockstepMaxSteps = options.lockstepMaxSteps ?? 4;
         options.timeStep = options.timeStep ?? 1 / 60;
-        options.audioEngine = options.audioEngine ?? true;
         options.stencil = options.stencil ?? true;
 
         this._audioContext = options.audioEngineOptions?.audioContext ?? null;
@@ -1971,15 +2117,9 @@ export abstract class AbstractEngine {
         if (IsWindowObjectExist() && IsDocumentAvailable()) {
             // make sure it is a Node object, and is a part of the document.
             if (this._renderingCanvas) {
-                const boundingRect = this._renderingCanvas.getBoundingClientRect
-                    ? this._renderingCanvas.getBoundingClientRect()
-                    : {
-                          // fallback to last solution in case the function doesn't exist
-                          width: this._renderingCanvas.width * this._hardwareScalingLevel,
-                          height: this._renderingCanvas.height * this._hardwareScalingLevel,
-                      };
-                width = this._renderingCanvas.clientWidth || boundingRect.width || this._renderingCanvas.width || 100;
-                height = this._renderingCanvas.clientHeight || boundingRect.height || this._renderingCanvas.height || 100;
+                const boundingRect = this._renderingCanvas.getBoundingClientRect?.();
+                width = this._renderingCanvas.clientWidth || boundingRect?.width || this._renderingCanvas.width * this._hardwareScalingLevel || 100;
+                height = this._renderingCanvas.clientHeight || boundingRect?.height || this._renderingCanvas.height * this._hardwareScalingLevel || 100;
             } else {
                 width = window.innerWidth;
                 height = window.innerHeight;
@@ -2144,9 +2284,10 @@ export abstract class AbstractEngine {
      * @param invertY defines if data must be stored with Y axis inverted
      * @param samplingMode defines the required sampling mode (Texture.NEAREST_SAMPLINGMODE by default)
      * @param compression defines the compression used (null by default)
-     * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_INT by default)
+     * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_BYTE by default)
      * @param creationFlags specific flags to use when creating the texture (Constants.TEXTURE_CREATIONFLAG_STORAGE for storage textures, for eg)
      * @param useSRGBBuffer defines if the texture must be loaded in a sRGB GPU buffer (if supported by the GPU).
+     * @param mipLevelCount defines the number of mip levels to allocate for the texture
      * @returns the raw texture inside an InternalTexture
      */
     public createRawTexture(
@@ -2160,7 +2301,8 @@ export abstract class AbstractEngine {
         compression?: Nullable<string>,
         type?: number,
         creationFlags?: number,
-        useSRGBBuffer?: boolean
+        useSRGBBuffer?: boolean,
+        mipLevelCount?: number
     ): InternalTexture {
         throw _WarnImport("engine.rawTexture");
     }
@@ -2171,7 +2313,7 @@ export abstract class AbstractEngine {
      * @param data defines the array of data to use to create each face
      * @param size defines the size of the textures
      * @param format defines the format of the data
-     * @param type defines the type of the data (like Engine.TEXTURETYPE_UNSIGNED_INT)
+     * @param type defines the type of the data (like Engine.TEXTURETYPE_UNSIGNED_BYTE)
      * @param generateMipMaps  defines if the engine should generate the mip levels
      * @param invertY defines if data must be stored with Y axis inverted
      * @param samplingMode defines the required sampling mode (like Texture.NEAREST_SAMPLINGMODE)
@@ -2236,6 +2378,7 @@ export abstract class AbstractEngine {
      * @param compression defines the compressed used (can be null)
      * @param textureType defines the compressed used (can be null)
      * @param creationFlags specific flags to use when creating the texture (Constants.TEXTURE_CREATIONFLAG_STORAGE for storage textures, for eg)
+     * @param mipLevelCount defines the number of mip levels to allocate for the texture
      * @returns a new raw 2D array texture (stored in an InternalTexture)
      */
     public createRawTexture2DArray(
@@ -2249,7 +2392,8 @@ export abstract class AbstractEngine {
         samplingMode: number,
         compression?: Nullable<string>,
         textureType?: number,
-        creationFlags?: number
+        creationFlags?: number,
+        mipLevelCount?: number
     ): InternalTexture {
         throw _WarnImport("engine.rawTexture");
     }
@@ -2291,11 +2435,11 @@ export abstract class AbstractEngine {
 
         // Function to check if running on mobile device
         this._checkForMobile = () => {
-            const currentUA = navigator.userAgent;
+            const currentUa = navigator.userAgent;
             this.hostInformation.isMobile =
-                currentUA.indexOf("Mobile") !== -1 ||
+                currentUa.indexOf("Mobile") !== -1 ||
                 // Needed for iOS 13+ detection on iPad (inspired by solution from https://stackoverflow.com/questions/9038625/detect-if-device-is-ios)
-                (currentUA.indexOf("Mac") !== -1 && IsDocumentAvailable() && "ontouchend" in document);
+                (currentUa.indexOf("Mac") !== -1 && IsDocumentAvailable() && "ontouchend" in document);
         };
 
         // Set initial isMobile value
@@ -2315,7 +2459,7 @@ export abstract class AbstractEngine {
     public _renderPassNames: string[] = ["main"];
 
     /** @internal */
-    public abstract _createHardwareTexture(): HardwareTextureWrapper;
+    public abstract _createHardwareTexture(): IHardwareTextureWrapper;
 
     /**
      * creates and returns a new video element
@@ -2395,6 +2539,7 @@ export abstract class AbstractEngine {
      * @param imageSource source to load the image from.
      * @param options An object that sets options for the image's extraction.
      */
+    // eslint-disable-next-line @typescript-eslint/promise-function-async
     public _createImageBitmapFromSource(imageSource: string, options?: ImageBitmapOptions): Promise<ImageBitmap> {
         throw new Error("createImageBitmapFromSource is not implemented");
     }
@@ -2405,6 +2550,7 @@ export abstract class AbstractEngine {
      * @param options An object that sets options for the image's extraction.
      * @returns ImageBitmap
      */
+    // eslint-disable-next-line @typescript-eslint/promise-function-async
     public createImageBitmap(image: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap> {
         return createImageBitmap(image, options);
     }
@@ -2461,6 +2607,7 @@ export abstract class AbstractEngine {
      * @param offlineProvider offline provider for caching
      * @param mimeType optional mime type
      * @param imageBitmapOptions optional the options to use when creating an ImageBitmap
+     * @param engine the engine instance to use
      * @returns the HTMLImageElement of the loaded image
      * @internal
      */
@@ -2470,7 +2617,8 @@ export abstract class AbstractEngine {
         onError: (message?: string, exception?: any) => void,
         offlineProvider: Nullable<IOfflineProvider>,
         mimeType?: string,
-        imageBitmapOptions?: ImageBitmapOptions
+        imageBitmapOptions?: ImageBitmapOptions,
+        engine?: AbstractEngine
     ): Nullable<HTMLImageElement> {
         throw _WarnImport("FileTools");
     }
@@ -2482,11 +2630,11 @@ export abstract class AbstractEngine {
         url: string,
         onSuccess: (data: string | ArrayBuffer, responseURL?: string) => void,
         onProgress?: (data: any) => void,
-        offlineProvider?: IOfflineProvider,
+        offlineProvider?: Nullable<IOfflineProvider>,
         useArrayBuffer?: boolean,
         onError?: (request?: IWebRequest, exception?: any) => void
     ): IFileRequest {
-        const request = _loadFile(url, onSuccess, onProgress, offlineProvider, useArrayBuffer, onError);
+        const request = _LoadFile(url, onSuccess, onProgress, offlineProvider, useArrayBuffer, onError);
         this._activeRequests.push(request);
         request.onCompleteObservable.add(() => {
             const index = this._activeRequests.indexOf(request);
@@ -2526,6 +2674,11 @@ export abstract class AbstractEngine {
      * An event triggered when the engine is disposed.
      */
     public readonly onDisposeObservable = new Observable<AbstractEngine>();
+
+    /**
+     * An event triggered when a global cleanup of all effects is required
+     */
+    public readonly onReleaseEffectsObservable = new Observable<AbstractEngine>();
 
     /**
      * Dispose and release all associated resources
@@ -2587,6 +2740,7 @@ export abstract class AbstractEngine {
         this.onCanvasFocusObservable.clear();
         this.onCanvasPointerOutObservable.clear();
         this.onNewSceneAddedObservable.clear();
+        this.onEffectErrorObservable.clear();
 
         if (IsWindowObjectExist()) {
             window.removeEventListener("resize", this._checkForMobile);
@@ -2628,7 +2782,7 @@ export abstract class AbstractEngine {
     /**
      * Gets the audio engine
      * @see https://doc.babylonjs.com/features/featuresDeepDive/audio/playingSoundsMusic
-     * @ignorenaming
+     * @deprecated please use AudioEngineV2 instead
      */
     // eslint-disable-next-line @typescript-eslint/naming-convention
     public static audioEngine: Nullable<IAudioEngine>;
@@ -2636,6 +2790,7 @@ export abstract class AbstractEngine {
     /**
      * Default AudioEngine factory responsible of creating the Audio Engine.
      * By default, this will create a BabylonJS Audio Engine if the workload has been embedded.
+     * @deprecated please use AudioEngineV2 instead
      */
     public static AudioEngineFactory: (
         hostElement: Nullable<HTMLElement>,
@@ -2678,4 +2833,15 @@ export abstract class AbstractEngine {
      * @returns frame number
      */
     public static QueueNewFrame: (func: () => void, requester?: any) => number = QueueNewFrame;
+
+    /**
+     * @internal
+     * Function used to get the correct texture loader for a specific extension.
+     * @param extension defines the file extension of the file being loaded
+     * @param mimeType defines the optional mime type of the file being loaded
+     * @returns the IInternalTextureLoader or null if it wasn't found
+     */
+    public static GetCompatibleTextureLoader(_extension: string, _mimeType?: string): Nullable<Promise<IInternalTextureLoader>> {
+        return null;
+    }
 }

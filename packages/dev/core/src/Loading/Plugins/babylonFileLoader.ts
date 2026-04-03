@@ -1,13 +1,13 @@
 import { Logger } from "../../Misc/logger";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { Camera } from "../../Cameras/camera";
-import type { Scene } from "../../scene";
+import { type Scene } from "../../scene";
 import { Vector3 } from "../../Maths/math.vector";
 import { Color3, Color4 } from "../../Maths/math.color";
 import { Mesh } from "../../Meshes/mesh";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
 import { Geometry } from "../../Meshes/geometry";
-import type { Node } from "../../node";
+import { type Node } from "../../node";
 import { TransformNode } from "../../Meshes/transformNode";
 import { Material } from "../../Materials/material";
 import { MultiMaterial } from "../../Materials/multiMaterial";
@@ -16,11 +16,12 @@ import { HDRCubeTexture } from "../../Materials/Textures/hdrCubeTexture";
 import { AnimationGroup } from "../../Animations/animationGroup";
 import { Light } from "../../Lights/light";
 import { SceneComponentConstants } from "../../sceneComponent";
-import { SceneLoader } from "../../Loading/sceneLoader";
-import { AbstractScene } from "../../abstractScene";
+import { RegisterSceneLoaderPlugin } from "../../Loading/sceneLoader";
+import { SceneLoaderFlags } from "../sceneLoaderFlags";
+import { Constants } from "../../Engines/constants";
 import { AssetContainer } from "../../assetContainer";
 import { ActionManager } from "../../Actions/actionManager";
-import type { IParticleSystem } from "../../Particles/IParticleSystem";
+import { type IParticleSystem } from "../../Particles/IParticleSystem";
 import { Skeleton } from "../../Bones/skeleton";
 import { MorphTargetManager } from "../../Morph/morphTargetManager";
 import { CannonJSPlugin } from "../../Physics/v1/Plugins/cannonJSPlugin";
@@ -31,6 +32,12 @@ import { GetClass } from "../../Misc/typeStore";
 import { Tools } from "../../Misc/tools";
 import { PostProcess } from "../../PostProcesses/postProcess";
 import { SpriteManager } from "core/Sprites/spriteManager";
+import { GetIndividualParser, Parse } from "./babylonFileParser.function";
+import { Observable } from "../../Misc/observable";
+import { type MorphTarget } from "../../Morph/morphTarget";
+
+import "../../Physics/joinedPhysicsEngineComponent";
+import "../../Helpers/sceneHelpers";
 
 /** @internal */
 // eslint-disable-next-line @typescript-eslint/naming-convention, no-var
@@ -48,10 +55,13 @@ export class BabylonFileLoaderConfiguration {
     public static LoaderInjectedPhysicsEngine: any = undefined;
 }
 
-let tempIndexContainer: { [key: string]: Node } = {};
-let tempMaterialIndexContainer: { [key: string]: Material } = {};
+let TempIndexContainer: { [key: string]: Node } = {};
+let TempMaterialIndexContainer: { [key: string]: Material } = {};
+let TempMorphTargetIndexContainer: { [key: number]: MorphTarget } = {};
+let TempMorphTargetManagerIndexContainer: { [key: string]: MorphTargetManager } = {};
+let TempSkeletonIndexContainer: { [key: number]: Skeleton } = {};
 
-const parseMaterialByPredicate = (predicate: (parsedMaterial: any) => boolean, parsedData: any, scene: Scene, rootUrl: string) => {
+const ParseMaterialByPredicate = (predicate: (parsedMaterial: any) => boolean, parsedData: any, scene: Scene, rootUrl: string) => {
     if (!parsedData.materials) {
         return null;
     }
@@ -65,7 +75,7 @@ const parseMaterialByPredicate = (predicate: (parsedMaterial: any) => boolean, p
     return null;
 };
 
-const isDescendantOf = (mesh: any, names: Array<any>, hierarchyIds: Array<number>) => {
+const IsDescendantOf = (mesh: any, names: Array<any>, hierarchyIds: Array<number>) => {
     for (const i in names) {
         if (mesh.name === names[i]) {
             hierarchyIds.push(mesh.id);
@@ -88,7 +98,7 @@ const logOperation = (operation: string, producer: { file: string; name: string;
     );
 };
 
-const loadDetailLevels = (scene: Scene, mesh: AbstractMesh) => {
+const LoadDetailLevels = (scene: Scene, mesh: AbstractMesh) => {
     const mastermesh: Mesh = mesh as Mesh;
 
     // Every value specified in the ids array of the lod data points to another mesh which should be used as the lower LOD level.
@@ -124,7 +134,7 @@ const loadDetailLevels = (scene: Scene, mesh: AbstractMesh) => {
     }
 };
 
-const findParent = (parentId: any, parentInstanceIndex: any, scene: Scene) => {
+const FindParent = (parentId: any, parentInstanceIndex: any, scene: Scene) => {
     if (typeof parentId !== "number") {
         const parentEntry = scene.getLastEntryById(parentId);
         if (parentEntry && parentInstanceIndex !== undefined && parentInstanceIndex !== null) {
@@ -134,7 +144,7 @@ const findParent = (parentId: any, parentInstanceIndex: any, scene: Scene) => {
         return parentEntry;
     }
 
-    const parent = tempIndexContainer[parentId];
+    const parent = TempIndexContainer[parentId];
     if (parent && parentInstanceIndex !== undefined && parentInstanceIndex !== null) {
         const instance = (parent as Mesh).instances[parseInt(parentInstanceIndex)];
         return instance;
@@ -143,16 +153,60 @@ const findParent = (parentId: any, parentInstanceIndex: any, scene: Scene) => {
     return parent;
 };
 
-const findMaterial = (materialId: any, scene: Scene) => {
+const FindMaterial = (materialId: any, scene: Scene) => {
     if (typeof materialId !== "number") {
         return scene.getLastMaterialById(materialId, true);
     }
 
-    return tempMaterialIndexContainer[materialId];
+    return TempMaterialIndexContainer[materialId];
 };
 
-const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError?: (message: string, exception?: any) => void, addToScene = false): AssetContainer => {
+/**
+ * @experimental
+ * Loads an AssetContainer from a serialized Babylon scene.
+ * @param scene The scene to load the asset container into.
+ * @param serializedScene The serialized scene data. This can be either a JSON string, or an object (e.g. from a call to JSON.parse).
+ * @param rootUrl The root URL for loading assets.
+ * @returns The loaded AssetContainer.
+ */
+export function LoadAssetContainerFromSerializedScene(scene: Scene, serializedScene: string | object, rootUrl: string): AssetContainer {
+    return LoadAssetContainer(scene, serializedScene, rootUrl);
+}
+
+const LoadAssetContainer = (scene: Scene, data: string | object, rootUrl: string, onError?: (message: string, exception?: any) => void, addToScene = false): AssetContainer => {
     const container = new AssetContainer(scene);
+
+    // When loading into a container (not directly into the scene), suppress entity-added
+    // observables to prevent scene events during loading. Entities still get added to scene
+    // arrays (so the linking code can find them), but no events fire.
+    // They are removed from the scene at the end via container.removeAllFromScene().
+    let savedObservables: Record<string, Observable<any>> | undefined;
+    if (!addToScene) {
+        savedObservables = {
+            mesh: scene.onNewMeshAddedObservable,
+            transformNode: scene.onNewTransformNodeAddedObservable,
+            light: scene.onNewLightAddedObservable,
+            camera: scene.onNewCameraAddedObservable,
+            material: scene.onNewMaterialAddedObservable,
+            multiMaterial: scene.onNewMultiMaterialAddedObservable,
+            texture: scene.onNewTextureAddedObservable,
+            skeleton: scene.onNewSkeletonAddedObservable,
+            geometry: scene.onNewGeometryAddedObservable,
+            animationGroup: scene.onNewAnimationGroupAddedObservable,
+            particleSystem: scene.onNewParticleSystemAddedObservable,
+        };
+        scene.onNewMeshAddedObservable = new Observable();
+        scene.onNewTransformNodeAddedObservable = new Observable();
+        scene.onNewLightAddedObservable = new Observable();
+        scene.onNewCameraAddedObservable = new Observable();
+        scene.onNewMaterialAddedObservable = new Observable();
+        scene.onNewMultiMaterialAddedObservable = new Observable();
+        scene.onNewTextureAddedObservable = new Observable();
+        scene.onNewSkeletonAddedObservable = new Observable();
+        scene.onNewGeometryAddedObservable = new Observable();
+        scene.onNewAnimationGroupAddedObservable = new Observable();
+        scene.onNewParticleSystemAddedObservable = new Observable();
+    }
 
     // Entire method running in try block, so ALWAYS logs as far as it got, only actually writes details
     // when SceneLoader.debugLogging = true (default), or exception encountered.
@@ -161,9 +215,9 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
     let log = "importScene has failed JSON parse";
     try {
         // eslint-disable-next-line no-var
-        var parsedData = JSON.parse(data);
+        var parsedData = typeof data === "object" ? data : JSON.parse(data);
         log = "";
-        const fullDetails = SceneLoader.loggingLevel === SceneLoader.DETAILED_LOGGING;
+        const fullDetails = SceneLoaderFlags.loggingLevel === Constants.SCENELOADER_DETAILED_LOGGING;
 
         let index: number;
         let cache: number;
@@ -226,13 +280,18 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             scene.environmentIntensity = parsedData.environmentIntensity;
         }
 
+        // IBL Intensity
+        if (parsedData.iblIntensity !== undefined && parsedData.iblIntensity !== null) {
+            scene.iblIntensity = parsedData.iblIntensity;
+        }
+
         // Lights
         if (parsedData.lights !== undefined && parsedData.lights !== null) {
             for (index = 0, cache = parsedData.lights.length; index < cache; index++) {
                 const parsedLight = parsedData.lights[index];
                 const light = Light.Parse(parsedLight, scene);
                 if (light) {
-                    tempIndexContainer[parsedLight.uniqueId] = light;
+                    TempIndexContainer[parsedLight.uniqueId] = light;
                     container.lights.push(light);
                     light._parentContainer = container;
                     log += index === 0 ? "\n\tLights:" : "";
@@ -276,7 +335,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
                 const parsedMaterial = parsedData.materials[index];
                 const mat = Material.Parse(parsedMaterial, scene, rootUrl);
                 if (mat) {
-                    tempMaterialIndexContainer[parsedMaterial.uniqueId || parsedMaterial.id] = mat;
+                    TempMaterialIndexContainer[parsedMaterial.uniqueId || parsedMaterial.id] = mat;
                     container.materials.push(mat);
                     mat._parentContainer = container;
                     log += index === 0 ? "\n\tMaterials:" : "";
@@ -284,12 +343,12 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
 
                     // Textures
                     const textures = mat.getActiveTextures();
-                    textures.forEach((t) => {
+                    for (const t of textures) {
                         if (container.textures.indexOf(t) == -1) {
                             container.textures.push(t);
                             t._parentContainer = container;
                         }
-                    });
+                    }
                 }
             }
         }
@@ -298,7 +357,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             for (index = 0, cache = parsedData.multiMaterials.length; index < cache; index++) {
                 const parsedMultiMaterial = parsedData.multiMaterials[index];
                 const mmat = MultiMaterial.ParseMultiMaterial(parsedMultiMaterial, scene);
-                tempMaterialIndexContainer[parsedMultiMaterial.uniqueId || parsedMultiMaterial.id] = mmat;
+                TempMaterialIndexContainer[parsedMultiMaterial.uniqueId || parsedMultiMaterial.id] = mmat;
                 container.multiMaterials.push(mmat);
                 mmat._parentContainer = container;
 
@@ -307,21 +366,31 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
 
                 // Textures
                 const textures = mmat.getActiveTextures();
-                textures.forEach((t) => {
+                for (const t of textures) {
                     if (container.textures.indexOf(t) == -1) {
                         container.textures.push(t);
                         t._parentContainer = container;
                     }
-                });
+                }
             }
         }
 
-        // Morph targets
+        // Morph target managers
         if (parsedData.morphTargetManagers !== undefined && parsedData.morphTargetManagers !== null) {
-            for (const managerData of parsedData.morphTargetManagers) {
-                const manager = MorphTargetManager.Parse(managerData, scene);
+            for (const parsedManager of parsedData.morphTargetManagers) {
+                const manager = MorphTargetManager.Parse(parsedManager, scene);
+                TempMorphTargetManagerIndexContainer[parsedManager.id] = manager;
                 container.morphTargetManagers.push(manager);
                 manager._parentContainer = container;
+
+                // Morph targets - add to TempMorphTargetIndexContainer to later connect animations -> morph targets
+                for (let index = 0; index < parsedManager.targets.length; index++) {
+                    const parsedTarget = parsedManager.targets[index];
+                    if (parsedTarget.uniqueId !== undefined && parsedTarget.uniqueId !== null) {
+                        const target = manager.getTarget(index);
+                        TempMorphTargetIndexContainer[parsedTarget.uniqueId] = target;
+                    }
+                }
             }
         }
 
@@ -330,10 +399,20 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             for (index = 0, cache = parsedData.skeletons.length; index < cache; index++) {
                 const parsedSkeleton = parsedData.skeletons[index];
                 const skeleton = Skeleton.Parse(parsedSkeleton, scene);
+                if (parsedSkeleton.uniqueId !== undefined && parsedSkeleton.uniqueId !== null) {
+                    TempSkeletonIndexContainer[parsedSkeleton.uniqueId] = skeleton;
+                }
                 container.skeletons.push(skeleton);
                 skeleton._parentContainer = container;
                 log += index === 0 ? "\n\tSkeletons:" : "";
                 log += "\n\t\t" + skeleton.toString(fullDetails);
+
+                // Bones - add to TempIndexContainer to later connect animations -> bones
+                for (let boneIndex = 0; boneIndex < parsedSkeleton.bones.length; boneIndex++) {
+                    const parsedBone = parsedSkeleton.bones[boneIndex];
+                    const bone = skeleton.bones[boneIndex]; // This was instantiated in Skeleton.Parse
+                    TempIndexContainer[parsedBone.uniqueId] = bone;
+                }
             }
         }
 
@@ -347,16 +426,17 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             if (vertexData !== undefined && vertexData !== null) {
                 for (index = 0, cache = vertexData.length; index < cache; index++) {
                     const parsedVertexData = vertexData[index];
+
                     addedGeometry.push(Geometry.Parse(parsedVertexData, scene, rootUrl));
                 }
             }
 
-            addedGeometry.forEach((g) => {
+            for (const g of addedGeometry) {
                 if (g) {
                     container.geometries.push(g);
                     g._parentContainer = container;
                 }
-            });
+            }
         }
 
         // Transform nodes
@@ -364,7 +444,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             for (index = 0, cache = parsedData.transformNodes.length; index < cache; index++) {
                 const parsedTransformNode = parsedData.transformNodes[index];
                 const node = TransformNode.Parse(parsedTransformNode, scene, rootUrl);
-                tempIndexContainer[parsedTransformNode.uniqueId] = node;
+                TempIndexContainer[parsedTransformNode.uniqueId] = node;
                 container.transformNodes.push(node);
                 node._parentContainer = container;
             }
@@ -375,7 +455,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             for (index = 0, cache = parsedData.meshes.length; index < cache; index++) {
                 const parsedMesh = parsedData.meshes[index];
                 const mesh = <AbstractMesh>Mesh.Parse(parsedMesh, scene, rootUrl);
-                tempIndexContainer[parsedMesh.uniqueId] = mesh;
+                TempIndexContainer[parsedMesh.uniqueId] = mesh;
                 container.meshes.push(mesh);
                 mesh._parentContainer = container;
                 if (mesh.hasInstances) {
@@ -394,7 +474,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             for (index = 0, cache = parsedData.cameras.length; index < cache; index++) {
                 const parsedCamera = parsedData.cameras[index];
                 const camera = Camera.Parse(parsedCamera, scene);
-                tempIndexContainer[parsedCamera.uniqueId] = camera;
+                TempIndexContainer[parsedCamera.uniqueId] = camera;
                 container.cameras.push(camera);
                 camera._parentContainer = container;
                 log += index === 0 ? "\n\tCameras:" : "";
@@ -417,10 +497,74 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
         }
 
         // Animation Groups
-        if (parsedData.animationGroups !== undefined && parsedData.animationGroups !== null) {
+        if (parsedData.animationGroups !== undefined && parsedData.animationGroups !== null && parsedData.animationGroups.length) {
+            // Build the nodeMap only for scenes with animationGroups.
+            let nodeMap: Nullable<Map<Node["id"], Node>> = null;
+
+            // Helper to get nodes by id more efficiently, building the nodeMap only on first access.
+            const getNodeById = (id: Node["id"]) => {
+                if (!nodeMap) {
+                    nodeMap = new Map<Node["id"], Node>();
+
+                    // Nodes in scene does not change when parsing animationGroups, so it's safe to build a map.
+                    // This follows the order of scene.getNodeById: mesh, transformNode, light, camera, bone
+                    for (let index = 0; index < scene.meshes.length; index++) {
+                        // This follows the behavior of scene.getXXXById, which picks the first match
+                        if (!nodeMap.has(scene.meshes[index].id)) {
+                            nodeMap.set(scene.meshes[index].id, scene.meshes[index]);
+                        }
+                    }
+                    for (let index = 0; index < scene.transformNodes.length; index++) {
+                        if (!nodeMap.has(scene.transformNodes[index].id)) {
+                            nodeMap.set(scene.transformNodes[index].id, scene.transformNodes[index]);
+                        }
+                    }
+                    for (let index = 0; index < scene.lights.length; index++) {
+                        if (!nodeMap.has(scene.lights[index].id)) {
+                            nodeMap.set(scene.lights[index].id, scene.lights[index]);
+                        }
+                    }
+                    for (let index = 0; index < scene.cameras.length; index++) {
+                        if (!nodeMap.has(scene.cameras[index].id)) {
+                            nodeMap.set(scene.cameras[index].id, scene.cameras[index]);
+                        }
+                    }
+                    for (let skeletonIndex = 0; skeletonIndex < scene.skeletons.length; skeletonIndex++) {
+                        const skeleton = scene.skeletons[skeletonIndex];
+                        for (let boneIndex = 0; boneIndex < skeleton.bones.length; boneIndex++) {
+                            if (!nodeMap.has(skeleton.bones[boneIndex].id)) {
+                                nodeMap.set(skeleton.bones[boneIndex].id, skeleton.bones[boneIndex]);
+                            }
+                        }
+                    }
+                }
+
+                return nodeMap.get(id);
+            };
+
+            const targetLookup = (parsedTargetAnimation: any) => {
+                let target = null;
+                const isMorphTarget = parsedTargetAnimation.animation.property === "influence";
+                const uniqueId = parsedTargetAnimation.targetUniqueId;
+
+                // Attempt to find animation targets by uniqueId first (tracked in TempXXXIndexContainer).
+                if (uniqueId !== undefined && uniqueId !== null) {
+                    target = isMorphTarget ? TempMorphTargetIndexContainer[uniqueId] : TempIndexContainer[uniqueId];
+                }
+
+                // Backwards compatibility: If no uniqueId is provided or no match is found,
+                // fall back to searching by id in the scene.
+                if (!target) {
+                    const id = parsedTargetAnimation.targetId;
+                    target = isMorphTarget ? scene.getMorphTargetById(id) : getNodeById(id);
+                }
+
+                return target;
+            };
+
             for (index = 0, cache = parsedData.animationGroups.length; index < cache; index++) {
                 const parsedAnimationGroup = parsedData.animationGroups[index];
-                const animationGroup = AnimationGroup.Parse(parsedAnimationGroup, scene);
+                const animationGroup = AnimationGroup.Parse(parsedAnimationGroup, scene, targetLookup);
                 container.animationGroups.push(animationGroup);
                 animationGroup._parentContainer = container;
                 log += index === 0 ? "\n\tAnimationGroups:" : "";
@@ -433,6 +577,8 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             for (let index = 0, cache = parsedData.spriteManagers.length; index < cache; index++) {
                 const parsedSpriteManager = parsedData.spriteManagers[index];
                 const spriteManager = SpriteManager.Parse(parsedSpriteManager, scene, rootUrl);
+                container.spriteManagers.push(spriteManager);
+                spriteManager._parentContainer = container;
                 log += "\n\t\tSpriteManager " + spriteManager.name;
             }
         }
@@ -441,7 +587,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
         for (index = 0, cache = scene.cameras.length; index < cache; index++) {
             const camera = scene.cameras[index];
             if (camera._waitingParentId !== null) {
-                camera.parent = findParent(camera._waitingParentId, camera._waitingParentInstanceIndex, scene);
+                camera.parent = FindParent(camera._waitingParentId, camera._waitingParentInstanceIndex, scene);
                 camera._waitingParentId = null;
                 camera._waitingParentInstanceIndex = null;
             }
@@ -450,7 +596,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
         for (index = 0, cache = scene.lights.length; index < cache; index++) {
             const light = scene.lights[index];
             if (light && light._waitingParentId !== null) {
-                light.parent = findParent(light._waitingParentId, light._waitingParentInstanceIndex, scene);
+                light.parent = FindParent(light._waitingParentId, light._waitingParentInstanceIndex, scene);
                 light._waitingParentId = null;
                 light._waitingParentInstanceIndex = null;
             }
@@ -460,7 +606,7 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
         for (index = 0, cache = scene.transformNodes.length; index < cache; index++) {
             const transformNode = scene.transformNodes[index];
             if (transformNode._waitingParentId !== null) {
-                transformNode.parent = findParent(transformNode._waitingParentId, transformNode._waitingParentInstanceIndex, scene);
+                transformNode.parent = FindParent(transformNode._waitingParentId, transformNode._waitingParentInstanceIndex, scene);
                 transformNode._waitingParentId = null;
                 transformNode._waitingParentInstanceIndex = null;
             }
@@ -468,45 +614,79 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
         for (index = 0, cache = scene.meshes.length; index < cache; index++) {
             const mesh = scene.meshes[index];
             if (mesh._waitingParentId !== null) {
-                mesh.parent = findParent(mesh._waitingParentId, mesh._waitingParentInstanceIndex, scene);
+                mesh.parent = FindParent(mesh._waitingParentId, mesh._waitingParentInstanceIndex, scene);
                 mesh._waitingParentId = null;
                 mesh._waitingParentInstanceIndex = null;
             }
             if (mesh._waitingData.lods) {
-                loadDetailLevels(scene, mesh);
+                LoadDetailLevels(scene, mesh);
             }
         }
 
         // link multimats with materials
-        scene.multiMaterials.forEach((multimat) => {
-            multimat._waitingSubMaterialsUniqueIds.forEach((subMaterial) => {
-                multimat.subMaterials.push(findMaterial(subMaterial, scene));
-            });
+        for (const multimat of scene.multiMaterials) {
+            for (const subMaterial of multimat._waitingSubMaterialsUniqueIds) {
+                multimat.subMaterials.push(FindMaterial(subMaterial, scene));
+            }
             multimat._waitingSubMaterialsUniqueIds = [];
-        });
+        }
 
         // link meshes with materials
-        scene.meshes.forEach((mesh) => {
+        for (const mesh of scene.meshes) {
             if (mesh._waitingMaterialId !== null) {
-                mesh.material = findMaterial(mesh._waitingMaterialId, scene);
+                mesh.material = FindMaterial(mesh._waitingMaterialId, scene);
                 mesh._waitingMaterialId = null;
             }
-        });
+        }
 
-        // link skeleton transform nodes
+        // link meshes with morph target managers
+        for (const mesh of scene.meshes) {
+            if (mesh._waitingMorphTargetManagerId !== null) {
+                mesh.morphTargetManager = TempMorphTargetManagerIndexContainer[mesh._waitingMorphTargetManagerId];
+                mesh._waitingMorphTargetManagerId = null;
+            }
+        }
+
+        // link meshes with skeletons
+        for (const mesh of scene.meshes) {
+            // First try to get it via uniqueId
+            if (mesh._waitingSkeletonUniqueId !== null) {
+                mesh.skeleton = TempSkeletonIndexContainer[mesh._waitingSkeletonUniqueId];
+            }
+
+            // If not possible or not found, try to get it from the scene (backwards compatibility)
+            if (mesh._waitingSkeletonId !== null && !mesh.skeleton) {
+                mesh.skeleton = scene.getLastSkeletonById(mesh._waitingSkeletonId);
+            }
+
+            mesh._waitingSkeletonId = null;
+            mesh._waitingSkeletonUniqueId = null;
+        }
+
+        // link bones to transform nodes
         for (index = 0, cache = scene.skeletons.length; index < cache; index++) {
             const skeleton = scene.skeletons[index];
             if (skeleton._hasWaitingData) {
                 if (skeleton.bones != null) {
-                    skeleton.bones.forEach((bone) => {
-                        if (bone._waitingTransformNodeId) {
-                            const linkTransformNode = scene.getLastEntryById(bone._waitingTransformNodeId) as TransformNode;
-                            if (linkTransformNode) {
-                                bone.linkTransformNode(linkTransformNode);
-                            }
-                            bone._waitingTransformNodeId = null;
+                    for (const bone of skeleton.bones) {
+                        let linkTransformNode: Nullable<Node> = null;
+                        // First try to get it via uniqueId
+                        if (bone._waitingTransformNodeUniqueId !== null) {
+                            linkTransformNode = TempIndexContainer[bone._waitingTransformNodeUniqueId];
                         }
-                    });
+
+                        // If not possible or not found, try to get it from the scene (backwards compatibility)
+                        if (bone._waitingTransformNodeId !== null && !linkTransformNode) {
+                            linkTransformNode = scene.getLastEntryById(bone._waitingTransformNodeId);
+                        }
+
+                        if (linkTransformNode) {
+                            bone.linkTransformNode(linkTransformNode as TransformNode);
+                        }
+
+                        bone._waitingTransformNodeId = null;
+                        bone._waitingTransformNodeUniqueId = null;
+                    }
                 }
 
                 skeleton._hasWaitingData = null;
@@ -554,11 +734,11 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             }
         }
 
-        scene.geometries.forEach((g) => {
+        for (const g of scene.geometries) {
             g._loadedUniqueId = "";
-        });
+        }
 
-        AbstractScene.Parse(parsedData, scene, container, rootUrl);
+        Parse(parsedData, scene, container, rootUrl);
 
         // Actions (scene) Done last as it can access other objects.
         for (index = 0, cache = scene.meshes.length; index < cache; index++) {
@@ -580,21 +760,41 @@ const loadAssetContainer = (scene: Scene, data: string, rootUrl: string, onError
             throw err;
         }
     } finally {
-        tempIndexContainer = {};
-        tempMaterialIndexContainer = {};
+        TempIndexContainer = {};
+        TempMaterialIndexContainer = {};
+        TempMorphTargetIndexContainer = {};
+        TempMorphTargetManagerIndexContainer = {};
+        TempSkeletonIndexContainer = {};
 
         if (!addToScene) {
+            // Restore observables before removing from scene
+            if (savedObservables) {
+                scene.onNewMeshAddedObservable = savedObservables.mesh;
+                scene.onNewTransformNodeAddedObservable = savedObservables.transformNode;
+                scene.onNewLightAddedObservable = savedObservables.light;
+                scene.onNewCameraAddedObservable = savedObservables.camera;
+                scene.onNewMaterialAddedObservable = savedObservables.material;
+                scene.onNewMultiMaterialAddedObservable = savedObservables.multiMaterial;
+                scene.onNewTextureAddedObservable = savedObservables.texture;
+                scene.onNewSkeletonAddedObservable = savedObservables.skeleton;
+                scene.onNewGeometryAddedObservable = savedObservables.geometry;
+                scene.onNewAnimationGroupAddedObservable = savedObservables.animationGroup;
+                scene.onNewParticleSystemAddedObservable = savedObservables.particleSystem;
+            }
+            // Removes entities from scene arrays and moves them to the container
             container.removeAllFromScene();
         }
-        if (log !== null && SceneLoader.loggingLevel !== SceneLoader.NO_LOGGING) {
-            Logger.Log(logOperation("loadAssets", parsedData ? parsedData.producer : "Unknown") + (SceneLoader.loggingLevel !== SceneLoader.MINIMAL_LOGGING ? log : ""));
+        if (log !== null && SceneLoaderFlags.loggingLevel !== Constants.SCENELOADER_NO_LOGGING) {
+            Logger.Log(
+                logOperation("loadAssets", parsedData ? parsedData.producer : "Unknown") + (SceneLoaderFlags.loggingLevel !== Constants.SCENELOADER_MINIMAL_LOGGING ? log : "")
+            );
         }
     }
 
     return container;
 };
 
-SceneLoader.RegisterPlugin({
+RegisterSceneLoaderPlugin({
     name: "babylon.js",
     extensions: ".babylon",
     canDirectLoad: (data: string) => {
@@ -624,7 +824,7 @@ SceneLoader.RegisterPlugin({
             // eslint-disable-next-line no-var
             var parsedData = JSON.parse(data);
             log = "";
-            const fullDetails = SceneLoader.loggingLevel === SceneLoader.DETAILED_LOGGING;
+            const fullDetails = SceneLoaderFlags.loggingLevel === Constants.SCENELOADER_DETAILED_LOGGING;
             if (!meshesNames) {
                 meshesNames = null;
             } else if (!Array.isArray(meshesNames)) {
@@ -649,11 +849,11 @@ SceneLoader.RegisterPlugin({
                 const loadedSkeletonsIds = [];
                 const loadedMaterialsIds: string[] = [];
                 const loadedMaterialsUniqueIds: string[] = [];
-                const loadedMorphTargetsIds = [];
+                const loadedMorphTargetManagerIds: number[] = [];
                 for (let index = 0, cache = parsedData.meshes.length; index < cache; index++) {
                     const parsedMesh = parsedData.meshes[index];
 
-                    if (meshesNames === null || isDescendantOf(parsedMesh, meshesNames, hierarchyIds)) {
+                    if (meshesNames === null || IsDescendantOf(parsedMesh, meshesNames, hierarchyIds)) {
                         if (meshesNames !== null) {
                             // Remove found mesh name from list.
                             delete meshesNames[meshesNames.indexOf(parsedMesh.name)];
@@ -665,22 +865,28 @@ SceneLoader.RegisterPlugin({
                             if (parsedData.geometries !== undefined && parsedData.geometries !== null) {
                                 //find the correct geometry and add it to the scene
                                 let found: boolean = false;
-                                ["boxes", "spheres", "cylinders", "toruses", "grounds", "planes", "torusKnots", "vertexData"].forEach((geometryType: string) => {
-                                    if (found === true || !parsedData.geometries[geometryType] || !Array.isArray(parsedData.geometries[geometryType])) {
-                                        return;
-                                    } else {
-                                        parsedData.geometries[geometryType].forEach((parsedGeometryData: any) => {
-                                            if (parsedGeometryData.id === parsedMesh.geometryId) {
-                                                switch (geometryType) {
-                                                    case "vertexData":
-                                                        Geometry.Parse(parsedGeometryData, scene, rootUrl);
-                                                        break;
-                                                }
-                                                found = true;
-                                            }
-                                        });
+                                const geoms = ["boxes", "spheres", "cylinders", "toruses", "grounds", "planes", "torusKnots", "vertexData"];
+                                for (const geometryType of geoms) {
+                                    if (!parsedData.geometries[geometryType] || !Array.isArray(parsedData.geometries[geometryType])) {
+                                        continue;
                                     }
-                                });
+                                    const geom = parsedData.geometries[geometryType];
+                                    for (const parsedGeometryData of geom) {
+                                        if (parsedGeometryData.id === parsedMesh.geometryId) {
+                                            switch (geometryType) {
+                                                case "vertexData":
+                                                    Geometry.Parse(parsedGeometryData, scene, rootUrl);
+                                                    break;
+                                            }
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (found) {
+                                        break;
+                                    }
+                                }
                                 if (found === false) {
                                     Logger.Warn("Geometry not found for mesh " + parsedMesh.id);
                                 }
@@ -696,9 +902,9 @@ SceneLoader.RegisterPlugin({
                                 // Loads a submaterial of a multimaterial
                                 const loadSubMaterial = (subMatId: string, predicate: (parsedMaterial: any) => boolean) => {
                                     materialArray.push(subMatId);
-                                    const mat = parseMaterialByPredicate(predicate, parsedData, scene, rootUrl);
+                                    const mat = ParseMaterialByPredicate(predicate, parsedData, scene, rootUrl);
                                     if (mat && mat.material) {
-                                        tempMaterialIndexContainer[mat.parsedMaterial.uniqueId || mat.parsedMaterial.id] = mat.material;
+                                        TempMaterialIndexContainer[mat.parsedMaterial.uniqueId || mat.parsedMaterial.id] = mat.material;
                                         log += "\n\tMaterial " + mat.material.toString(fullDetails);
                                     }
                                 };
@@ -710,18 +916,18 @@ SceneLoader.RegisterPlugin({
                                     ) {
                                         if (parsedMultiMaterial.materialsUniqueIds) {
                                             // if the materials inside the multimat are stored by unique id
-                                            parsedMultiMaterial.materialsUniqueIds.forEach((subMatId: string) =>
-                                                loadSubMaterial(subMatId, (parsedMaterial) => parsedMaterial.uniqueId === subMatId)
-                                            );
+                                            for (const subMatId of parsedMultiMaterial.materialsUniqueIds) {
+                                                loadSubMaterial(subMatId, (parsedMaterial) => parsedMaterial.uniqueId === subMatId);
+                                            }
                                         } else {
                                             // if the mats are stored by id instead
-                                            parsedMultiMaterial.materials.forEach((subMatId: string) =>
-                                                loadSubMaterial(subMatId, (parsedMaterial) => parsedMaterial.id === subMatId)
-                                            );
+                                            for (const subMatId of parsedMultiMaterial.materials) {
+                                                loadSubMaterial(subMatId, (parsedMaterial) => parsedMaterial.id === subMatId);
+                                            }
                                         }
                                         materialArray.push(parsedMultiMaterial.uniqueId || parsedMultiMaterial.id);
                                         const mmat = MultiMaterial.ParseMultiMaterial(parsedMultiMaterial, scene);
-                                        tempMaterialIndexContainer[parsedMultiMaterial.uniqueId || parsedMultiMaterial.id] = mmat;
+                                        TempMaterialIndexContainer[parsedMultiMaterial.uniqueId || parsedMultiMaterial.id] = mmat;
                                         if (mmat) {
                                             materialFound = true;
                                             log += "\n\tMulti-Material " + mmat.toString(fullDetails);
@@ -733,7 +939,7 @@ SceneLoader.RegisterPlugin({
 
                             if (materialFound === false) {
                                 materialArray.push(parsedMesh.materialUniqueId || parsedMesh.materialId);
-                                const mat = parseMaterialByPredicate(
+                                const mat = ParseMaterialByPredicate(
                                     (parsedMaterial) =>
                                         (parsedMesh.materialUniqueId && parsedMaterial.uniqueId === parsedMesh.materialUniqueId) || parsedMaterial.id === parsedMesh.materialId,
                                     parsedData,
@@ -743,7 +949,7 @@ SceneLoader.RegisterPlugin({
                                 if (!mat || !mat.material) {
                                     Logger.Warn("Material not found for mesh " + parsedMesh.id);
                                 } else {
-                                    tempMaterialIndexContainer[mat.parsedMaterial.uniqueId || mat.parsedMaterial.id] = mat.material;
+                                    TempMaterialIndexContainer[mat.parsedMaterial.uniqueId || mat.parsedMaterial.id] = mat.material;
                                     log += "\n\tMaterial " + mat.material.toString(fullDetails);
                                 }
                             }
@@ -763,24 +969,28 @@ SceneLoader.RegisterPlugin({
                                     const parsedSkeleton = parsedData.skeletons[skeletonIndex];
                                     if (parsedSkeleton.id === parsedMesh.skeletonId) {
                                         const skeleton = Skeleton.Parse(parsedSkeleton, scene);
-                                        skeletons.push(skeleton);
                                         loadedSkeletonsIds.push(parsedSkeleton.id);
+                                        if (parsedSkeleton.uniqueId !== undefined && parsedSkeleton.uniqueId !== null) {
+                                            TempSkeletonIndexContainer[parsedSkeleton.uniqueId] = skeleton;
+                                        }
+                                        skeletons.push(skeleton);
                                         log += "\n\tSkeleton " + skeleton.toString(fullDetails);
                                     }
                                 }
                             }
                         }
 
-                        // Morph targets ?
+                        // Morph target managers ?
                         if (parsedMesh.morphTargetManagerId > -1 && parsedData.morphTargetManagers !== undefined && parsedData.morphTargetManagers !== null) {
-                            const morphTargetAlreadyLoaded = loadedMorphTargetsIds.indexOf(parsedMesh.morphTargetManagerId) > -1;
-                            if (!morphTargetAlreadyLoaded) {
-                                for (let morphTargetIndex = 0, morphTargetCache = parsedData.morphTargetManagers.length; morphTargetIndex < morphTargetCache; morphTargetIndex++) {
-                                    const parsedMorphTarget = parsedData.morphTargetManagers[morphTargetIndex];
-                                    if (parsedMorphTarget.id === parsedMesh.morphTargetManagerId) {
-                                        const morphTarget = MorphTargetManager.Parse(parsedMorphTarget, scene);
-                                        loadedMorphTargetsIds.push(morphTarget.uniqueId);
-                                        log += "\nMorph target " + morphTarget.toString();
+                            const morphTargetManagerAlreadyLoaded = loadedMorphTargetManagerIds.indexOf(parsedMesh.morphTargetManagerId) > -1;
+                            if (!morphTargetManagerAlreadyLoaded) {
+                                for (let morphTargetManagerIndex = 0; morphTargetManagerIndex < parsedData.morphTargetManagers.length; morphTargetManagerIndex++) {
+                                    const parsedManager = parsedData.morphTargetManagers[morphTargetManagerIndex];
+                                    if (parsedManager.id === parsedMesh.morphTargetManagerId) {
+                                        const morphTargetManager = MorphTargetManager.Parse(parsedManager, scene);
+                                        TempMorphTargetManagerIndexContainer[parsedManager.id] = morphTargetManager;
+                                        loadedMorphTargetManagerIds.push(parsedManager.id);
+                                        log += "\nMorph target manager" + morphTargetManager.toString();
                                     }
                                 }
                             }
@@ -795,20 +1005,28 @@ SceneLoader.RegisterPlugin({
                 }
 
                 // link multimats with materials
-                scene.multiMaterials.forEach((multimat) => {
-                    multimat._waitingSubMaterialsUniqueIds.forEach((subMaterial) => {
-                        multimat.subMaterials.push(findMaterial(subMaterial, scene));
-                    });
+                for (const multimat of scene.multiMaterials) {
+                    for (const subMaterial of multimat._waitingSubMaterialsUniqueIds) {
+                        multimat.subMaterials.push(FindMaterial(subMaterial, scene));
+                    }
                     multimat._waitingSubMaterialsUniqueIds = [];
-                });
+                }
 
                 // link meshes with materials
-                scene.meshes.forEach((mesh) => {
+                for (const mesh of scene.meshes) {
                     if (mesh._waitingMaterialId !== null) {
-                        mesh.material = findMaterial(mesh._waitingMaterialId, scene);
+                        mesh.material = FindMaterial(mesh._waitingMaterialId, scene);
                         mesh._waitingMaterialId = null;
                     }
-                });
+                }
+
+                // link meshes with morph target managers
+                for (const mesh of scene.meshes) {
+                    if (mesh._waitingMorphTargetManagerId !== null) {
+                        mesh.morphTargetManager = TempMorphTargetManagerIndexContainer[mesh._waitingMorphTargetManagerId];
+                        mesh._waitingMorphTargetManagerId = null;
+                    }
+                }
 
                 // Connecting parents and lods
                 for (let index = 0, cache = scene.transformNodes.length; index < cache; index++) {
@@ -841,38 +1059,61 @@ SceneLoader.RegisterPlugin({
                             currentMesh._waitingParentInstanceIndex = null;
                         }
                         currentMesh.parent = parentNode;
-                        if (currentMesh.parent?.getClassName() === "TransformNode") {
-                            const loadedTransformNodeIndex = loadedTransformNodes.indexOf(currentMesh.parent as TransformNode);
-                            if (loadedTransformNodeIndex > -1) {
-                                loadedTransformNodes.splice(loadedTransformNodeIndex, 1);
-                            }
-                        }
                         currentMesh._waitingParentId = null;
                     }
                     if (currentMesh._waitingData.lods) {
-                        loadDetailLevels(scene, currentMesh);
+                        LoadDetailLevels(scene, currentMesh);
                     }
                 }
 
                 // Remove unused transform nodes
                 for (const transformNode of loadedTransformNodes) {
-                    transformNode.dispose();
+                    const childMeshes = transformNode.getChildMeshes(false);
+                    if (!childMeshes.length) {
+                        transformNode.dispose();
+                    }
                 }
 
-                // link skeleton transform nodes
+                // link meshes with skeletons
+                for (const mesh of scene.meshes) {
+                    // First try to get it via uniqueId
+                    if (mesh._waitingSkeletonUniqueId !== null) {
+                        mesh.skeleton = TempSkeletonIndexContainer[mesh._waitingSkeletonUniqueId];
+                    }
+
+                    // If not possible or not found, try to get it from the scene (backwards compatibility)
+                    if (mesh._waitingSkeletonId !== null && !mesh.skeleton) {
+                        mesh.skeleton = scene.getLastSkeletonById(mesh._waitingSkeletonId);
+                    }
+
+                    mesh._waitingSkeletonId = null;
+                    mesh._waitingSkeletonUniqueId = null;
+                }
+
+                // link bones to transform nodes
                 for (let index = 0, cache = scene.skeletons.length; index < cache; index++) {
                     const skeleton = scene.skeletons[index];
                     if (skeleton._hasWaitingData) {
                         if (skeleton.bones != null) {
-                            skeleton.bones.forEach((bone) => {
-                                if (bone._waitingTransformNodeId) {
-                                    const linkTransformNode = scene.getLastEntryById(bone._waitingTransformNodeId) as TransformNode;
-                                    if (linkTransformNode) {
-                                        bone.linkTransformNode(linkTransformNode);
-                                    }
-                                    bone._waitingTransformNodeId = null;
+                            for (const bone of skeleton.bones) {
+                                let linkTransformNode: Nullable<Node> = null;
+                                // First try to get it via uniqueId
+                                if (bone._waitingTransformNodeUniqueId !== null) {
+                                    linkTransformNode = parsedIdToNodeMap.get(bone._waitingTransformNodeUniqueId) ?? null;
                                 }
-                            });
+
+                                // If not possible or not found, try to get it from the scene (backwards compatibility)
+                                if (bone._waitingTransformNodeId !== null && !linkTransformNode) {
+                                    linkTransformNode = scene.getLastEntryById(bone._waitingTransformNodeId);
+                                }
+
+                                if (linkTransformNode) {
+                                    bone.linkTransformNode(linkTransformNode as TransformNode);
+                                }
+
+                                bone._waitingTransformNodeId = null;
+                                bone._waitingTransformNodeUniqueId = null;
+                            }
                         }
 
                         skeleton._hasWaitingData = null;
@@ -893,7 +1134,7 @@ SceneLoader.RegisterPlugin({
 
             // Particles
             if (parsedData.particleSystems !== undefined && parsedData.particleSystems !== null) {
-                const parser = AbstractScene.GetIndividualParser(SceneComponentConstants.NAME_PARTICLESYSTEM);
+                const parser = GetIndividualParser(SceneComponentConstants.NAME_PARTICLESYSTEM);
                 if (parser) {
                     for (let index = 0, cache = parsedData.particleSystems.length; index < cache; index++) {
                         const parsedParticleSystem = parsedData.particleSystems[index];
@@ -904,9 +1145,9 @@ SceneLoader.RegisterPlugin({
                 }
             }
 
-            scene.geometries.forEach((g) => {
+            for (const g of scene.geometries) {
                 g._loadedUniqueId = "";
-            });
+            }
 
             return true;
         } catch (err) {
@@ -918,10 +1159,14 @@ SceneLoader.RegisterPlugin({
                 throw err;
             }
         } finally {
-            if (log !== null && SceneLoader.loggingLevel !== SceneLoader.NO_LOGGING) {
-                Logger.Log(logOperation("importMesh", parsedData ? parsedData.producer : "Unknown") + (SceneLoader.loggingLevel !== SceneLoader.MINIMAL_LOGGING ? log : ""));
+            if (log !== null && SceneLoaderFlags.loggingLevel !== Constants.SCENELOADER_NO_LOGGING) {
+                Logger.Log(
+                    logOperation("importMesh", parsedData ? parsedData.producer : "Unknown") + (SceneLoaderFlags.loggingLevel !== Constants.SCENELOADER_MINIMAL_LOGGING ? log : "")
+                );
             }
-            tempMaterialIndexContainer = {};
+            TempMaterialIndexContainer = {};
+            TempMorphTargetManagerIndexContainer = {};
+            TempSkeletonIndexContainer = {};
         }
 
         return false;
@@ -939,7 +1184,7 @@ SceneLoader.RegisterPlugin({
 
             // Scene
             if (parsedData.useDelayedTextureLoading !== undefined && parsedData.useDelayedTextureLoading !== null) {
-                scene.useDelayedTextureLoading = parsedData.useDelayedTextureLoading && !SceneLoader.ForceFullSceneLoadingForIncremental;
+                scene.useDelayedTextureLoading = parsedData.useDelayedTextureLoading && !SceneLoaderFlags.ForceFullSceneLoadingForIncremental;
             }
             if (parsedData.autoClear !== undefined && parsedData.autoClear !== null) {
                 scene.autoClear = parsedData.autoClear;
@@ -1017,7 +1262,7 @@ SceneLoader.RegisterPlugin({
                 scene.collisionsEnabled = parsedData.collisionsEnabled;
             }
 
-            const container = loadAssetContainer(scene, data, rootUrl, onError, true);
+            const container = LoadAssetContainer(scene, data, rootUrl, onError, true);
             if (!container) {
                 return false;
             }
@@ -1041,14 +1286,16 @@ SceneLoader.RegisterPlugin({
                 throw err;
             }
         } finally {
-            if (log !== null && SceneLoader.loggingLevel !== SceneLoader.NO_LOGGING) {
-                Logger.Log(logOperation("importScene", parsedData ? parsedData.producer : "Unknown") + (SceneLoader.loggingLevel !== SceneLoader.MINIMAL_LOGGING ? log : ""));
+            if (log !== null && SceneLoaderFlags.loggingLevel !== Constants.SCENELOADER_NO_LOGGING) {
+                Logger.Log(
+                    logOperation("importScene", parsedData ? parsedData.producer : "Unknown") + (SceneLoaderFlags.loggingLevel !== Constants.SCENELOADER_MINIMAL_LOGGING ? log : "")
+                );
             }
         }
         return false;
     },
     loadAssetContainer: (scene: Scene, data: string, rootUrl: string, onError?: (message: string, exception?: any) => void): AssetContainer => {
-        const container = loadAssetContainer(scene, data, rootUrl, onError);
+        const container = LoadAssetContainer(scene, data, rootUrl, onError);
         return container;
     },
 });

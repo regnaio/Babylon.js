@@ -63,7 +63,9 @@ export class STLExport {
                     sourceMesh = mesh.sourceMesh;
                 }
                 const data = sourceMesh.getVerticesData(VertexBuffer.PositionKind, true, true);
-                if (!data) return [];
+                if (!data) {
+                    return [];
+                }
                 const temp = Vector3.Zero();
                 let index;
                 for (index = 0; index < data.length; index += 3) {
@@ -79,7 +81,7 @@ export class STLExport {
             doNotBakeTransform = true;
         }
 
-        let data: DataView | string = "";
+        let data: DataView<ArrayBuffer> | string = "";
 
         let faceCount = 0;
         let offset = 0;

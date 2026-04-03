@@ -1,8 +1,8 @@
-import type { GlobalState } from "./globalState";
-import type { Nullable } from "core/types";
-import type { GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
-import type { NodeGeometry } from "core/Meshes/Node/nodeGeometry";
-import type { NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
+import { type GlobalState } from "./globalState";
+import { type Nullable } from "core/types";
+import { type GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
+import { type NodeGeometry } from "core/Meshes/Node/nodeGeometry";
+import { type NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
 
 export class SerializationTools {
     public static UpdateLocations(geometry: NodeGeometry, globalState: GlobalState, frame?: Nullable<GraphFrame>) {
@@ -20,6 +20,7 @@ export class SerializationTools {
                 blockId: block.uniqueId,
                 x: node ? node.x : 0,
                 y: node ? node.y : 0,
+                isCollapsed: node ? node.isCollapsed : false,
             });
         }
 
@@ -37,13 +38,13 @@ export class SerializationTools {
     }
 
     public static Deserialize(serializationObject: any, globalState: GlobalState) {
-        globalState.nodeGeometry!.parseSerializedObject(serializationObject);
+        globalState.nodeGeometry.parseSerializedObject(serializationObject);
         globalState.onIsLoadingChanged.notifyObservers(false);
     }
 
     public static AddFrameToGeometry(serializationObject: any, globalState: GlobalState, currentGeometry: NodeGeometry) {
         this.UpdateLocations(currentGeometry, globalState);
-        globalState.nodeGeometry!.parseSerializedObject(serializationObject, true);
+        globalState.nodeGeometry.parseSerializedObject(serializationObject, true);
         globalState.onImportFrameObservable.notifyObservers(serializationObject);
         globalState.onIsLoadingChanged.notifyObservers(false);
     }

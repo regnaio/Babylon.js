@@ -1,9 +1,5 @@
-/* eslint-disable import/no-internal-modules */
-export * from "./glTFAnimation";
+/* eslint-disable @typescript-eslint/no-restricted-imports */
 export * from "./glTFData";
-export * from "./glTFExporter";
-export * from "./glTFExporterExtension";
-export * from "./glTFMaterialExporter";
 export * from "./glTFSerializer";
-export * from "./glTFUtilities";
+export { _SolveMetallic, _ConvertToGLTFPBRMetallicRoughness } from "./glTFMaterialExporter";
 export * from "./Extensions/index";

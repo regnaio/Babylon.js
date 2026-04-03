@@ -1,10 +1,10 @@
 import { serialize, serializeAsColor3, expandToProperty, serializeAsTexture } from "../../Misc/decorators";
-import type { Scene } from "../../scene";
-import type { Color3 } from "../../Maths/math.color";
-import type { BaseTexture } from "../../Materials/Textures/baseTexture";
+import { type Scene } from "../../scene";
+import { type Color3 } from "../../Maths/math.color";
+import { type BaseTexture } from "../../Materials/Textures/baseTexture";
 import { PBRBaseSimpleMaterial } from "./pbrBaseSimpleMaterial";
 import { RegisterClass } from "../../Misc/typeStore";
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { SerializationHelper } from "../../Misc/decorators.serialization";
 
 /**
@@ -103,12 +103,24 @@ export class PBRSpecularGlossinessMaterial extends PBRBaseSimpleMaterial {
         const serializationObject = SerializationHelper.Serialize(this);
         serializationObject.customType = "BABYLON.PBRSpecularGlossinessMaterial";
 
-        serializationObject.clearCoat = this.clearCoat.serialize();
-        serializationObject.anisotropy = this.anisotropy.serialize();
-        serializationObject.brdf = this.brdf.serialize();
-        serializationObject.sheen = this.sheen.serialize();
-        serializationObject.subSurface = this.subSurface.serialize();
-        serializationObject.iridescence = this.iridescence.serialize();
+        if (!this.clearCoat.doNotSerialize) {
+            serializationObject.clearCoat = this.clearCoat.serialize();
+        }
+        if (!this.anisotropy.doNotSerialize) {
+            serializationObject.anisotropy = this.anisotropy.serialize();
+        }
+        if (!this.brdf.doNotSerialize) {
+            serializationObject.brdf = this.brdf.serialize();
+        }
+        if (!this.sheen.doNotSerialize) {
+            serializationObject.sheen = this.sheen.serialize();
+        }
+        if (!this.subSurface.doNotSerialize) {
+            serializationObject.subSurface = this.subSurface.serialize();
+        }
+        if (!this.iridescence.doNotSerialize) {
+            serializationObject.iridescence = this.iridescence.serialize();
+        }
 
         return serializationObject;
     }

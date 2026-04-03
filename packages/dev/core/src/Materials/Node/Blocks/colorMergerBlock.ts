@@ -1,10 +1,10 @@
 import { NodeMaterialBlock } from "../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../nodeMaterialBuildState";
+import { type NodeMaterialBuildState } from "../nodeMaterialBuildState";
 import { NodeMaterialBlockTargets } from "../Enums/nodeMaterialBlockTargets";
-import type { NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
 import { RegisterClass } from "../../../Misc/typeStore";
-import type { Scene } from "../../../scene";
+import { type Scene } from "../../../scene";
 
 /**
  * Block used to create a Color3/4 out of individual inputs (one for each component)
@@ -116,9 +116,16 @@ export class ColorMergerBlock extends NodeMaterialBlock {
         return name;
     }
 
+    protected override _outputRename(name: string) {
+        if (name === "rgb") {
+            return "rgbOut";
+        }
+        return name;
+    }
+
     private _buildSwizzle(len: number) {
         const swizzle = this.rSwizzle + this.gSwizzle + this.bSwizzle + this.aSwizzle;
-        return "." + swizzle.substr(0, len);
+        return "." + swizzle.substring(0, len);
     }
 
     protected override _buildBlock(state: NodeMaterialBuildState) {
@@ -167,6 +174,10 @@ export class ColorMergerBlock extends NodeMaterialBlock {
         return this;
     }
 
+    /**
+     * Serializes the block
+     * @returns the serialized object
+     */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -178,6 +189,12 @@ export class ColorMergerBlock extends NodeMaterialBlock {
         return serializationObject;
     }
 
+    /**
+     * Deserializes the block
+     * @param serializationObject - the serialization object
+     * @param scene - the scene
+     * @param rootUrl - the root URL
+     */
     public override _deserialize(serializationObject: any, scene: Scene, rootUrl: string) {
         super._deserialize(serializationObject, scene, rootUrl);
 

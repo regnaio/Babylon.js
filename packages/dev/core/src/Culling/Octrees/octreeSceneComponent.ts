@@ -1,7 +1,7 @@
-import type { ISmartArrayLike } from "../../Misc/smartArray";
+import { type ISmartArrayLike } from "../../Misc/smartArray";
 import { Scene } from "../../scene";
 import { Vector3 } from "../../Maths/math.vector";
-import type { SubMesh } from "../../Meshes/subMesh";
+import { type SubMesh } from "../../Meshes/subMesh";
 import { AbstractMesh } from "../../Meshes/abstractMesh";
 import { Ray } from "../../Culling/ray";
 import { SceneComponentConstants } from "../../sceneComponent";
@@ -9,9 +9,10 @@ import { SceneComponentConstants } from "../../sceneComponent";
 import { Octree } from "./octree";
 import { EngineStore } from "../../Engines/engineStore";
 
-import type { Collider } from "../../Collisions/collider";
+import { type Collider } from "../../Collisions/collider";
 
 declare module "../../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /**
          * @internal
@@ -64,6 +65,7 @@ Object.defineProperty(Scene.prototype, "selectionOctree", {
 });
 
 declare module "../../Meshes/abstractMesh" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractMesh {
         /**
          * @internal

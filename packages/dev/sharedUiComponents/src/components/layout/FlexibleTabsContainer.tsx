@@ -1,14 +1,12 @@
-import type { FC } from "react";
-import { useContext } from "react";
+import { type FC, useContext } from "react";
 import { FlexibleTab } from "./FlexibleTab";
 import { LayoutContext } from "./LayoutContext";
-import style from "./FlexibleTabsContainer.modules.scss";
+import * as style from "./FlexibleTabsContainer.module.scss";
 
 import dragIcon from "../../imgs/dragDotsIcon_white.svg";
 import { getPosInLayout, removeLayoutRowAndRedistributePercentages } from "./utils";
 import { DraggableIcon } from "./DraggableIcon";
-import type { LayoutTab, LayoutTabsRow, TabDrag } from "./types";
-import { ElementTypes } from "./types";
+import { type LayoutTab, type LayoutTabsRow, type TabDrag, ElementTypes } from "./types";
 
 /**
  * Arguments for the TabsContainer component.

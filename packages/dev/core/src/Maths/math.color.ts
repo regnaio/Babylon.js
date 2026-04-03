@@ -1,28 +1,27 @@
 import { BuildArray } from "../Misc/arrayTools";
 import { RegisterClass } from "../Misc/typeStore";
-import type { DeepImmutable, FloatArray, Tuple } from "../types";
+import { type DeepImmutable, type FloatArray, type Tuple } from "../types";
 import { Epsilon, ToGammaSpace, ToLinearSpace } from "./math.constants";
-import type { IColor3Like, IColor4Like } from "./math.like";
-import { Scalar } from "./math.scalar";
-import { Clamp, ToHex } from "./math.scalar.functions";
-import type { Tensor } from "./tensor";
+import { type IColor3Like, type IColor4Like } from "./math.like";
+import { Clamp, ToHex, WithinEpsilon } from "./math.scalar.functions";
+import { type Tensor } from "./tensor";
 
-function colorChannelToLinearSpace(color: number): number {
+function ColorChannelToLinearSpace(color: number): number {
     return Math.pow(color, ToLinearSpace);
 }
 
-function colorChannelToLinearSpaceExact(color: number): number {
+function ColorChannelToLinearSpaceExact(color: number): number {
     if (color <= 0.04045) {
         return 0.0773993808 * color;
     }
     return Math.pow(0.947867299 * (color + 0.055), 2.4);
 }
 
-function colorChannelToGammaSpace(color: number): number {
+function ColorChannelToGammaSpace(color: number): number {
     return Math.pow(color, ToGammaSpace);
 }
 
-function colorChannelToGammaSpaceExact(color: number): number {
+function ColorChannelToGammaSpaceExact(color: number): number {
     if (color <= 0.0031308) {
         return 12.92 * color;
     }
@@ -34,14 +33,22 @@ function colorChannelToGammaSpaceExact(color: number): number {
  */
 export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Like {
     /**
+     * If the first color is flagged with integers (as everything is 0,0,0), V8 stores all of the properties as integers internally because it doesn't know any better yet.
+     * If subsequent colors are created with non-integer values, V8 determines that it would be best to represent these properties as doubles instead of integers,
+     * and henceforth it will use floating-point representation for all color instances that it creates.
+     * But the original color instances are unchanged and has a "deprecated map".
+     * If we keep using the color instances from step 1, it will now be a poison pill which will mess up optimizations in any code it touches.
+     */
+    static _V8PerformanceHack = new Color3(0.5, 0.5, 0.5) as DeepImmutable<Color3>;
+    /**
      * @see Tensor.dimension
      */
-    public declare readonly dimension: [3];
+    declare public readonly dimension: [3];
 
     /**
      * @see Tensor.rank
      */
-    public declare readonly rank: 1;
+    declare public readonly rank: 1;
 
     /**
      * Creates a new Color3 object from red, green, blue values, all between 0 and 1
@@ -328,7 +335,7 @@ export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Lik
      * @returns true if both colors are distant less than epsilon
      */
     public equalsWithEpsilon(otherColor: DeepImmutable<IColor3Like>, epsilon: number = Epsilon): boolean {
-        return Scalar.WithinEpsilon(this.r, otherColor.r, epsilon) && Scalar.WithinEpsilon(this.g, otherColor.g, epsilon) && Scalar.WithinEpsilon(this.b, otherColor.b, epsilon);
+        return WithinEpsilon(this.r, otherColor.r, epsilon) && WithinEpsilon(this.g, otherColor.g, epsilon) && WithinEpsilon(this.b, otherColor.b, epsilon);
     }
 
     /**
@@ -591,6 +598,23 @@ export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Lik
     }
 
     /**
+     * Updates the Color3 rgb values from the string containing valid hexadecimal values
+     * @param hex defines a string containing valid hexadecimal values
+     * @returns the current Color3 object
+     */
+    public fromHexString(hex: string): this {
+        if (hex.substring(0, 1) !== "#" || hex.length !== 7) {
+            return this;
+        }
+
+        this.r = parseInt(hex.substring(1, 3), 16) / 255;
+        this.g = parseInt(hex.substring(3, 5), 16) / 255;
+        this.b = parseInt(hex.substring(5, 7), 16) / 255;
+
+        return this;
+    }
+
+    /**
      * Converts current color in rgb space to HSV values
      * @returns a new color3 representing the HSV values
      */
@@ -659,13 +683,13 @@ export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Lik
      */
     public toLinearSpaceToRef(convertedColor: IColor3Like, exact = false): this {
         if (exact) {
-            convertedColor.r = colorChannelToLinearSpaceExact(this.r);
-            convertedColor.g = colorChannelToLinearSpaceExact(this.g);
-            convertedColor.b = colorChannelToLinearSpaceExact(this.b);
+            convertedColor.r = ColorChannelToLinearSpaceExact(this.r);
+            convertedColor.g = ColorChannelToLinearSpaceExact(this.g);
+            convertedColor.b = ColorChannelToLinearSpaceExact(this.b);
         } else {
-            convertedColor.r = colorChannelToLinearSpace(this.r);
-            convertedColor.g = colorChannelToLinearSpace(this.g);
-            convertedColor.b = colorChannelToLinearSpace(this.b);
+            convertedColor.r = ColorChannelToLinearSpace(this.r);
+            convertedColor.g = ColorChannelToLinearSpace(this.g);
+            convertedColor.b = ColorChannelToLinearSpace(this.b);
         }
         return this;
     }
@@ -689,13 +713,13 @@ export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Lik
      */
     public toGammaSpaceToRef(convertedColor: IColor3Like, exact = false): this {
         if (exact) {
-            convertedColor.r = colorChannelToGammaSpaceExact(this.r);
-            convertedColor.g = colorChannelToGammaSpaceExact(this.g);
-            convertedColor.b = colorChannelToGammaSpaceExact(this.b);
+            convertedColor.r = ColorChannelToGammaSpaceExact(this.r);
+            convertedColor.g = ColorChannelToGammaSpaceExact(this.g);
+            convertedColor.b = ColorChannelToGammaSpaceExact(this.b);
         } else {
-            convertedColor.r = colorChannelToGammaSpace(this.r);
-            convertedColor.g = colorChannelToGammaSpace(this.g);
-            convertedColor.b = colorChannelToGammaSpace(this.b);
+            convertedColor.r = ColorChannelToGammaSpace(this.r);
+            convertedColor.g = ColorChannelToGammaSpace(this.g);
+            convertedColor.b = ColorChannelToGammaSpace(this.b);
         }
         return this;
     }
@@ -766,15 +790,7 @@ export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Lik
      * @returns a new Color3 object
      */
     public static FromHexString(hex: string): Color3 {
-        if (hex.substring(0, 1) !== "#" || hex.length !== 7) {
-            return new Color3(0, 0, 0);
-        }
-
-        const r = parseInt(hex.substring(1, 3), 16);
-        const g = parseInt(hex.substring(3, 5), 16);
-        const b = parseInt(hex.substring(5, 7), 16);
-
-        return Color3.FromInts(r, g, b);
+        return new Color3(0, 0, 0).fromHexString(hex);
     }
 
     /**
@@ -1002,14 +1018,22 @@ Object.defineProperties(Color3.prototype, {
  */
 export class Color4 implements Tensor<Tuple<number, 4>, IColor4Like>, IColor4Like {
     /**
+     * If the first color is flagged with integers (as everything is 0,0,0,0), V8 stores all of the properties as integers internally because it doesn't know any better yet.
+     * If subsequent colors are created with non-integer values, V8 determines that it would be best to represent these properties as doubles instead of integers,
+     * and henceforth it will use floating-point representation for all color instances that it creates.
+     * But the original color instances are unchanged and has a "deprecated map".
+     * If we keep using the color instances from step 1, it will now be a poison pill which will mess up optimizations in any code it touches.
+     */
+    static _V8PerformanceHack = new Color4(0.5, 0.5, 0.5, 0.5) as DeepImmutable<Color4>;
+    /**
      * @see Tensor.dimension
      */
-    public declare readonly dimension: [4];
+    declare public readonly dimension: [4];
 
     /**
      * @see Tensor.rank
      */
-    public declare readonly rank: 1;
+    declare public readonly rank: 1;
 
     /**
      * Creates a new Color4 object from red, green, blue values, all between 0 and 1
@@ -1459,10 +1483,10 @@ export class Color4 implements Tensor<Tuple<number, 4>, IColor4Like>, IColor4Lik
      */
     public equalsWithEpsilon(otherColor: DeepImmutable<IColor4Like>, epsilon: number = Epsilon): boolean {
         return (
-            Scalar.WithinEpsilon(this.r, otherColor.r, epsilon) &&
-            Scalar.WithinEpsilon(this.g, otherColor.g, epsilon) &&
-            Scalar.WithinEpsilon(this.b, otherColor.b, epsilon) &&
-            Scalar.WithinEpsilon(this.a, otherColor.a, epsilon)
+            WithinEpsilon(this.r, otherColor.r, epsilon) &&
+            WithinEpsilon(this.g, otherColor.g, epsilon) &&
+            WithinEpsilon(this.b, otherColor.b, epsilon) &&
+            WithinEpsilon(this.a, otherColor.a, epsilon)
         );
     }
 
@@ -1585,6 +1609,34 @@ export class Color4 implements Tensor<Tuple<number, 4>, IColor4Like>, IColor4Lik
     }
 
     /**
+     * Updates the Color4 rgba values from the string containing valid hexadecimal values.
+     *
+     * A valid hex string is either in the format #RRGGBB or #RRGGBBAA.
+     *
+     * When a hex string without alpha is passed, the resulting Color4 keeps
+     * its previous alpha value.
+     *
+     * An invalid string does not modify this object
+     *
+     * @param hex defines a string containing valid hexadecimal values
+     * @returns the current updated Color4 object
+     */
+    public fromHexString(hex: string): this {
+        if (hex.substring(0, 1) !== "#" || (hex.length !== 9 && hex.length !== 7)) {
+            return this;
+        }
+
+        this.r = parseInt(hex.substring(1, 3), 16) / 255;
+        this.g = parseInt(hex.substring(3, 5), 16) / 255;
+        this.b = parseInt(hex.substring(5, 7), 16) / 255;
+        if (hex.length === 9) {
+            this.a = parseInt(hex.substring(7, 9), 16) / 255;
+        }
+
+        return this;
+    }
+
+    /**
      * Computes a new Color4 converted from the current one to linear space
      * @param exact defines if the conversion will be done in an exact way which is slower but more accurate (default is false)
      * @returns a new Color4 object
@@ -1603,13 +1655,13 @@ export class Color4 implements Tensor<Tuple<number, 4>, IColor4Like>, IColor4Lik
      */
     public toLinearSpaceToRef(convertedColor: IColor4Like, exact = false): this {
         if (exact) {
-            convertedColor.r = colorChannelToLinearSpaceExact(this.r);
-            convertedColor.g = colorChannelToLinearSpaceExact(this.g);
-            convertedColor.b = colorChannelToLinearSpaceExact(this.b);
+            convertedColor.r = ColorChannelToLinearSpaceExact(this.r);
+            convertedColor.g = ColorChannelToLinearSpaceExact(this.g);
+            convertedColor.b = ColorChannelToLinearSpaceExact(this.b);
         } else {
-            convertedColor.r = colorChannelToLinearSpace(this.r);
-            convertedColor.g = colorChannelToLinearSpace(this.g);
-            convertedColor.b = colorChannelToLinearSpace(this.b);
+            convertedColor.r = ColorChannelToLinearSpace(this.r);
+            convertedColor.g = ColorChannelToLinearSpace(this.g);
+            convertedColor.b = ColorChannelToLinearSpace(this.b);
         }
         convertedColor.a = this.a;
         return this;
@@ -1634,13 +1686,13 @@ export class Color4 implements Tensor<Tuple<number, 4>, IColor4Like>, IColor4Lik
      */
     public toGammaSpaceToRef(convertedColor: IColor4Like, exact = false): this {
         if (exact) {
-            convertedColor.r = colorChannelToGammaSpaceExact(this.r);
-            convertedColor.g = colorChannelToGammaSpaceExact(this.g);
-            convertedColor.b = colorChannelToGammaSpaceExact(this.b);
+            convertedColor.r = ColorChannelToGammaSpaceExact(this.r);
+            convertedColor.g = ColorChannelToGammaSpaceExact(this.g);
+            convertedColor.b = ColorChannelToGammaSpaceExact(this.b);
         } else {
-            convertedColor.r = colorChannelToGammaSpace(this.r);
-            convertedColor.g = colorChannelToGammaSpace(this.g);
-            convertedColor.b = colorChannelToGammaSpace(this.b);
+            convertedColor.r = ColorChannelToGammaSpace(this.r);
+            convertedColor.g = ColorChannelToGammaSpace(this.g);
+            convertedColor.b = ColorChannelToGammaSpace(this.b);
         }
         convertedColor.a = this.a;
         return this;
@@ -1667,12 +1719,7 @@ export class Color4 implements Tensor<Tuple<number, 4>, IColor4Like>, IColor4Lik
             return new Color4(0.0, 0.0, 0.0, 0.0);
         }
 
-        const r = parseInt(hex.substring(1, 3), 16);
-        const g = parseInt(hex.substring(3, 5), 16);
-        const b = parseInt(hex.substring(5, 7), 16);
-        const a = hex.length === 9 ? parseInt(hex.substring(7, 9), 16) : 255;
-
-        return Color4.FromInts(r, g, b, a);
+        return new Color4(0.0, 0.0, 0.0, 1.0).fromHexString(hex);
     }
 
     /**

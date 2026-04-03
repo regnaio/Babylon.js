@@ -1,3 +1,5 @@
+#define PBR_FRAGMENT_SHADER
+
 #define CUSTOM_FRAGMENT_BEGIN
 
 #include<prePassDeclaration>[SCENE_MRT_COUNT]
@@ -75,6 +77,10 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var albedoTexture: vec4f = textureSample(albedoSampler, albedoSamplerSampler, fragmentInputs.vAlbedoUV + uvOffset);
 #endif
 
+#ifdef BASE_WEIGHT
+    var baseWeightTexture: vec4f = textureSample(baseWeightSampler, baseWeightSamplerSampler, fragmentInputs.vBaseWeightUV + uvOffset);
+#endif
+
 #ifdef OPACITY
     var opacityMap: vec4f = textureSample(opacitySampler, opacitySamplerSampler, fragmentInputs.vOpacityUV + uvOffset);
 #endif
@@ -88,6 +94,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     #ifdef ALBEDO
         , albedoTexture
         , uniforms.vAlbedoInfos
+    #endif
+        , uniforms.baseWeight
+    #ifdef BASE_WEIGHT
+        , baseWeightTexture
+        , uniforms.vBaseWeightInfos
     #endif
     #ifdef OPACITY
         , opacityMap
@@ -123,7 +134,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     #ifdef AMBIENT
         ambientOcclusionColorMap,
         uniforms.vAmbientInfos
-    #endif        
+    #endif
     );
 
     #include<pbrBlockLightmapInit>
@@ -152,6 +163,10 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var microSurfaceTexel: vec4f = textureSample(microSurfaceSampler, microSurfaceSamplerSampler, fragmentInputs.vMicroSurfaceSamplerUV + uvOffset) * uniforms.vMicroSurfaceSamplerInfos.y;
 #endif
 
+#ifdef BASE_DIFFUSE_ROUGHNESS
+    var baseDiffuseRoughnessTexture: f32 = textureSample(baseDiffuseRoughnessSampler, baseDiffuseRoughnessSamplerSampler, fragmentInputs.vBaseDiffuseRoughnessUV + uvOffset).x;
+#endif
+
 #ifdef METALLICWORKFLOW
     var metallicReflectanceFactors: vec4f = uniforms.vMetallicReflectanceFactors;
     #ifdef REFLECTANCE
@@ -169,9 +184,9 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         #endif
 
         #ifndef METALLIC_REFLECTANCE_USE_ALPHA_ONLY
-            metallicReflectanceFactors = vec4f(metallicReflectanceFactors.rgb * reflectanceFactorsMap.rgb, metallicReflectanceFactors.a);
+            metallicReflectanceFactors = vec4f(metallicReflectanceFactors.rgb * metallicReflectanceFactorsMap.rgb, metallicReflectanceFactors.a);
         #endif
-        metallicReflectanceFactors *= metallicReflectanceFactorsMap.a;
+        metallicReflectanceFactors.a *= metallicReflectanceFactorsMap.a;
     #endif
 #endif
 
@@ -180,6 +195,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     #ifdef METALLICWORKFLOW
         , surfaceAlbedo
         , metallicReflectanceFactors
+    #endif
+        , uniforms.baseDiffuseRoughness
+    #ifdef BASE_DIFFUSE_ROUGHNESS
+        , baseDiffuseRoughnessTexture
+        , uniforms.vBaseDiffuseRoughnessInfos
     #endif
     #ifdef REFLECTIVITY
         , uniforms.vReflectivityInfos
@@ -199,6 +219,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
     var microSurface: f32 = reflectivityOut.microSurface;
     var roughness: f32 = reflectivityOut.roughness;
+    var diffuseRoughness: f32 = reflectivityOut.diffuseRoughness;
 
     #ifdef METALLICWORKFLOW
         surfaceAlbedo = reflectivityOut.surfaceAlbedo;
@@ -242,7 +263,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         #endif
             TBN,
             normalW,
-            viewDirectionW            
+            viewDirectionW
         );
     #endif
 
@@ -252,7 +273,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
         #ifndef USE_CUSTOM_REFLECTION
             reflectionOut = reflectionBlock(
-                input.vPositionW
+                fragmentInputs.vPositionW
                 , normalW
                 , alphaG
                 , uniforms.vReflectionMicrosurfaceInfos
@@ -270,16 +291,17 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
                 , reflectionSampler
                 , reflectionSamplerSampler
             #if defined(NORMAL) && defined(USESPHERICALINVERTEX)
-                , input.vEnvironmentIrradiance
+                , fragmentInputs.vEnvironmentIrradiance
             #endif
-            #ifdef USESPHERICALFROMREFLECTIONMAP
-                #if !defined(NORMAL) || !defined(USESPHERICALINVERTEX)
-                    , uniforms.reflectionMatrix
-                #endif
+            #if (defined(USESPHERICALFROMREFLECTIONMAP) && (!defined(NORMAL) || !defined(USESPHERICALINVERTEX))) || (defined(USEIRRADIANCEMAP) && defined(REFLECTIONMAP_3D))
+                , uniforms.reflectionMatrix
             #endif
             #ifdef USEIRRADIANCEMAP
                 , irradianceSampler
                 , irradianceSamplerSampler
+                #ifdef USE_IRRADIANCE_DOMINANT_DIRECTION
+                    , uniforms.vReflectionDominantDirection
+                #endif
             #endif
             #ifndef LODBASEDMICROSFURACE
                 , reflectionLowSampler
@@ -289,7 +311,14 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             #endif
             #ifdef REALTIME_FILTERING
                 , uniforms.vReflectionFilteringInfo
+                #ifdef IBL_CDF_FILTERING
+                    , icdfSampler
+                    , icdfSamplerSampler
+                #endif
             #endif
+                , viewDirectionW
+                , diffuseRoughness
+                , surfaceAlbedo
             );
         #else
             #define CUSTOM_REFLECTION
@@ -323,7 +352,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             , sheenMapData
             , uniforms.vSheenInfos.y
         #endif
-            , reflectance
+            , reflectanceF0
         #ifdef SHEEN_LINKWITHALBEDO
             , baseColor
             , surfaceAlbedo
@@ -349,7 +378,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
                 , reflectionHighSamplerSampler
             #endif
             #ifdef REALTIME_FILTERING
-                , vReflectionFilteringInfo
+                , uniforms.vReflectionFilteringInfo
             #endif
             #if !defined(REFLECTIONMAP_SKYBOX) && defined(RADIANCEOCCLUSION)
                 , seo
@@ -377,10 +406,10 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         var iridescenceOut: iridescenceOutParams;
 
         #ifdef IRIDESCENCE_TEXTURE
-            var iridescenceMapData: vec2f = textureSample(iridescenceSampler, iridescenceSamplerSampler, fragmentInputs.vIridescenceUV + uvOffset).rg * vIridescenceInfos.y;
+            var iridescenceMapData: vec2f = textureSample(iridescenceSampler, iridescenceSamplerSampler, fragmentInputs.vIridescenceUV + uvOffset).rg * uniforms.vIridescenceInfos.y;
         #endif
         #ifdef IRIDESCENCE_THICKNESS_TEXTURE
-            var iridescenceThicknessMapData: vec2f = textureSample(iridescenceThicknessSampler, iridescenceThicknessSamplerSampler, fragmentInputs.vIridescenceThicknessUV + uvOffset).rg * vIridescenceInfos.w;
+            var iridescenceThicknessMapData: vec2f = textureSample(iridescenceThicknessSampler, iridescenceThicknessSamplerSampler, fragmentInputs.vIridescenceThicknessUV + uvOffset).rg * uniforms.vIridescenceInfos.w;
         #endif
 
         iridescenceOut = iridescenceBlock(
@@ -395,6 +424,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             #endif
             #ifdef CLEARCOAT
                 , NdotVUnclamped
+                , uniforms.vClearCoatParams
                 #ifdef CLEARCOAT_TEXTURE
                     , clearCoatMapData
                 #endif
@@ -422,7 +452,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         #endif
 
         clearcoatOut = clearcoatBlock(
-            input.vPositionW
+            fragmentInputs.vPositionW
             , geometricNormalW
             , viewDirectionW
             , uniforms.vClearCoatParams
@@ -446,7 +476,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             , clearCoatBumpMapData
             , fragmentInputs.vClearCoatBumpUV
             #if defined(TANGENT) && defined(NORMAL)
-                , vTBN
+                , mat3x3<f32>(input.vTBN0, input.vTBN1, input.vTBN2)
             #else
                 , uniforms.vClearCoatTangentSpaceParams
             #endif
@@ -472,11 +502,6 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             #endif
             #ifdef REALTIME_FILTERING
                 , uniforms.vReflectionFilteringInfo
-            #endif
-        #endif
-        #if defined(ENVIRONMENTBRDF) && !defined(REFLECTIONMAP_SKYBOX)
-            #ifdef RADIANCEOCCLUSION
-                , ambientMonochrome
             #endif
         #endif
         #if defined(CLEARCOAT_BUMP) || defined(TWOSIDEDLIGHTING)
@@ -508,6 +533,9 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
         #ifdef SS_TRANSLUCENCYCOLOR_TEXTURE
             var translucencyColorMap: vec4f = textureSample(translucencyColorSampler, translucencyColorSamplerSampler, fragmentInputs.vTranslucencyColorUV + uvOffset);
+            #ifdef SS_TRANSLUCENCYCOLOR_TEXTURE_GAMMA
+                translucencyColorMap = toLinearSpaceVec4(translucencyColorMap);
+            #endif
         #endif
 
         subSurfaceOut = subSurfaceBlock(
@@ -515,7 +543,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             , uniforms.vThicknessParam
             , uniforms.vTintColor
             , normalW
-            , specularEnvironmentReflectance
+        #ifdef LEGACY_SPECULAR_ENERGY_CONSERVATION
+            , vec3f(max(colorSpecularEnvironmentReflectance.r, max(colorSpecularEnvironmentReflectance.g, colorSpecularEnvironmentReflectance.b)))
+        #else
+            , baseSpecularEnvironmentReflectance
+        #endif
         #ifdef SS_THICKNESSANDMASK_TEXTURE
             , thicknessMap
         #endif
@@ -535,7 +567,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
                     #if defined(REALTIME_FILTERING)
                         , reflectionSampler
                         , reflectionSamplerSampler
-                        , vReflectionFilteringInfo
+                        , uniforms.vReflectionFilteringInfo
+                        #ifdef IBL_CDF_FILTERING
+                            , icdfSampler
+                            , icdfSamplerSampler
+                        #endif
                     #endif
                 #endif
                 #ifdef USEIRRADIANCEMAP
@@ -548,7 +584,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             , surfaceAlbedo
         #endif
         #ifdef SS_REFRACTION
-            , input.vPositionW
+            , fragmentInputs.vPositionW
             , viewDirectionW
             , scene.view
             , uniforms.vRefractionInfos
@@ -584,7 +620,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
                 , uniforms.vRefractionSize
             #endif
             #ifdef SS_DISPERSION
-                , dispersion
+                , uniforms.dispersion
             #endif
         #endif
         #ifdef SS_TRANSLUCENCY
@@ -603,7 +639,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             #endif
         #endif
     #else
-        subSurfaceOut.specularEnvironmentReflectance = specularEnvironmentReflectance;
+        subSurfaceOut.specularEnvironmentReflectance = colorSpecularEnvironmentReflectance;
     #endif
 
     // _____________________________ Direct Lighting Info __________________________________
@@ -628,114 +664,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     #define CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR
 
 #ifdef PREPASS
-    var writeGeometryInfo: f32 = select(0.0, 1.0, finalColor.a > 0.4);
-    var fragData: array<vec4<f32>, SCENE_MRT_COUNT>;
-
-    #ifdef PREPASS_POSITION
-    fragData[PREPASS_POSITION_INDEX] =  vec4f(input.vPositionW, writeGeometryInfo);
-    #endif
-
-    #ifdef PREPASS_VELOCITY
-    var a: vec2f = (fragmentInputs.vCurrentPosition.xy / fragmentInputs.vCurrentPosition.w) * 0.5 + 0.5;
-    var b: vec2f = (fragmentInputs.vPreviousPosition.xy / fragmentInputs.vPreviousPosition.w) * 0.5 + 0.5;
-
-    var velocity: vec2f = abs(a - b);
-    velocity =  vec2f(pow(velocity.x, 1.0 / 3.0), pow(velocity.y, 1.0 / 3.0)) * sign(a - b) * 0.5 + 0.5;
-
-    fragData[PREPASS_VELOCITY_INDEX] =  vec4f(velocity, 0.0, writeGeometryInfo);
-#elif defined(PREPASS_VELOCITY_LINEAR)
-    var velocity : vec2f = vec2f(0.5) * ((fragmentInputs.vPreviousPosition.xy /
-                                          fragmentInputs.vPreviousPosition.w) -
-                                         (fragmentInputs.vCurrentPosition.xy /
-                                          fragmentInputs.vCurrentPosition.w));
-    fragData[PREPASS_VELOCITY_LINEAR_INDEX] =
-        vec4f(velocity, 0.0, writeGeometryInfo);
-#endif
-
-#ifdef PREPASS_ALBEDO_SQRT
-    var sqAlbedo : vec3f = sqrt(surfaceAlbedo); // for pre and post scatter
-#endif
-
-#ifdef PREPASS_IRRADIANCE
-    var irradiance : vec3f = finalDiffuse;
-#ifndef UNLIT
-#ifdef REFLECTION
-    irradiance += finalIrradiance;
-#endif
-#endif
-
-#ifdef SS_SCATTERING
-    fragData[0] = vec4f(finalColor.rgb - irradiance,
-                        finalColor.a); // Split irradiance from final color
-    irradiance /= sqAlbedo;
-#else
-    fragData[0] = finalColor; // No split lighting
-    var scatteringDiffusionProfile : f32 = 255.;
-#endif
-
-    fragData[PREPASS_IRRADIANCE_INDEX] =
-        vec4f(clamp(irradiance, vec3f(0.), vec3f(1.)),
-              writeGeometryInfo * scatteringDiffusionProfile /
-                  255.); // Irradiance + SS diffusion profile
-#else
-    fragData[0] = vec4f(finalColor.rgb, finalColor.a);
-#endif
-
-#ifdef PREPASS_DEPTH
-    fragData[PREPASS_DEPTH_INDEX] = vec4f(fragmentInputs.vViewPos.z, 0.0, 0.0,
-                                          writeGeometryInfo); // Linear depth
-#endif
-
-#ifdef PREPASS_NORMAL
-#ifdef PREPASS_NORMAL_WORLDSPACE
-    fragData[PREPASS_NORMAL_INDEX] =
-        vec4f(normalW, writeGeometryInfo); // Normal
-#else
-    fragData[PREPASS_NORMAL_INDEX] =
-        vec4f(normalize((scene.view * vec4f(normalW, 0.0)).rgb),
-              writeGeometryInfo); // Normal
-#endif
-#endif
-
-#ifdef PREPASS_ALBEDO_SQRT
-    fragData[PREPASS_ALBEDO_SQRT_INDEX] =
-        vec4f(sqAlbedo, writeGeometryInfo); // albedo, for pre and post scatter
-#endif
-
-#ifdef PREPASS_REFLECTIVITY
-#ifndef UNLIT
-    fragData[PREPASS_REFLECTIVITY_INDEX] =
-        vec4f(specularEnvironmentR0, microSurface) * writeGeometryInfo;
-#else
-    fragData[PREPASS_REFLECTIVITY_INDEX] =
-        vec4f(0.0, 0.0, 0.0, 1.0) * writeGeometryInfo;
-#endif
-#endif
-
-#if SCENE_MRT_COUNT > 0
-    fragmentOutputs.fragData0 = fragData[0];
-#endif
-#if SCENE_MRT_COUNT > 1
-    fragmentOutputs.fragData1 = fragData[1];
-#endif
-#if SCENE_MRT_COUNT > 2
-    fragmentOutputs.fragData2 = fragData[2];
-#endif
-#if SCENE_MRT_COUNT > 3
-    fragmentOutputs.fragData3 = fragData[3];
-#endif
-#if SCENE_MRT_COUNT > 4
-    fragmentOutputs.fragData4 = fragData[4];
-#endif
-#if SCENE_MRT_COUNT > 5
-    fragmentOutputs.fragData5 = fragData[5];
-#endif
-#if SCENE_MRT_COUNT > 6
-    fragmentOutputs.fragData6 = fragData[6];
-#endif
-#if SCENE_MRT_COUNT > 7
-    fragmentOutputs.fragData7 = fragData[7];
-#endif
+    #include<pbrBlockPrePass>
 #endif
 
 #if !defined(PREPASS) && !defined(ORDER_INDEPENDENT_TRANSPARENCY)
@@ -757,3 +686,4 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     #define CUSTOM_FRAGMENT_MAIN_END
 
 }
+

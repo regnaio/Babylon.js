@@ -1,24 +1,24 @@
-import type { Nullable, IndicesArray } from "../../types";
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import { type Nullable, type IndicesArray, type FloatArray } from "../../types";
 import { Logger } from "../../Misc/logger";
 import { BuildArray } from "../../Misc/arrayTools";
-import type { Matrix } from "../../Maths/math.vector";
-import { Vector3, Quaternion } from "../../Maths/math.vector";
-import type { TransformNode } from "../../Meshes/transformNode";
+import { type Matrix, Vector3, Quaternion } from "../../Maths/math.vector";
+import { type TransformNode } from "../../Meshes/transformNode";
 import { AbstractMesh } from "../../Meshes/abstractMesh";
 import { Mesh } from "../../Meshes/mesh";
-import type { Scene } from "../../scene";
-import type { Bone } from "../../Bones/bone";
-import type { BoundingInfo } from "../../Culling/boundingInfo";
-import type { PhysicsEngine as PhysicsEngineV1 } from "./physicsEngine";
+import { type Scene } from "../../scene";
+import { type Bone } from "../../Bones/bone";
+import { type BoundingInfo } from "../../Culling/boundingInfo";
+import { type PhysicsEngine as PhysicsEngineV1 } from "./physicsEngine";
 
-import type { PhysicsJointData } from "./physicsJoint";
-import { PhysicsJoint } from "./physicsJoint";
+import { type PhysicsJointData, PhysicsJoint } from "./physicsJoint";
 import { Space } from "../../Maths/math.axis";
 
 /**
  * The interface for the physics imposter parameters
  * @see https://doc.babylonjs.com/features/featuresDeepDive/physics/usingPhysicsEngine
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface PhysicsImpostorParameters {
     /**
      * The mass of the physics imposter
@@ -136,7 +136,7 @@ export interface IPhysicsEnabledObject {
      * @param kind The type of vertex data
      * @returns A nullable array of numbers, or a float32 array
      */
-    getVerticesData(kind: string): Nullable<Array<number> | Float32Array>;
+    getVerticesData(kind: string): Nullable<FloatArray>;
     /**
      * Gets the indices from the mesh
      * @returns A nullable array of index arrays
@@ -322,7 +322,7 @@ export class PhysicsImpostor {
         if (!plugin.setBodyPressure) {
             return;
         }
-        plugin.setBodyPressure!(this, value);
+        plugin.setBodyPressure(this, value);
     }
 
     /**
@@ -336,7 +336,7 @@ export class PhysicsImpostor {
         if (!plugin.getBodyStiffness) {
             return 0;
         }
-        return plugin.getBodyStiffness!(this);
+        return plugin.getBodyStiffness(this);
     }
 
     /**
@@ -350,7 +350,7 @@ export class PhysicsImpostor {
         if (!plugin.setBodyStiffness) {
             return;
         }
-        plugin.setBodyStiffness!(this, value);
+        plugin.setBodyStiffness(this, value);
     }
 
     /**
@@ -364,7 +364,7 @@ export class PhysicsImpostor {
         if (!plugin.getBodyVelocityIterations) {
             return 0;
         }
-        return plugin.getBodyVelocityIterations!(this);
+        return plugin.getBodyVelocityIterations(this);
     }
 
     /**
@@ -378,7 +378,7 @@ export class PhysicsImpostor {
         if (!plugin.setBodyVelocityIterations) {
             return;
         }
-        plugin.setBodyVelocityIterations!(this, value);
+        plugin.setBodyVelocityIterations(this, value);
     }
 
     /**
@@ -392,7 +392,7 @@ export class PhysicsImpostor {
         if (!plugin.getBodyPositionIterations) {
             return 0;
         }
-        return plugin.getBodyPositionIterations!(this);
+        return plugin.getBodyPositionIterations(this);
     }
 
     /**
@@ -406,7 +406,7 @@ export class PhysicsImpostor {
         if (!plugin.setBodyPositionIterations) {
             return;
         }
-        plugin.setBodyPositionIterations!(this, value);
+        plugin.setBodyPositionIterations(this, value);
     }
 
     /**
@@ -532,7 +532,7 @@ export class PhysicsImpostor {
 
     private _getPhysicsParent(): Nullable<PhysicsImpostor> {
         if (this.object.parent instanceof AbstractMesh) {
-            const parentMesh: AbstractMesh = <AbstractMesh>this.object.parent;
+            const parentMesh: AbstractMesh = this.object.parent;
             return parentMesh.physicsImpostor;
         }
         return null;
@@ -632,7 +632,9 @@ export class PhysicsImpostor {
             //bring back the rotation
             this.object.rotationQuaternion = q;
             //calculate the world matrix with the new rotation
-            this.object.computeWorldMatrix && this.object.computeWorldMatrix(true);
+            if (this.object.computeWorldMatrix) {
+                this.object.computeWorldMatrix(true);
+            }
             return size;
         } else {
             return PhysicsImpostor.DEFAULT_OBJECT_SIZE;
@@ -784,7 +786,7 @@ export class PhysicsImpostor {
         collideAgainst: PhysicsImpostor | Array<PhysicsImpostor>,
         func: (collider: PhysicsImpostor, collidedAgainst: PhysicsImpostor, point: Nullable<Vector3>) => void
     ): void {
-        const collidedAgainstList: Array<PhysicsImpostor> = collideAgainst instanceof Array ? <Array<PhysicsImpostor>>collideAgainst : [<PhysicsImpostor>collideAgainst];
+        const collidedAgainstList: Array<PhysicsImpostor> = collideAgainst instanceof Array ? collideAgainst : [collideAgainst];
         this._onPhysicsCollideCallbacks.push({ callback: func, otherImpostors: collidedAgainstList });
     }
 
@@ -797,7 +799,7 @@ export class PhysicsImpostor {
         collideAgainst: PhysicsImpostor | Array<PhysicsImpostor>,
         func: (collider: PhysicsImpostor, collidedAgainst: PhysicsImpostor | Array<PhysicsImpostor>, point: Nullable<Vector3>) => void
     ): void {
-        const collidedAgainstList: Array<PhysicsImpostor> = collideAgainst instanceof Array ? <Array<PhysicsImpostor>>collideAgainst : [<PhysicsImpostor>collideAgainst];
+        const collidedAgainstList: Array<PhysicsImpostor> = collideAgainst instanceof Array ? collideAgainst : [collideAgainst];
         let index = -1;
         const found = this._onPhysicsCollideCallbacks.some((cbDef, idx) => {
             if (cbDef.callback === func && cbDef.otherImpostors.length === collidedAgainstList.length) {
@@ -853,9 +855,9 @@ export class PhysicsImpostor {
         }
 
         this.object.translate(this._deltaPosition, -1);
-        this._deltaRotationConjugated &&
-            this.object.rotationQuaternion &&
+        if (this._deltaRotationConjugated && this.object.rotationQuaternion) {
             this.object.rotationQuaternion.multiplyToRef(this._deltaRotationConjugated, this.object.rotationQuaternion);
+        }
         this.object.computeWorldMatrix(false);
         if (this.object.parent && this.object.rotationQuaternion) {
             this.getParentsRotation();
@@ -864,13 +866,14 @@ export class PhysicsImpostor {
             this._tmpQuat.copyFrom(this.object.rotationQuaternion || new Quaternion());
         }
         if (!this._options.disableBidirectionalTransformation) {
-            this.object.rotationQuaternion &&
+            if (this.object.rotationQuaternion) {
                 this._physicsEngine.getPhysicsPlugin().setPhysicsBodyTransformation(this, /*bInfo.boundingBox.centerWorld*/ this.object.getAbsolutePosition(), this._tmpQuat);
+            }
         }
 
-        this._onBeforePhysicsStepCallbacks.forEach((func) => {
+        for (const func of this._onBeforePhysicsStepCallbacks) {
             func(this);
-        });
+        }
     };
 
     /**
@@ -881,9 +884,9 @@ export class PhysicsImpostor {
             return;
         }
 
-        this._onAfterPhysicsStepCallbacks.forEach((func) => {
+        for (const func of this._onAfterPhysicsStepCallbacks) {
             func(this);
-        });
+        }
 
         this._physicsEngine.getPhysicsPlugin().setTransformationFromPhysicsBody(this);
         // object has now its world rotation. needs to be converted to local.
@@ -895,7 +898,9 @@ export class PhysicsImpostor {
         // take the position set and make it the absolute position of this object.
         this.object.setAbsolutePosition(this.object.position);
         if (this._deltaRotation) {
-            this.object.rotationQuaternion && this.object.rotationQuaternion.multiplyToRef(this._deltaRotation, this.object.rotationQuaternion);
+            if (this.object.rotationQuaternion) {
+                this.object.rotationQuaternion.multiplyToRef(this._deltaRotation, this.object.rotationQuaternion);
+            }
             this._deltaPosition.applyRotationQuaternionToRef(this._deltaRotation, PhysicsImpostor._TmpVecs[0]);
             this.object.translate(PhysicsImpostor._TmpVecs[0], 1);
         } else {
@@ -927,13 +932,13 @@ export class PhysicsImpostor {
             if (this.onCollideEvent) {
                 this.onCollideEvent(this, otherImpostor);
             }
-            this._onPhysicsCollideCallbacks
-                .filter((obj) => {
-                    return obj.otherImpostors.indexOf(<PhysicsImpostor>otherImpostor) !== -1;
-                })
-                .forEach((obj) => {
-                    obj.callback(this, <PhysicsImpostor>otherImpostor, e.point, e.distance, e.impulse, e.normal);
-                });
+            const callbacks = this._onPhysicsCollideCallbacks.filter((obj) => {
+                return obj.otherImpostors.indexOf(<PhysicsImpostor>otherImpostor) !== -1;
+            });
+
+            for (const obj of callbacks) {
+                obj.callback(this, <PhysicsImpostor>otherImpostor, e.point, e.distance, e.impulse, e.normal);
+            }
         }
     };
 
@@ -1015,7 +1020,7 @@ export class PhysicsImpostor {
             return this;
         }
         if (this._physicsEngine) {
-            plugin.appendAnchor!(this, otherImpostor, width, height, influence, noCollisionBetweenLinkedBodies);
+            plugin.appendAnchor(this, otherImpostor, width, height, influence, noCollisionBetweenLinkedBodies);
         }
         return this;
     }
@@ -1087,24 +1092,15 @@ export class PhysicsImpostor {
             return;
         }
 
-        this._joints.forEach((j) => {
+        for (const j of this._joints) {
             if (this._physicsEngine) {
                 this._physicsEngine.removeJoint(this, j.otherImpostor, j.joint);
             }
-        });
+        }
         //dispose the physics body
         this._physicsEngine.removeImpostor(this);
         if (this.parent) {
             this.parent.forceUpdate();
-        } else {
-            /*this._object.getChildMeshes().forEach(function(mesh) {
-                if (mesh.physicsImpostor) {
-                    if (disposeChildren) {
-                        mesh.physicsImpostor.dispose();
-                        mesh.physicsImpostor = null;
-                    }
-                }
-            })*/
         }
 
         this._isDisposed = true;

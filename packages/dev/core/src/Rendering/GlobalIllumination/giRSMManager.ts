@@ -5,30 +5,32 @@
  * - C++ implementation by Luis Angel: https://github.com/imyoungmin/RSM
  * - Javascript implementation by Erkaman: https://github.com/Erkaman/webgl-rsm
  */
-import type { Scene } from "core/scene";
-import type { GIRSM } from "./giRSM";
-import type { Material } from "core/Materials/material";
+import { type Scene } from "core/scene";
+import { type GIRSM } from "./giRSM";
+import { type Material } from "core/Materials/material";
 import { RawTexture } from "core/Materials/Textures/rawTexture";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
 import { PostProcess } from "core/PostProcesses/postProcess";
 import { Observable, type Observer } from "core/Misc/observable";
 import { Layer } from "core/Layers/layer";
 import { Matrix } from "core/Maths/math.vector";
 import { Constants } from "core/Engines/constants";
-import type { RenderTargetWrapper } from "core/Engines/renderTargetWrapper";
+import { type RenderTargetWrapper } from "core/Engines/renderTargetWrapper";
 import { MaterialPluginBase } from "core/Materials/materialPluginBase";
-import type { InternalTexture } from "core/Materials/Textures/internalTexture";
-import type { StandardMaterial } from "core/Materials/standardMaterial";
+import { type InternalTexture } from "core/Materials/Textures/internalTexture";
+import { type StandardMaterial } from "core/Materials/standardMaterial";
 import { PBRBaseMaterial } from "core/Materials/PBR/pbrBaseMaterial";
-import type { UniformBuffer } from "core/Materials/uniformBuffer";
-import type { AbstractEngine } from "core/Engines/abstractEngine";
+import { type UniformBuffer } from "core/Materials/uniformBuffer";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
 import { GeometryBufferRenderer } from "../geometryBufferRenderer";
 import { BaseTexture } from "core/Materials/Textures/baseTexture";
-import type { WebGPURenderTargetWrapper } from "core/Engines/WebGPU/webgpuRenderTargetWrapper";
+import { type WebGPURenderTargetWrapper } from "core/Engines/WebGPU/webgpuRenderTargetWrapper";
 import { expandToProperty, serialize } from "core/Misc/decorators";
 import { MaterialDefines } from "core/Materials/materialDefines";
 import { RegisterClass } from "core/Misc/typeStore";
+
+import "../geometryBufferRendererSceneComponent";
 
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
@@ -91,12 +93,12 @@ export class GIRSMManager {
 
         this._enable = enable;
         this._debugLayer.isEnabled = this._showOnlyGI && enable;
-        this._materialsWithRenderPlugin.forEach((mat) => {
+        for (const mat of this._materialsWithRenderPlugin) {
             if (mat.pluginManager) {
                 const plugin = mat.pluginManager.getPlugin(GIRSMRenderPluginMaterial.Name) as GIRSMRenderPluginMaterial;
                 plugin.isEnabled = enable;
             }
-        });
+        }
 
         this.recreateResources(!enable);
     }
@@ -343,11 +345,11 @@ export class GIRSMManager {
         if (material) {
             this._addGISupportToMaterial(material);
         } else {
-            this._scene.meshes.forEach((mesh) => {
+            for (const mesh of this._scene.meshes) {
                 if (mesh.getTotalVertices() > 0 && mesh.isEnabled() && mesh.material) {
                     this._addGISupportToMaterial(mesh.material);
                 }
-            });
+            }
         }
     }
 
@@ -423,6 +425,7 @@ export class GIRSMManager {
         this._debugLayer.texture?.dispose();
         this._debugLayer.dispose();
         this._scene.onBeforeDrawPhaseObservable.remove(this._drawPhaseObserver);
+        this._onShaderLoadedObservable.clear();
     }
 
     /**
@@ -452,6 +455,7 @@ export class GIRSMManager {
         this._counters = [];
         this._countersRTW = [];
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._initShaderSourceAsync();
 
         this.generateSampleTexture(maxSamples);
@@ -460,8 +464,8 @@ export class GIRSMManager {
             const currentRenderTarget = this._engine._currentRenderTarget;
             let rebindCurrentRenderTarget = false;
 
-            if (this._enable) {
-                if (!this.pause) {
+            if (this._enable && this._shadersLoaded) {
+                if (!this.pause && this._ppGlobalIllumination.length > 0) {
                     this._scene.postProcessManager.directRender(this._ppGlobalIllumination, this._ppGlobalIllumination[0].inputTexture);
                     this._engine.unBindFramebuffer(this._ppGlobalIllumination[0].inputTexture, true);
 
@@ -556,14 +560,14 @@ export class GIRSMManager {
             return;
         }
 
-        this._materialsWithRenderPlugin.forEach((mat) => {
+        for (const mat of this._materialsWithRenderPlugin) {
             if (mat.pluginManager) {
                 const plugin = mat.pluginManager.getPlugin<GIRSMRenderPluginMaterial>(GIRSMRenderPluginMaterial.Name)!;
                 plugin.textureGIContrib = this.enableBlur ? this._blurRTT!.renderTarget!.texture! : this._ppGlobalIllumination[0].inputTexture.texture!;
                 plugin.outputTextureWidth = this._outputDimensions.width;
                 plugin.outputTextureHeight = this._outputDimensions.height;
             }
-        });
+        }
     }
 
     protected _createPostProcesses() {

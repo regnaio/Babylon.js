@@ -2,11 +2,12 @@ import { InternalTexture, InternalTextureSource } from "../../Materials/Textures
 import { Logger } from "../../Misc/logger";
 import { Constants } from "../constants";
 import { ThinEngine } from "../thinEngine";
-import type { RenderTargetWrapper } from "../renderTargetWrapper";
-import type { WebGLRenderTargetWrapper } from "../WebGL/webGLRenderTargetWrapper";
-import type { RenderTargetCreationOptions } from "../../Materials/Textures/textureCreationOptions";
+import { type RenderTargetWrapper } from "../renderTargetWrapper";
+import { type WebGLRenderTargetWrapper } from "../WebGL/webGLRenderTargetWrapper";
+import { type RenderTargetCreationOptions } from "../../Materials/Textures/textureCreationOptions";
 
 declare module "../../Engines/abstractEngine" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractEngine {
         /**
          * Creates a new render target cube wrapper
@@ -25,7 +26,7 @@ ThinEngine.prototype.createRenderTargetCubeTexture = function (size: number, opt
         generateMipMaps: true,
         generateDepthBuffer: true,
         generateStencilBuffer: false,
-        type: Constants.TEXTURETYPE_UNSIGNED_INT,
+        type: Constants.TEXTURETYPE_UNSIGNED_BYTE,
         samplingMode: Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         format: Constants.TEXTUREFORMAT_RGBA,
         ...options,
@@ -47,7 +48,7 @@ ThinEngine.prototype.createRenderTargetCubeTexture = function (size: number, opt
     const filters = this._getSamplingParameters(fullOptions.samplingMode, fullOptions.generateMipMaps);
 
     if (fullOptions.type === Constants.TEXTURETYPE_FLOAT && !this._caps.textureFloat) {
-        fullOptions.type = Constants.TEXTURETYPE_UNSIGNED_INT;
+        fullOptions.type = Constants.TEXTURETYPE_UNSIGNED_BYTE;
         Logger.Warn("Float textures are not supported. Cube render target forced to TEXTURETYPE_UNESIGNED_BYTE type");
     }
 

@@ -5,6 +5,8 @@
 uniform float currentCount;
 uniform float timeDelta;
 uniform float stopFactor;
+uniform float emitIndex;
+uniform float emitCount;
 #ifndef LOCAL
 uniform mat4 emitterWM;
 #endif
@@ -12,6 +14,12 @@ uniform vec2 lifeTime;
 uniform vec2 emitPower;
 uniform vec2 sizeRange;
 uniform vec4 scaleRange;
+
+#ifdef FLOWMAP
+uniform mat4 flowMapProjection;
+uniform float flowMapStrength;
+uniform sampler2D flowMapSampler;
+#endif
 
 #ifndef COLORGRADIENTS
 uniform vec4 color1;
@@ -179,10 +187,22 @@ vec4 getRandomVec4(float offset) {
 }
 
 void main() {
-  float newAge = age + timeDelta;    
+  float newAge = age + timeDelta;
 
-  // If particle is dead and system is not stopped, spawn as new particle
-  if (newAge >= life && stopFactor != 0.) {
+#ifdef EMITRATECTRL
+  // Check if this particle is in the emit range for this frame
+  float particleIndex = float(gl_VertexID);
+  float offsetFromEmitIndex = particleIndex - emitIndex;
+  if (offsetFromEmitIndex < 0.0) {
+    offsetFromEmitIndex += currentCount; // wrap around circular buffer
+  }
+  bool shouldEmit = offsetFromEmitIndex < emitCount && stopFactor != 0.;
+#else
+  // Legacy mode: recycle dead particles immediately
+  bool shouldEmit = newAge >= life && stopFactor != 0.;
+#endif
+
+  if (shouldEmit) {
     vec3 newPosition;
     vec3 newDirection;
 
@@ -191,7 +211,11 @@ void main() {
 
     // Age and life
     outLife = lifeTime.x + (lifeTime.y - lifeTime.x) * randoms.r;
+#ifdef EMITRATECTRL
+    outAge = 0.0;
+#else
     outAge = newAge - life;
+#endif
 
     // Seed
     outSeed = seed;
@@ -260,7 +284,7 @@ void main() {
     newPosition = (radius - (radius * radiusRange * randoms2.z)) * vec3(randX, randY, randZ);
 
     #ifdef DIRECTEDSPHEREEMITTER
-      newDirection = normalize(direction1 + (direction2 - direction1) * randoms3);
+      newDirection = direction1 + (direction2 - direction1) * randoms3;
     #else
       // Direction
       newDirection = normalize(newPosition + directionRandomizer * randoms3);
@@ -409,6 +433,15 @@ void main() {
     outDirection = direction;
 #else
     vec3 updatedDirection = direction + gravity * timeDelta;
+
+    #ifdef FLOWMAP
+        vec4 clipSpace = (flowMapProjection * vec4(position, 1.));
+        vec3 ndcSpace = clipSpace.xyz / clipSpace.w;
+        vec2 flowMapUV = ndcSpace.xy * 0.5 + 0.5;
+        vec4 flowMapValue = texture(flowMapSampler, flowMapUV);
+        vec3 flowMapDirection = (flowMapValue.xyz * 2.0 - 1.0) * flowMapValue.w;
+        updatedDirection += flowMapDirection * timeDelta * flowMapStrength;
+    #endif
 
     #ifdef LIMITVELOCITYGRADIENTS
         float limitVelocity = texture(limitVelocityGradientSampler, vec2(ageGradient, 0)).r;

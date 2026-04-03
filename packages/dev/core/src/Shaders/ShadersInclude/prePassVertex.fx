@@ -2,12 +2,15 @@
     vViewPos = (view * worldPos).rgb;
 #endif
 
+#ifdef PREPASS_NORMALIZED_VIEW_DEPTH
+    vNormViewDepth = ((view * worldPos).z - cameraInfo.x) / (cameraInfo.y - cameraInfo.x);
+#endif
+
 #ifdef PREPASS_LOCAL_POSITION
     vPosition = positionUpdated.xyz;
 #endif
 
-#if defined(PREPASS_VELOCITY) && defined(BONES_VELOCITY_ENABLED) ||        \
-        defined(PREPASS_VELOCITY_LINEAR)
+#if (defined(PREPASS_VELOCITY) || defined(PREPASS_VELOCITY_LINEAR)) && defined(BONES_VELOCITY_ENABLED)
     vCurrentPosition = viewProjection * worldPos;
 
 #if NUM_BONE_INFLUENCERS > 0

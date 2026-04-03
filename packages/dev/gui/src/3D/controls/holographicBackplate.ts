@@ -1,11 +1,12 @@
-import type { TransformNode } from "core/Meshes/transformNode";
-import type { Mesh } from "core/Meshes/mesh";
+import { type TransformNode } from "core/Meshes/transformNode";
+import { type Mesh } from "core/Meshes/mesh";
 import { CreateBox } from "core/Meshes/Builders/boxBuilder";
-import type { Scene } from "core/scene";
+import { type Scene } from "core/scene";
 import { FluentBackplateMaterial } from "../materials/fluentBackplate/fluentBackplateMaterial";
 import { Control3D } from "./control3D";
 import { SceneLoader } from "core/Loading/sceneLoader";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { Tools } from "core/Misc/tools";
 
 /**
  * Class used to create a holographic backplate in 3D
@@ -15,7 +16,7 @@ export class HolographicBackplate extends Control3D {
     /**
      * Base Url for the button model.
      */
-    public static MODEL_BASE_URL: string = "https://assets.babylonjs.com/meshes/MRTK/";
+    public static MODEL_BASE_URL: string = "https://assets.babylonjs.com/core/MRTK/";
     /**
      * File name for the button model.
      */
@@ -77,8 +78,9 @@ export class HolographicBackplate extends Control3D {
         );
         collisionMesh.isPickable = true;
         collisionMesh.visibility = 0;
-
-        SceneLoader.ImportMeshAsync(undefined, HolographicBackplate.MODEL_BASE_URL, HolographicBackplate.MODEL_FILENAME, scene).then((result) => {
+        const baseUrl = Tools.GetAssetUrl(HolographicBackplate.MODEL_BASE_URL);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
+        SceneLoader.ImportMeshAsync(undefined, baseUrl, HolographicBackplate.MODEL_FILENAME, scene).then((result) => {
             const importedModel = result.meshes[1];
             importedModel.name = `${this.name}_frontPlate`;
             importedModel.isPickable = false;

@@ -1,15 +1,14 @@
-import type { Nullable } from "../types";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
-import type { Scene } from "../scene";
+import { type Nullable } from "../types";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
+import { type Scene } from "../scene";
 import { Vector3, Vector4 } from "../Maths/math.vector";
 import { Color3, Color4 } from "../Maths/math.color";
 import { Condition, ValueCondition } from "./condition";
-import type { IAction } from "./action";
-import { Action } from "./action";
+import { type IAction, Action } from "./action";
 import { DoNothingAction } from "./directActions";
 
 import { EngineStore } from "../Engines/engineStore";
-import type { IActionEvent } from "../Actions/actionEvent";
+import { type IActionEvent } from "../Actions/actionEvent";
 import { Logger } from "../Misc/logger";
 import { DeepCopier } from "../Misc/deepCopier";
 import { GetClass } from "../Misc/typeStore";
@@ -245,7 +244,9 @@ export class ActionManager extends AbstractActionManager {
             const action = this.actions[index];
 
             if (action.trigger >= ActionManager.OnPickTrigger && action.trigger <= ActionManager.OnPointerOutTrigger) {
-                return true;
+                if (action._evaluateConditionForCurrentFrame()) {
+                    return true;
+                }
             }
         }
 
@@ -260,7 +261,9 @@ export class ActionManager extends AbstractActionManager {
             const action = this.actions[index];
 
             if (action.trigger >= ActionManager.OnPickTrigger && action.trigger <= ActionManager.OnPickUpTrigger) {
-                return true;
+                if (action._evaluateConditionForCurrentFrame()) {
+                    return true;
+                }
             }
         }
 
@@ -300,7 +303,7 @@ export class ActionManager extends AbstractActionManager {
      * @param action defines the action to be unregistered
      * @returns a boolean indicating whether the action has been unregistered
      */
-    public unregisterAction(action: IAction): Boolean {
+    public unregisterAction(action: IAction): boolean {
         const index = this.actions.indexOf(action);
         if (index !== -1) {
             this.actions.splice(index, 1);
@@ -384,18 +387,26 @@ export class ActionManager extends AbstractActionManager {
      */
     public serialize(name: string): any {
         const root = {
-            children: new Array(),
+            children: [] as any[],
             name: name,
             type: 3, // Root node
-            properties: new Array(), // Empty for root but required
+            properties: [] as {
+                name: string;
+                targetType: Nullable<string>;
+                value: string;
+            }[], // Empty for root but required
         };
 
         for (let i = 0; i < this.actions.length; i++) {
             const triggerObject = {
                 type: 0, // Trigger
-                children: new Array(),
+                children: [] as any[],
                 name: ActionManager.GetTriggerName(this.actions[i].trigger),
-                properties: new Array(),
+                properties: [] as {
+                    name: string;
+                    targetType: Nullable<string>;
+                    value: string;
+                }[],
             };
 
             const triggerOptions = this.actions[i].triggerOptions;
@@ -580,6 +591,7 @@ export class ActionManager extends AbstractActionManager {
                 const nothing = new DoNothingAction(trigger, condition);
 
                 if (action) {
+                    // eslint-disable-next-line github/no-then
                     action.then(nothing);
                 } else {
                     actionManager.registerAction(nothing);
@@ -595,6 +607,7 @@ export class ActionManager extends AbstractActionManager {
                 } else {
                     condition = null;
                     if (action) {
+                        // eslint-disable-next-line github/no-then
                         action.then(newAction);
                     } else {
                         actionManager.registerAction(newAction);

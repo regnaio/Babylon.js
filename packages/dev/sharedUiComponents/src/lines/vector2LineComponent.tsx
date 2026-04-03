@@ -1,12 +1,12 @@
 import * as React from "react";
-import type { Vector2 } from "core/Maths/math.vector";
-import type { Observable } from "core/Misc/observable";
+import { Vector2 } from "core/Maths/math.vector";
+import { type Observable } from "core/Misc/observable";
 
 import { NumericInput } from "./numericInputComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import type { PropertyChangedEvent } from "../propertyChangedEvent";
-import type { LockObject } from "../tabs/propertyGrids/lockObject";
+import { type PropertyChangedEvent } from "../propertyChangedEvent";
+import { type LockObject } from "../tabs/propertyGrids/lockObject";
 
 interface IVector2LineComponentProps {
     label: string;
@@ -31,7 +31,8 @@ export class Vector2LineComponent extends React.Component<IVector2LineComponentP
     constructor(props: IVector2LineComponentProps) {
         super(props);
 
-        this.state = { isExpanded: false, value: this.props.target[this.props.propertyName].clone() };
+        const value = this.props.target[this.props.propertyName];
+        this.state = { isExpanded: false, value: value && value.clone ? value.clone() : Vector2.Zero() };
     }
 
     override shouldComponentUpdate(nextProps: IVector2LineComponentProps, nextState: { isExpanded: boolean; value: Vector2 }) {

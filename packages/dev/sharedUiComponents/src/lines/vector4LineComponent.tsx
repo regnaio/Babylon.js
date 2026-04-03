@@ -1,12 +1,12 @@
 import * as React from "react";
-import type { Vector4 } from "core/Maths/math.vector";
-import type { Observable } from "core/Misc/observable";
+import { Vector4 } from "core/Maths/math.vector";
+import { type Observable } from "core/Misc/observable";
 
 import { NumericInput } from "./numericInputComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import type { PropertyChangedEvent } from "../propertyChangedEvent";
-import type { LockObject } from "../tabs/propertyGrids/lockObject";
+import { type PropertyChangedEvent } from "../propertyChangedEvent";
+import { type LockObject } from "../tabs/propertyGrids/lockObject";
 
 interface IVector4LineComponentProps {
     label: string;
@@ -33,7 +33,8 @@ export class Vector4LineComponent extends React.Component<IVector4LineComponentP
     constructor(props: IVector4LineComponentProps) {
         super(props);
 
-        this.state = { isExpanded: false, value: this.getCurrentValue().clone() };
+        const value = this.getCurrentValue();
+        this.state = { isExpanded: false, value: value && value.clone ? value.clone() : Vector4.Zero() };
     }
 
     getCurrentValue() {

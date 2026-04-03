@@ -2,24 +2,45 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 // Mixins
 interface Window {
-    mozIndexedDB: IDBFactory;
-    webkitIndexedDB: IDBFactory;
-    msIndexedDB: IDBFactory;
-    webkitURL: typeof URL;
-    mozRequestAnimationFrame(callback: FrameRequestCallback): number;
-    oRequestAnimationFrame(callback: FrameRequestCallback): number;
-    WebGLRenderingContext: WebGLRenderingContext;
     CANNON: any;
-    AudioContext: AudioContext;
-    webkitAudioContext: AudioContext;
-    PointerEvent: any;
-    Math: Math;
-    Uint8Array: Uint8ArrayConstructor;
-    Float32Array: Float32ArrayConstructor;
-    mozURL: typeof URL;
-    msURL: typeof URL;
     DracoDecoderModule: any;
-    setImmediate(handler: (...args: any[]) => void): number;
+}
+
+interface Uint8Array<TArrayBuffer extends ArrayBufferLike = ArrayBufferLike> {
+    /**
+     * Converts the `Uint8Array` to a base64-encoded string.
+     * @param options If provided, sets the alphabet and padding behavior used.
+     * @returns A base64-encoded string.
+     */
+    toBase64?(options?: { alphabet?: "base64" | "base64url" | undefined; omitPadding?: boolean | undefined }): string;
+}
+
+interface Int8ArrayConstructor {
+    new (data: number | ArrayLike<number> | ArrayBufferLike): Int8Array<ArrayBuffer>;
+}
+
+interface Uint8ArrayConstructor {
+    new (data: number | ArrayLike<number> | ArrayBufferLike): Uint8Array<ArrayBuffer>;
+
+    /**
+     * Creates a new `Uint8Array` from a base64-encoded string.
+     * @param string The base64-encoded string.
+     * @param options If provided, specifies the alphabet and handling of the last chunk.
+     * @returns A new `Uint8Array` instance.
+     * @throws {SyntaxError} If the input string contains characters outside the specified alphabet, or if the last
+     * chunk is inconsistent with the `lastChunkHandling` option.
+     */
+    fromBase64?(
+        string: string,
+        options?: {
+            alphabet?: "base64" | "base64url" | undefined;
+            lastChunkHandling?: "loose" | "strict" | "stop-before-partial" | undefined;
+        }
+    ): Uint8Array<ArrayBuffer>;
+}
+
+interface Float32ArrayConstructor {
+    new (data: number | ArrayLike<number> | ArrayBufferLike): Float32Array<ArrayBuffer>;
 }
 
 interface WorkerGlobalScope {
@@ -28,66 +49,10 @@ interface WorkerGlobalScope {
 
 type WorkerSelf = WindowOrWorkerGlobalScope & WorkerGlobalScope;
 
-interface HTMLCanvasElement {
-    requestPointerLock(): void;
-    msRequestPointerLock?(): void;
-    mozRequestPointerLock?(): void;
-    webkitRequestPointerLock?(): void;
-
-    /** Track whether a record is in progress */
-    isRecording: boolean;
-    /** Capture Stream method defined by some browsers */
-    captureStream(fps?: number): MediaStream;
-}
-
-interface CanvasRenderingContext2D {
-    msImageSmoothingEnabled: boolean;
-}
-
 // Babylon Extension to enable UIEvents to work with our IUIEvents
 interface UIEvent {
     inputIndex: number;
 }
-
-interface MouseEvent {
-    mozMovementX: number;
-    mozMovementY: number;
-    webkitMovementX: number;
-    webkitMovementY: number;
-    msMovementX: number;
-    msMovementY: number;
-}
-
-interface Navigator {
-    mozGetVRDevices: (any: any) => any;
-    webkitGetUserMedia(constraints: MediaStreamConstraints, successCallback: any, errorCallback: any): void;
-    mozGetUserMedia(constraints: MediaStreamConstraints, successCallback: any, errorCallback: any): void;
-    msGetUserMedia(constraints: MediaStreamConstraints, successCallback: any, errorCallback: any): void;
-
-    webkitGetGamepads(): Gamepad[];
-    msGetGamepads(): Gamepad[];
-    webkitGamepads(): Gamepad[];
-}
-
-interface HTMLVideoElement {
-    mozSrcObject: any;
-}
-
-interface Math {
-    fround(x: number): number;
-    imul(a: number, b: number): number;
-    log2(x: number): number;
-}
-
-interface OffscreenCanvas extends EventTarget {
-    width: number;
-    height: number;
-}
-
-declare var OffscreenCanvas: {
-    prototype: OffscreenCanvas;
-    new (width: number, height: number): OffscreenCanvas;
-};
 
 // Experimental Pressure API https://wicg.github.io/compute-pressure/
 type PressureSource = "cpu";
@@ -96,6 +61,7 @@ type PressureState = "nominal" | "fair" | "serious" | "critical";
 
 type PressureFactor = "thermal" | "power-supply";
 
+// Not available in Firefox, Safari, Not baseline.
 interface PressureRecord {
     source: PressureSource;
     state: PressureState;
@@ -103,8 +69,9 @@ interface PressureRecord {
     time: number;
 }
 
+// Not available in Firefox, Safari
 interface PressureObserver {
-    observe(source: PressureSource): void;
+    observe(source: PressureSource): Promise<void>;
     unobserve(source: PressureSource): void;
     disconnect(): void;
     takeRecords(): Array<PressureRecord>;

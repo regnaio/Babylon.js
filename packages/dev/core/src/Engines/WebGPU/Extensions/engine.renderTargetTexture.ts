@@ -1,8 +1,9 @@
-import type { Nullable } from "../../../types";
-import { WebGPUEngine } from "../../webgpuEngine";
-import type { RenderTargetTexture } from "../../../Materials/Textures/renderTargetTexture";
+import { type Nullable } from "../../../types";
+import { type RenderTargetTexture } from "../../../Materials/Textures/renderTargetTexture";
+import { ThinWebGPUEngine } from "core/Engines/thinWebGPUEngine";
 
 declare module "../../abstractEngine" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractEngine {
         /**
          * Sets a depth stencil texture from a render target to the according uniform.
@@ -15,7 +16,12 @@ declare module "../../abstractEngine" {
     }
 }
 
-WebGPUEngine.prototype.setDepthStencilTexture = function (channel: number, uniform: Nullable<WebGLUniformLocation>, texture: Nullable<RenderTargetTexture>, name?: string): void {
+ThinWebGPUEngine.prototype.setDepthStencilTexture = function (
+    channel: number,
+    uniform: Nullable<WebGLUniformLocation>,
+    texture: Nullable<RenderTargetTexture>,
+    name?: string
+): void {
     if (!texture || !texture.depthStencilTexture) {
         this._setTexture(channel, null, undefined, undefined, name);
     } else {

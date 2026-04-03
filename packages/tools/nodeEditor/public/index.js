@@ -1,4 +1,5 @@
 /* global BABYLON */
+var cdnPort = 1337;
 let snippetUrl = "https://snippet.babylonjs.com";
 let currentSnippetToken;
 let previousHash = "";
@@ -10,7 +11,7 @@ if (window.location.search.indexOf("webgpu") !== -1) {
     localStorage.setItem("Engine", 1);
 }
 
-const useWebGPU = localStorage.getItem("Engine") === "1";
+let useWebGPU = localStorage.getItem("Engine") === "1";
 
 let loadScriptAsync = function (url, instantResolve) {
     return new Promise((resolve) => {
@@ -43,7 +44,7 @@ let loadScriptAsync = function (url, instantResolve) {
 
 const Versions = {
     dist: ["https://cdn.babylonjs.com/timestamp.js?t=" + Date.now(), "https://preview.babylonjs.com/babylon.js", "https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"],
-    local: [`//${window.location.hostname}:1337/babylon.js`, `//${window.location.hostname}:1337/loaders/babylonjs.loaders.min.js`],
+    local: [`//${window.location.hostname}:${cdnPort}/babylon.js`, `//${window.location.hostname}:${cdnPort}/loaders/babylonjs.loaders.min.js`],
 };
 
 let loadInSequence = async function (versions, index, resolve) {
@@ -88,6 +89,18 @@ let checkBabylonVersionAsync = function () {
 
     return new Promise((resolve) => {
         loadInSequence(frameworkScripts, 0, resolve);
+    }).then(() => {
+        // if local, set the default base URL
+        if (snapshot) {
+            // eslint-disable-next-line no-undef
+            globalThis.BABYLON.Tools.ScriptBaseUrl = "https://snapshots-cvgtc2eugrd3cgfd.z01.azurefd.net/" + snapshot;
+        } else if (version) {
+            // eslint-disable-next-line no-undef
+            globalThis.BABYLON.Tools.ScriptBaseUrl = "https://cdn.babylonjs.com/v" + version;
+        } else if (activeVersion === "local") {
+            // eslint-disable-next-line no-undef
+            globalThis.BABYLON.Tools.ScriptBaseUrl = window.location.protocol + `//${window.location.hostname}:${cdnPort}/`;
+        }
     });
 };
 
@@ -153,10 +166,12 @@ checkBabylonVersionAsync().then(() => {
                 let canvas = document.createElement("canvas");
                 let engine;
 
-                if (useWebGPU) {
+                if (useWebGPU && (await BABYLON.WebGPUEngine.IsSupportedAsync)) {
                     engine = new BABYLON.WebGPUEngine(canvas);
                     await engine.initAsync();
                 } else {
+                    localStorage.setItem("Engine", 0);
+                    useWebGPU = false;
                     engine = new BABYLON.Engine(canvas, false, { disableWebGL2Support: false });
                 }
 
@@ -180,11 +195,17 @@ checkBabylonVersionAsync().then(() => {
                         case BABYLON.NodeMaterialModes.PostProcess:
                             nodeMaterial.setToDefaultPostProcess();
                             break;
+                        case BABYLON.NodeMaterialModes.SFE:
+                            BABYLON.SetToDefaultSFE(nodeMaterial);
+                            break;
                         case BABYLON.NodeMaterialModes.Particle:
                             nodeMaterial.setToDefaultParticle();
                             break;
                         case BABYLON.NodeMaterialModes.ProceduralTexture:
                             nodeMaterial.setToDefaultProceduralTexture();
+                            break;
+                        case BABYLON.NodeMaterialModes.GaussianSplatting:
+                            BABYLON.SetToDefaultGaussianSplatting(nodeMaterial);
                             break;
                     }
                     nodeMaterial.build(true);

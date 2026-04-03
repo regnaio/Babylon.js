@@ -1,17 +1,20 @@
-import type { Nullable } from "../types";
-import type { Camera } from "../Cameras/camera";
-import type { Effect } from "../Materials/effect";
+import { type Nullable } from "../types";
+import { type Camera } from "../Cameras/camera";
+import { type Effect } from "../Materials/effect";
 import { Texture } from "../Materials/Textures/texture";
-import type { PostProcessOptions } from "./postProcess";
-import { PostProcess } from "./postProcess";
-import type { AbstractEngine } from "../Engines/abstractEngine";
-import type { Scene } from "../scene";
+import { type PostProcessOptions, PostProcess } from "./postProcess";
+import { type AbstractEngine } from "../Engines/abstractEngine";
+import { type Scene } from "../scene";
 import { Constants } from "../Engines/constants";
 import { Logger } from "../Misc/logger";
 
 import "../Shaders/imageProcessing.fragment";
 import "../Shaders/subSurfaceScattering.fragment";
 import "../Shaders/postprocess.vertex";
+
+import "../ShadersWGSL/imageProcessing.fragment";
+import "../ShadersWGSL/subSurfaceScattering.fragment";
+import "../ShadersWGSL/postprocess.vertex";
 
 /**
  * Sub surface scattering post process
@@ -33,24 +36,22 @@ export class SubSurfaceScatteringPostProcess extends PostProcess {
         samplingMode?: number,
         engine?: AbstractEngine,
         reusable?: boolean,
-        textureType: number = Constants.TEXTURETYPE_UNSIGNED_INT
+        textureType: number = Constants.TEXTURETYPE_UNSIGNED_BYTE
     ) {
-        super(
-            name,
-            "subSurfaceScattering",
-            ["texelSize", "viewportSize", "metersPerUnit"],
-            ["diffusionS", "diffusionD", "filterRadii", "irradianceSampler", "depthSampler", "albedoSampler"],
-            options,
+        const localOptions = {
+            uniforms: ["texelSize", "viewportSize", "metersPerUnit"],
+            samplers: ["diffusionS", "diffusionD", "filterRadii", "irradianceSampler", "depthSampler", "albedoSampler"],
+            size: typeof options === "number" ? options : undefined,
             camera,
-            samplingMode || Texture.BILINEAR_SAMPLINGMODE,
+            samplingMode,
             engine,
             reusable,
-            null,
             textureType,
-            "postprocess",
-            undefined,
-            true
-        );
+            ...(options as PostProcessOptions),
+            blockCompilation: true,
+        };
+
+        super(name, "subSurfaceScattering", { ...localOptions, samplingMode: samplingMode || Texture.BILINEAR_SAMPLINGMODE });
         this._scene = scene;
 
         this.updateEffect();

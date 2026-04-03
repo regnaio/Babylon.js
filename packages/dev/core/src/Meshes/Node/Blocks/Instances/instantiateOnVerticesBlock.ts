@@ -1,15 +1,15 @@
 import { NodeGeometryBlock } from "../../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryBuildState } from "../../nodeGeometryBuildState";
-import type { INodeGeometryExecutionContext } from "../../Interfaces/nodeGeometryExecutionContext";
-import type { VertexData } from "../../../mesh.vertexData";
+import { type NodeGeometryBuildState } from "../../nodeGeometryBuildState";
+import { type INodeGeometryExecutionContext } from "../../Interfaces/nodeGeometryExecutionContext";
+import { type VertexData } from "../../../mesh.vertexData";
 import { Vector3 } from "../../../../Maths/math.vector";
 import { PropertyTypeForEdition, editableInPropertyPage } from "../../../../Decorators/nodeDecorator";
 import { Epsilon } from "../../../../Maths/math.constants";
-import type { Nullable } from "../../../../types";
-import type { INodeGeometryInstancingContext } from "../../Interfaces/nodeGeometryInstancingContext";
+import { type Nullable } from "../../../../types";
+import { type INodeGeometryInstancingContext } from "../../Interfaces/nodeGeometryInstancingContext";
 
 /**
  * Block used to instance geometry on every vertex of a geometry
@@ -44,6 +44,7 @@ export class InstantiateOnVerticesBlock extends NodeGeometryBlock implements INo
         this.registerInput("instance", NodeGeometryBlockConnectionPointTypes.Geometry, true);
         this.registerInput("density", NodeGeometryBlockConnectionPointTypes.Float, true, 1, 0, 1);
         this.registerInput("matrix", NodeGeometryBlockConnectionPointTypes.Matrix, true);
+        this.registerInput("offset", NodeGeometryBlockConnectionPointTypes.Vector3, true, Vector3.Zero());
         this.registerInput("rotation", NodeGeometryBlockConnectionPointTypes.Vector3, true, Vector3.Zero());
         this.registerInput("scaling", NodeGeometryBlockConnectionPointTypes.Vector3, true, Vector3.One());
 
@@ -120,17 +121,24 @@ export class InstantiateOnVerticesBlock extends NodeGeometryBlock implements INo
     }
 
     /**
+     * Gets the offset input component
+     */
+    public get offset(): NodeGeometryConnectionPoint {
+        return this._inputs[4];
+    }
+
+    /**
      * Gets the rotation input component
      */
     public get rotation(): NodeGeometryConnectionPoint {
-        return this._inputs[4];
+        return this._inputs[5];
     }
 
     /**
      * Gets the scaling input component
      */
     public get scaling(): NodeGeometryConnectionPoint {
-        return this._inputs[5];
+        return this._inputs[6];
     }
 
     /**
@@ -216,8 +224,12 @@ export class InstantiateOnVerticesBlock extends NodeGeometryBlock implements INo
                     const transform = this.matrix.getConnectedValue(state);
                     state._instantiateWithPositionAndMatrix(clone, currentPosition, transform, additionalVertexData);
                 } else {
+                    const offset = state.adaptInput(this.offset, NodeGeometryBlockConnectionPointTypes.Vector3, Vector3.ZeroReadOnly);
                     const scaling = state.adaptInput(this.scaling, NodeGeometryBlockConnectionPointTypes.Vector3, Vector3.OneReadOnly);
                     const rotation = this.rotation.getConnectedValue(state) || Vector3.ZeroReadOnly;
+
+                    currentPosition.addInPlace(offset);
+
                     state._instantiate(clone, currentPosition, rotation, scaling, additionalVertexData);
                 }
                 this._currentLoopIndex++;
@@ -272,6 +284,7 @@ export class InstantiateOnVerticesBlock extends NodeGeometryBlock implements INo
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

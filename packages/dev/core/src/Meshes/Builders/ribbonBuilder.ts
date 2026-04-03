@@ -1,8 +1,7 @@
-import type { Nullable, FloatArray } from "../../types";
-import type { Scene } from "../../scene";
-import type { Vector3, Vector2, Vector4 } from "../../Maths/math.vector";
-import { TmpVectors } from "../../Maths/math.vector";
-import type { Color4 } from "../../Maths/math.color";
+import { type Nullable, type FloatArray } from "../../types";
+import { type Scene } from "../../scene";
+import { type Vector3, type Vector2, type Vector4, TmpVectors } from "../../Maths/math.vector";
+import { type Color4 } from "../../Maths/math.color";
 import { Mesh, _CreationDataStorage } from "../mesh";
 import { VertexBuffer } from "../../Buffers/buffer";
 import { VertexData } from "../mesh.vertexData";
@@ -119,8 +118,8 @@ export function CreateRibbonVertexData(options: {
     // vertical distances (v)
     let path1: Vector3[];
     let path2: Vector3[];
-    let vertex1: Nullable<Vector3> = null;
-    let vertex2: Nullable<Vector3> = null;
+    let vertex1: Nullable<Vector3>;
+    let vertex2: Nullable<Vector3>;
     for (i = 0; i < minlg + closePathCorr; i++) {
         vTotalDistance[i] = 0;
         vs[i] = [0];
@@ -195,8 +194,8 @@ export function CreateRibbonVertexData(options: {
 
     if (closePath) {
         // update both the first and last vertex normals to their average value
-        let indexFirst: number = 0;
-        let indexLast: number = 0;
+        let indexFirst: number;
+        let indexLast: number;
         for (p = 0; p < pathArray.length; p++) {
             indexFirst = idx[p] * 3;
             if (p + 1 < pathArray.length) {
@@ -328,7 +327,7 @@ export function CreateRibbon(
         const maximum = TmpVectors.Vector3[1].setAll(-Number.MAX_VALUE);
         const positionFunction = (positions: FloatArray) => {
             let minlg = pathArray[0].length;
-            const mesh = <Mesh>instance;
+            const mesh = instance;
             let i = 0;
             const ns = mesh._originalBuilderSideOrientation === Mesh.DOUBLESIDE ? 2 : 1;
             for (let si = 1; si <= ns; ++si) {
@@ -389,12 +388,12 @@ export function CreateRibbon(
             VertexData.ComputeNormals(positions, indices, normals, params);
 
             if (instance._creationDataStorage && instance._creationDataStorage.closePath) {
-                let indexFirst: number = 0;
-                let indexLast: number = 0;
+                let indexFirst: number;
+                let indexLast: number;
                 for (let p = 0; p < pathArray.length; p++) {
-                    indexFirst = instance._creationDataStorage!.idx[p] * 3;
+                    indexFirst = instance._creationDataStorage.idx[p] * 3;
                     if (p + 1 < pathArray.length) {
-                        indexLast = (instance._creationDataStorage!.idx[p + 1] - 1) * 3;
+                        indexLast = (instance._creationDataStorage.idx[p + 1] - 1) * 3;
                     } else {
                         indexLast = normals.length - 3;
                     }

@@ -1,4 +1,8 @@
-﻿#if defined(BUMP) || !defined(NORMAL) || defined(FORCENORMALFORWARD) || defined(SPECULARAA) || defined(CLEARCOAT_BUMP) || defined(ANISOTROPIC)
+﻿#define PBR_FRAGMENT_SHADER
+
+#define CUSTOM_FRAGMENT_EXTENSION
+
+#if defined(BUMP) || !defined(NORMAL) || defined(FORCENORMALFORWARD) || defined(SPECULARAA) || defined(CLEARCOAT_BUMP) || defined(ANISOTROPIC)
 #extension GL_OES_standard_derivatives : enable
 #endif
 
@@ -12,7 +16,9 @@
 #extension GL_EXT_frag_depth : enable
 #endif
 
+#if SCENE_MRT_COUNT > 0
 #include<prePassDeclaration>[SCENE_MRT_COUNT]
+#endif
 
 precision highp float;
 #include<oitDeclaration>
@@ -67,6 +73,8 @@ precision highp float;
 #include<pbrBlockIridescence>
 #include<pbrBlockSubSurface>
 
+#include<pbrClusteredLightingFunctions>
+
 // _____________________________ MAIN FUNCTION ____________________________
 void main(void) {
 
@@ -88,6 +96,10 @@ void main(void) {
     vec4 albedoTexture = texture2D(albedoSampler, vAlbedoUV + uvOffset);
 #endif
 
+#ifdef BASE_WEIGHT
+    vec4 baseWeightTexture = texture2D(baseWeightSampler, vBaseWeightUV + uvOffset);
+#endif
+
 #ifdef OPACITY
     vec4 opacityMap = texture2D(opacitySampler, vOpacityUV + uvOffset);
 #endif
@@ -101,6 +113,11 @@ void main(void) {
     #ifdef ALBEDO
         , albedoTexture
         , vAlbedoInfos
+    #endif
+        , baseWeight
+    #ifdef BASE_WEIGHT
+        , baseWeightTexture
+        , vBaseWeightInfos
     #endif
     #ifdef OPACITY
         , opacityMap
@@ -136,14 +153,14 @@ void main(void) {
     #ifdef AMBIENT
         ambientOcclusionColorMap,
         vAmbientInfos
-    #endif        
+    #endif
     );
 
     #include<pbrBlockLightmapInit>
 
 #ifdef UNLIT
     vec3 diffuseBase = vec3(1., 1., 1.);
-#else
+#else // !UNLIT
 
     // _____________________________ Reflectivity _______________________________
     vec3 baseColor = surfaceAlbedo;
@@ -184,8 +201,12 @@ void main(void) {
         #ifndef METALLIC_REFLECTANCE_USE_ALPHA_ONLY
             metallicReflectanceFactors.rgb *= metallicReflectanceFactorsMap.rgb;
         #endif
-        metallicReflectanceFactors *= metallicReflectanceFactorsMap.a;
+        metallicReflectanceFactors.a *= metallicReflectanceFactorsMap.a;
     #endif
+#endif
+
+#ifdef BASE_DIFFUSE_ROUGHNESS
+    float baseDiffuseRoughnessTexture = texture2D(baseDiffuseRoughnessSampler, vBaseDiffuseRoughnessUV + uvOffset).r;
 #endif
 
     reflectivityOut = reflectivityBlock(
@@ -193,6 +214,11 @@ void main(void) {
     #ifdef METALLICWORKFLOW
         , surfaceAlbedo
         , metallicReflectanceFactors
+    #endif
+        , baseDiffuseRoughness
+    #ifdef BASE_DIFFUSE_ROUGHNESS
+        , baseDiffuseRoughnessTexture
+        , vBaseDiffuseRoughnessInfos
     #endif
     #ifdef REFLECTIVITY
         , vReflectivityInfos
@@ -212,6 +238,7 @@ void main(void) {
 
     float microSurface = reflectivityOut.microSurface;
     float roughness = reflectivityOut.roughness;
+    float diffuseRoughness = reflectivityOut.diffuseRoughness;
 
     #ifdef METALLICWORKFLOW
         surfaceAlbedo = reflectivityOut.surfaceAlbedo;
@@ -255,7 +282,7 @@ void main(void) {
         #endif
             TBN,
             normalW,
-            viewDirectionW            
+            viewDirectionW
         );
     #endif
 
@@ -284,13 +311,14 @@ void main(void) {
             #if defined(NORMAL) && defined(USESPHERICALINVERTEX)
                 , vEnvironmentIrradiance
             #endif
-            #ifdef USESPHERICALFROMREFLECTIONMAP
-                #if !defined(NORMAL) || !defined(USESPHERICALINVERTEX)
-                    , reflectionMatrix
-                #endif
+            #if (defined(USESPHERICALFROMREFLECTIONMAP) && (!defined(NORMAL) || !defined(USESPHERICALINVERTEX))) || (defined(USEIRRADIANCEMAP) && defined(REFLECTIONMAP_3D))
+                , reflectionMatrix
             #endif
             #ifdef USEIRRADIANCEMAP
                 , irradianceSampler
+                #ifdef USE_IRRADIANCE_DOMINANT_DIRECTION
+                    , vReflectionDominantDirection
+                #endif
             #endif
             #ifndef LODBASEDMICROSFURACE
                 , reflectionSamplerLow
@@ -298,7 +326,13 @@ void main(void) {
             #endif
             #ifdef REALTIME_FILTERING
                 , vReflectionFilteringInfo
+                #ifdef IBL_CDF_FILTERING
+                    , icdfSampler
+                #endif
             #endif
+                , viewDirectionW
+                , diffuseRoughness
+                , baseColor
             );
         #else
             #define CUSTOM_REFLECTION
@@ -332,7 +366,7 @@ void main(void) {
             , sheenMapData
             , vSheenInfos.y
         #endif
-            , reflectance
+            , reflectanceF0
         #ifdef SHEEN_LINKWITHALBEDO
             , baseColor
             , surfaceAlbedo
@@ -401,6 +435,7 @@ void main(void) {
             #endif
             #ifdef CLEARCOAT
                 , NdotVUnclamped
+                , vClearCoatParams
                 #ifdef CLEARCOAT_TEXTURE
                     , clearCoatMapData
                 #endif
@@ -477,11 +512,6 @@ void main(void) {
                 , vReflectionFilteringInfo
             #endif
         #endif
-        #if defined(ENVIRONMENTBRDF) && !defined(REFLECTIONMAP_SKYBOX)
-            #ifdef RADIANCEOCCLUSION
-                , ambientMonochrome
-            #endif
-        #endif
         #if defined(CLEARCOAT_BUMP) || defined(TWOSIDEDLIGHTING)
             , (gl_FrontFacing ? 1. : -1.)
         #endif
@@ -511,6 +541,13 @@ void main(void) {
 
         #ifdef SS_TRANSLUCENCYCOLOR_TEXTURE
             vec4 translucencyColorMap = texture2D(translucencyColorSampler, vTranslucencyColorUV + uvOffset);
+            #ifdef SS_TRANSLUCENCYCOLOR_TEXTURE_GAMMA
+                translucencyColorMap = toLinearSpace(translucencyColorMap);
+            #endif
+        #endif
+
+        #ifdef LEGACY_SPECULAR_ENERGY_CONSERVATION
+            vec3 vSpecularEnvironmentReflectance = vec3(max(colorSpecularEnvironmentReflectance.r, max(colorSpecularEnvironmentReflectance.g, colorSpecularEnvironmentReflectance.b)));
         #endif
 
         subSurfaceOut = subSurfaceBlock(
@@ -518,7 +555,11 @@ void main(void) {
             , vThicknessParam
             , vTintColor
             , normalW
-            , specularEnvironmentReflectance
+        #ifdef LEGACY_SPECULAR_ENERGY_CONSERVATION
+            , vSpecularEnvironmentReflectance
+        #else
+            , baseSpecularEnvironmentReflectance
+        #endif
         #ifdef SS_THICKNESSANDMASK_TEXTURE
             , thicknessMap
         #endif
@@ -538,6 +579,9 @@ void main(void) {
                     #if defined(REALTIME_FILTERING)
                         , reflectionSampler
                         , vReflectionFilteringInfo
+                        #ifdef IBL_CDF_FILTERING
+                            , icdfSampler
+                        #endif
                     #endif
                 #endif
                 #ifdef USEIRRADIANCEMAP
@@ -601,7 +645,7 @@ void main(void) {
             #endif
         #endif
     #else
-        subSurfaceOut.specularEnvironmentReflectance = specularEnvironmentReflectance;
+        subSurfaceOut.specularEnvironmentReflectance = colorSpecularEnvironmentReflectance;
     #endif
 
     // _____________________________ Direct Lighting Info __________________________________
@@ -611,7 +655,7 @@ void main(void) {
 
     // _____________________________ Compute Final Lit Components ________________________
     #include<pbrBlockFinalLitComponents>
-#endif // UNLIT
+#endif // !UNLIT
 
     #include<pbrBlockFinalUnlitComponents>
 
@@ -626,98 +670,7 @@ void main(void) {
     #define CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR
 
 #ifdef PREPASS
-    float writeGeometryInfo = finalColor.a > ALPHATESTVALUE ? 1.0 : 0.0;
-
-    #ifdef PREPASS_POSITION
-    gl_FragData[PREPASS_POSITION_INDEX] = vec4(vPositionW, writeGeometryInfo);
-    #endif
-
-    #ifdef PREPASS_LOCAL_POSITION
-    gl_FragData[PREPASS_LOCAL_POSITION_INDEX] = vec4(vPosition * 0.5 + 0.5, writeGeometryInfo);
-    #endif
-
-#if defined(PREPASS_VELOCITY)
-    vec2 a = (vCurrentPosition.xy / vCurrentPosition.w) * 0.5 + 0.5;
-    vec2 b = (vPreviousPosition.xy / vPreviousPosition.w) * 0.5 + 0.5;
-
-    vec2 velocity = abs(a - b);
-    velocity = vec2(pow(velocity.x, 1.0 / 3.0), pow(velocity.y, 1.0 / 3.0)) *
-                   sign(a - b) * 0.5 +
-               0.5;
-    gl_FragData[PREPASS_VELOCITY_INDEX] =
-        vec4(velocity, 0.0, writeGeometryInfo);
-#elif defined(PREPASS_VELOCITY_LINEAR)
-    vec2 velocity = vec2(0.5) * ((vPreviousPosition.xy / vPreviousPosition.w) -
-                                 (vCurrentPosition.xy / vCurrentPosition.w));
-    gl_FragData[PREPASS_VELOCITY_LINEAR_INDEX] =
-        vec4(velocity, 0.0, writeGeometryInfo);
-#endif
-
-#ifdef PREPASS_ALBEDO_SQRT
-    vec3 sqAlbedo = sqrt(surfaceAlbedo); // for pre and post scatter
-#endif
-
-#ifdef PREPASS_IRRADIANCE
-    vec3 irradiance = finalDiffuse;
-#ifndef UNLIT
-#ifdef REFLECTION
-    irradiance += finalIrradiance;
-#endif
-#endif
-
-#ifdef SS_SCATTERING
-    gl_FragData[0] = vec4(finalColor.rgb - irradiance,
-                          finalColor.a); // Split irradiance from final color
-    irradiance /= sqAlbedo;
-#else
-    gl_FragData[0] = finalColor; // No split lighting
-    float scatteringDiffusionProfile = 255.;
-#endif
-
-    gl_FragData[PREPASS_IRRADIANCE_INDEX] =
-        vec4(clamp(irradiance, vec3(0.), vec3(1.)),
-             writeGeometryInfo * scatteringDiffusionProfile /
-                 255.); // Irradiance + SS diffusion profile
-#else
-    gl_FragData[0] = vec4(finalColor.rgb, finalColor.a);
-#endif
-
-#ifdef PREPASS_DEPTH
-    gl_FragData[PREPASS_DEPTH_INDEX] =
-        vec4(vViewPos.z, 0.0, 0.0, writeGeometryInfo); // Linear depth
-#endif
-
-#ifdef PREPASS_NDC_DEPTH
-        gl_FragData[PREPASS_NDC_DEPTH_INDEX] = vec4(
-            gl_FragCoord.z, 0.0, 0.0, writeGeometryInfo); // Clip-space depth
-#endif
-
-#ifdef PREPASS_NORMAL
-#ifdef PREPASS_NORMAL_WORLDSPACE
-        gl_FragData[PREPASS_NORMAL_INDEX] =
-            vec4(normalW, writeGeometryInfo); // Normal
-#else
-        gl_FragData[PREPASS_NORMAL_INDEX] =
-            vec4(normalize((view * vec4(normalW, 0.0)).rgb),
-                 writeGeometryInfo); // Normal
-#endif
-#endif
-
-#ifdef PREPASS_WORLD_NORMAL
-        gl_FragData[PREPASS_WORLD_NORMAL_INDEX] = vec4(normalW * 0.5 + 0.5, writeGeometryInfo); // Normal
-#endif
-
-#ifdef PREPASS_ALBEDO_SQRT
-        gl_FragData[PREPASS_ALBEDO_SQRT_INDEX] = vec4(sqAlbedo, writeGeometryInfo); // albedo, for pre and post scatter
-#endif
-
-#ifdef PREPASS_REFLECTIVITY
-#ifndef UNLIT
-            gl_FragData[PREPASS_REFLECTIVITY_INDEX] = vec4(specularEnvironmentR0, microSurface) * writeGeometryInfo;
-#else
-            gl_FragData[PREPASS_REFLECTIVITY_INDEX] = vec4( 0.0, 0.0, 0.0, 1.0 ) * writeGeometryInfo;
-#endif
-#endif
+    #include<pbrBlockPrePass>
 #endif
 
 #if !defined(PREPASS) || defined(WEBGL2)

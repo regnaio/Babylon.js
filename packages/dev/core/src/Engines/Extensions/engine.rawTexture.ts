@@ -1,13 +1,14 @@
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { InternalTexture, InternalTextureSource } from "../../Materials/Textures/internalTexture";
 import { Logger } from "../../Misc/logger";
-import type { Scene } from "../../scene";
+import { type Scene } from "../../scene";
 import { Constants } from "../constants";
 import { ThinEngine } from "../thinEngine";
-import type { IWebRequest } from "../../Misc/interfaces/iWebRequest";
+import { type IWebRequest } from "../../Misc/interfaces/iWebRequest";
 import { IsExponentOfTwo } from "../../Misc/tools.functions";
 
 declare module "../abstractEngine" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractEngine {
         /**
          * Update a raw texture
@@ -25,7 +26,7 @@ declare module "../abstractEngine" {
          * @param format defines the format of the data
          * @param invertY defines if data must be stored with Y axis inverted
          * @param compression defines the compression used (null by default)
-         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_INT by default)
+         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_BYTE by default)
          * @param useSRGBBuffer defines if the texture must be loaded in a sRGB GPU buffer (if supported by the GPU).
          */
         updateRawTexture(
@@ -42,7 +43,7 @@ declare module "../abstractEngine" {
          * @param texture defines the texture to update
          * @param data defines the data to store
          * @param format defines the data format
-         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_INT by default)
+         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_BYTE by default)
          * @param invertY defines if data must be stored with Y axis inverted
          */
         updateRawCubeTexture(texture: InternalTexture, data: ArrayBufferView[], format: number, type: number, invertY: boolean): void;
@@ -52,7 +53,7 @@ declare module "../abstractEngine" {
          * @param texture defines the texture to update
          * @param data defines the data to store
          * @param format defines the data format
-         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_INT by default)
+         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_BYTE by default)
          * @param invertY defines if data must be stored with Y axis inverted
          * @param compression defines the compression used (null by default)
          */
@@ -63,7 +64,7 @@ declare module "../abstractEngine" {
          * @param texture defines the texture to update
          * @param data defines the data to store
          * @param format defines the data format
-         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_INT by default)
+         * @param type defines the type fo the data (Engine.TEXTURETYPE_UNSIGNED_BYTE by default)
          * @param invertY defines if data must be stored with Y axis inverted
          * @param compression defines the compression used (null by default)
          * @param level defines which level of the texture to update
@@ -76,7 +77,7 @@ declare module "../abstractEngine" {
          * @param scene defines the current scene
          * @param size defines the size of the textures
          * @param format defines the format of the data
-         * @param type defines the type fo the data (like Engine.TEXTURETYPE_UNSIGNED_INT)
+         * @param type defines the type fo the data (like Engine.TEXTURETYPE_UNSIGNED_BYTE)
          * @param noMipmap defines if the engine should avoid generating the mip levels
          * @param callback defines a callback used to extract texture data from loaded data
          * @param mipmapGenerator defines to provide an optional tool to generate mip levels
@@ -91,7 +92,7 @@ declare module "../abstractEngine" {
             format: number,
             type: number,
             noMipmap: boolean,
-            callback: (ArrayBuffer: ArrayBuffer) => Nullable<ArrayBufferView[]>,
+            callback: (ArrayBuffer: ArrayBuffer) => Nullable<ArrayBufferView[] | Promise<ArrayBufferView[]>>,
             mipmapGenerator: Nullable<(faces: ArrayBufferView[]) => ArrayBufferView[][]>,
             onLoad: Nullable<() => void>,
             onError: Nullable<(message?: string, exception?: any) => void>
@@ -103,7 +104,7 @@ declare module "../abstractEngine" {
          * @param scene defines the current scene
          * @param size defines the size of the textures
          * @param format defines the format of the data
-         * @param type defines the type fo the data (like Engine.TEXTURETYPE_UNSIGNED_INT)
+         * @param type defines the type fo the data (like Engine.TEXTURETYPE_UNSIGNED_BYTE)
          * @param noMipmap defines if the engine should avoid generating the mip levels
          * @param callback defines a callback used to extract texture data from loaded data
          * @param mipmapGenerator defines to provide an optional tool to generate mip levels
@@ -120,7 +121,7 @@ declare module "../abstractEngine" {
             format: number,
             type: number,
             noMipmap: boolean,
-            callback: (ArrayBuffer: ArrayBuffer) => Nullable<ArrayBufferView[]>,
+            callback: (ArrayBuffer: ArrayBuffer) => Nullable<ArrayBufferView[] | Promise<ArrayBufferView[]>>,
             mipmapGenerator: Nullable<(faces: ArrayBufferView[]) => ArrayBufferView[][]>,
             onLoad: Nullable<() => void>,
             onError: Nullable<(message?: string, exception?: any) => void>,
@@ -144,7 +145,7 @@ declare module "../abstractEngine" {
          * @param format defines the data format
          * @param invertY defines if data must be stored with Y axis inverted
          * @param compression defines the used compression (can be null)
-         * @param textureType defines the texture Type (Engine.TEXTURETYPE_UNSIGNED_INT, Engine.TEXTURETYPE_FLOAT...)
+         * @param textureType defines the texture Type (Engine.TEXTURETYPE_UNSIGNED_BYTE, Engine.TEXTURETYPE_FLOAT...)
          */
         updateRawTexture3D(texture: InternalTexture, data: Nullable<ArrayBufferView>, format: number, invertY: boolean, compression: Nullable<string>, textureType: number): void;
 
@@ -164,7 +165,7 @@ declare module "../abstractEngine" {
          * @param format defines the data format
          * @param invertY defines if data must be stored with Y axis inverted
          * @param compression defines the used compression (can be null)
-         * @param textureType defines the texture Type (Engine.TEXTURETYPE_UNSIGNED_INT, Engine.TEXTURETYPE_FLOAT...)
+         * @param textureType defines the texture Type (Engine.TEXTURETYPE_UNSIGNED_BYTE, Engine.TEXTURETYPE_FLOAT...)
          */
         updateRawTexture2DArray(
             texture: InternalTexture,
@@ -183,7 +184,7 @@ ThinEngine.prototype.updateRawTexture = function (
     format: number,
     invertY: boolean,
     compression: Nullable<string> = null,
-    type: number = Constants.TEXTURETYPE_UNSIGNED_INT,
+    type: number = Constants.TEXTURETYPE_UNSIGNED_BYTE,
     useSRGBBuffer: boolean = false
 ): void {
     if (!texture) {
@@ -233,7 +234,7 @@ ThinEngine.prototype.createRawTexture = function (
     invertY: boolean,
     samplingMode: number,
     compression: Nullable<string> = null,
-    type: number = Constants.TEXTURETYPE_UNSIGNED_INT,
+    type: number = Constants.TEXTURETYPE_UNSIGNED_BYTE,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     creationFlags = 0,
     useSRGBBuffer = false
@@ -431,7 +432,7 @@ ThinEngine.prototype.updateRawCubeTexture = function (
             );
         } else {
             if (needConversion) {
-                faceData = _convertRGBtoRGBATextureData(faceData, texture.width, texture.height, type);
+                faceData = ConvertRGBtoRGBATextureData(faceData, texture.width, texture.height, type);
             }
             gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex, level, internalSizedFomat, texture.width, texture.height, 0, internalFormat, textureType, faceData);
         }
@@ -454,7 +455,7 @@ ThinEngine.prototype.createRawCubeTextureFromUrl = function (
     format: number,
     type: number,
     noMipmap: boolean,
-    callback: (ArrayBuffer: ArrayBuffer) => Nullable<ArrayBufferView[]>,
+    callback: (ArrayBuffer: ArrayBuffer) => Nullable<ArrayBufferView[] | Promise<ArrayBufferView[]>>,
     mipmapGenerator: Nullable<(faces: ArrayBufferView[]) => ArrayBufferView[][]>,
     onLoad: Nullable<() => void> = null,
     onError: Nullable<(message?: string, exception?: any) => void> = null,
@@ -470,18 +471,24 @@ ThinEngine.prototype.createRawCubeTextureFromUrl = function (
 
     const onerror = (request?: IWebRequest, exception?: any) => {
         scene?.removePendingData(texture);
-        if (onError && request) {
-            onError(request.status + " " + request.statusText, exception);
+        if (onError) {
+            onError(request ? request.status + " " + request.statusText : "Failed to parse texture data", exception);
         }
     };
 
-    const internalCallback = (data: any) => {
-        const width = texture.width;
-        const faceDataArrays = callback(data);
-
-        if (!faceDataArrays) {
+    const internalCallbackAsync = async (data: any) => {
+        // If the texture has been disposed
+        if (!texture._hardwareTexture) {
             return;
         }
+
+        const faceDataArraysResult = callback(data);
+        if (!faceDataArraysResult) {
+            return;
+        }
+
+        const faceDataArrays: any = faceDataArraysResult instanceof Promise ? await faceDataArraysResult : faceDataArraysResult;
+        const width = texture.width;
 
         if (mipmapGenerator) {
             const textureType = this._getWebGLTextureType(type);
@@ -504,7 +511,7 @@ ThinEngine.prototype.createRawCubeTextureFromUrl = function (
                 for (let faceIndex = 0; faceIndex < 6; faceIndex++) {
                     let mipFaceData = mipData[level][faceIndex];
                     if (needConversion) {
-                        mipFaceData = _convertRGBtoRGBATextureData(mipFaceData, mipSize, mipSize, type);
+                        mipFaceData = ConvertRGBtoRGBATextureData(mipFaceData, mipSize, mipSize, type);
                     }
                     gl.texImage2D(faceIndex, level, internalSizedFomat, mipSize, mipSize, 0, internalFormat, textureType, mipFaceData);
                 }
@@ -530,7 +537,10 @@ ThinEngine.prototype.createRawCubeTextureFromUrl = function (
     this._loadFile(
         url,
         (data) => {
-            internalCallback(data);
+            // eslint-disable-next-line github/no-then
+            internalCallbackAsync(data).catch((err) => {
+                onerror(undefined, err);
+            });
         },
         undefined,
         scene?.offlineProvider,
@@ -544,8 +554,7 @@ ThinEngine.prototype.createRawCubeTextureFromUrl = function (
 /**
  * @internal
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
-function _convertRGBtoRGBATextureData(rgbData: any, width: number, height: number, textureType: number): ArrayBufferView {
+function ConvertRGBtoRGBATextureData(rgbData: any, width: number, height: number, textureType: number): ArrayBufferView {
     // Create new RGBA data container.
     let rgbaData: any;
     let val1 = 1;
@@ -585,7 +594,7 @@ function _convertRGBtoRGBATextureData(rgbData: any, width: number, height: numbe
  * @internal
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
-function _makeCreateRawTextureFunction(is3D: boolean) {
+function MakeCreateRawTextureFunction(is3D: boolean) {
     return function (
         this: ThinEngine,
         data: Nullable<ArrayBufferView>,
@@ -597,7 +606,7 @@ function _makeCreateRawTextureFunction(is3D: boolean) {
         invertY: boolean,
         samplingMode: number,
         compression: Nullable<string> = null,
-        textureType: number = Constants.TEXTURETYPE_UNSIGNED_INT
+        textureType: number = Constants.TEXTURETYPE_UNSIGNED_BYTE
     ): InternalTexture {
         const target = is3D ? this._gl.TEXTURE_3D : this._gl.TEXTURE_2D_ARRAY;
         const source = is3D ? InternalTextureSource.Raw3D : InternalTextureSource.Raw2DArray;
@@ -647,16 +656,15 @@ function _makeCreateRawTextureFunction(is3D: boolean) {
     };
 }
 
-ThinEngine.prototype.createRawTexture2DArray = _makeCreateRawTextureFunction(false);
-ThinEngine.prototype.createRawTexture3D = _makeCreateRawTextureFunction(true);
+ThinEngine.prototype.createRawTexture2DArray = MakeCreateRawTextureFunction(false);
+ThinEngine.prototype.createRawTexture3D = MakeCreateRawTextureFunction(true);
 
 /**
  * Create a function for updateRawTexture3D/updateRawTexture2DArray
  * @param is3D true for TEXTURE_3D and false for TEXTURE_2D_ARRAY
  * @internal
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
-function _makeUpdateRawTextureFunction(is3D: boolean) {
+function MakeUpdateRawTextureFunction(is3D: boolean) {
     return function (
         this: ThinEngine,
         texture: InternalTexture,
@@ -664,7 +672,7 @@ function _makeUpdateRawTextureFunction(is3D: boolean) {
         format: number,
         invertY: boolean,
         compression: Nullable<string> = null,
-        textureType: number = Constants.TEXTURETYPE_UNSIGNED_INT
+        textureType: number = Constants.TEXTURETYPE_UNSIGNED_BYTE
     ): void {
         const target = is3D ? this._gl.TEXTURE_3D : this._gl.TEXTURE_2D_ARRAY;
         const internalType = this._getWebGLTextureType(textureType);
@@ -700,5 +708,5 @@ function _makeUpdateRawTextureFunction(is3D: boolean) {
     };
 }
 
-ThinEngine.prototype.updateRawTexture2DArray = _makeUpdateRawTextureFunction(false);
-ThinEngine.prototype.updateRawTexture3D = _makeUpdateRawTextureFunction(true);
+ThinEngine.prototype.updateRawTexture2DArray = MakeUpdateRawTextureFunction(false);
+ThinEngine.prototype.updateRawTexture3D = MakeUpdateRawTextureFunction(true);

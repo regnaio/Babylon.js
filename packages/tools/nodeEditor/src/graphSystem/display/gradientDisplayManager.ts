@@ -1,8 +1,8 @@
-import type { NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
-import type { GradientBlock } from "core/Materials/Node/Blocks/gradientBlock";
-import type { IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
-import type { INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
-import styles from "./gradientDisplayManager.modules.scss";
+import { type NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
+import { type GradientBlock } from "core/Materials/Node/Blocks/gradientBlock";
+import { type IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
+import { type INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
+import * as styles from "./gradientDisplayManager.module.scss";
 
 export class GradientDisplayManager implements IDisplayManager {
     public getHeaderClass() {

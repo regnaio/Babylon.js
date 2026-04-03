@@ -1,11 +1,11 @@
-import type { Nullable } from "../../types";
-import type { VertexData } from "../mesh.vertexData";
-import type { NodeGeometryConnectionPoint } from "./nodeGeometryBlockConnectionPoint";
+import { type Nullable } from "../../types";
+import { type VertexData } from "../mesh.vertexData";
+import { type NodeGeometryConnectionPoint } from "./nodeGeometryBlockConnectionPoint";
 import { NodeGeometryContextualSources } from "./Enums/nodeGeometryContextualSources";
 import { Matrix, Vector2, Vector3, Vector4 } from "../../Maths/math.vector";
-import type { INodeGeometryExecutionContext } from "./Interfaces/nodeGeometryExecutionContext";
+import { type INodeGeometryExecutionContext } from "./Interfaces/nodeGeometryExecutionContext";
 import { NodeGeometryBlockConnectionPointTypes } from "./Enums/nodeGeometryConnectionPointTypes";
-import type { INodeGeometryInstancingContext } from "./Interfaces/nodeGeometryInstancingContext";
+import { type INodeGeometryInstancingContext } from "./Interfaces/nodeGeometryInstancingContext";
 
 /**
  * Class used to store node based geometry build state
@@ -195,6 +195,18 @@ export class NodeGeometryBuildState {
                 }
                 return this.geometryContext.metadata.collectionId || 0;
             }
+            case NodeGeometryContextualSources.LatticeID: {
+                if (this.executionContext.getOverridePositionsContextualValue) {
+                    return this.executionContext.getOverridePositionsContextualValue();
+                }
+                return Vector3.Zero();
+            }
+            case NodeGeometryContextualSources.LatticeControl: {
+                if (this.executionContext.getOverrideNormalsContextualValue) {
+                    return this.executionContext.getOverrideNormalsContextualValue();
+                }
+                return Vector3.Zero();
+            }
         }
 
         return null;
@@ -272,7 +284,6 @@ export class NodeGeometryBuildState {
         }
 
         if (errorMessage) {
-            // eslint-disable-next-line no-throw-literal
             throw "Build of NodeGeometry failed:\n" + errorMessage;
         }
     }

@@ -1,8 +1,8 @@
-import type { WebXRSessionManager } from "core/XR/webXRSessionManager";
+import { type WebXRSessionManager } from "core/XR/webXRSessionManager";
 import { WebXRCompositionLayerRenderTargetTextureProvider, WebXRCompositionLayerWrapper } from "./WebXRCompositionLayer";
-import type { Nullable } from "core/types";
-import type { RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
-import type { Viewport } from "core/Maths/math.viewport";
+import { type Nullable } from "core/types";
+import { type RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
+import { type Viewport } from "core/Maths/math.viewport";
 
 /**
  * Wraps xr projection layers.
@@ -67,7 +67,10 @@ class WebXRProjectionLayerRenderTargetTextureProvider extends WebXRCompositionLa
     }
 }
 
-export const defaultXRProjectionLayerInit: XRProjectionLayerInit = {
+/**
+ * @internal
+ */
+export const DefaultXRProjectionLayerInit: XRProjectionLayerInit = {
     textureType: "texture",
     colorFormat: 0x1908 /* WebGLRenderingContext.RGBA */,
     depthFormat: 0x88f0 /* WebGLRenderingContext.DEPTH24_STENCIL8 */,

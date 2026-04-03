@@ -1,14 +1,14 @@
 import * as React from "react";
 
-import type { Observable } from "core/Misc/observable";
+import { type Observable } from "core/Misc/observable";
 
-import type { PropertyChangedEvent } from "../../../propertyChangedEvent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { GlobalState } from "../../../globalState";
-import type { Node } from "core/node";
+import { type PropertyChangedEvent } from "../../../propertyChangedEvent";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type GlobalState } from "../../../globalState";
+import { type Node } from "core/node";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
 import { OptionsLine } from "shared-ui-components/lines/optionsLineComponent";
-import type { TransformNode } from "core/Meshes/transformNode";
+import { type TransformNode } from "core/Meshes/transformNode";
 
 interface IParentPropertyGridComponentProps {
     globalState: GlobalState;
@@ -70,7 +70,7 @@ export class ParentPropertyGridComponent extends React.Component<IParentProperty
                                 node.parent = null;
                             }
                         } else {
-                            const newParent = sortedNodes[value as number];
+                            const newParent = sortedNodes[value];
                             if (nodeAsTransform.setParent) {
                                 nodeAsTransform.setParent(newParent);
                             } else {

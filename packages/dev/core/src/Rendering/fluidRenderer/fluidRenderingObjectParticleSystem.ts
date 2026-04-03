@@ -1,13 +1,14 @@
-import type { VertexBuffer } from "core/Buffers/buffer";
-import type { DataBuffer } from "core/Buffers/dataBuffer";
+import { type VertexBuffer } from "core/Buffers/buffer";
+import { type DataBuffer } from "core/Buffers/dataBuffer";
 import { Constants } from "core/Engines/constants";
-import type { Effect } from "core/Materials/effect";
-import type { Observer } from "core/Misc/observable";
-import type { IParticleSystem } from "core/Particles/IParticleSystem";
-import type { Scene } from "core/scene";
-import type { Nullable } from "core/types";
+import { type Effect } from "core/Materials/effect";
+import { type Observer } from "core/Misc/observable";
+import { type IParticleSystem } from "core/Particles/IParticleSystem";
+import { type Scene } from "core/scene";
+import { type Nullable } from "core/types";
 
 import { FluidRenderingObject } from "./fluidRenderingObject";
+import { type ShaderLanguage } from "core/Materials/shaderLanguage";
 
 /**
  * Defines a rendering object based on a particle system
@@ -79,9 +80,10 @@ export class FluidRenderingObjectParticleSystem extends FluidRenderingObject {
      * Creates a new instance of the class
      * @param scene The scene the particle system is part of
      * @param ps The particle system
+     * @param shaderLanguage The shader language to use
      */
-    constructor(scene: Scene, ps: IParticleSystem) {
-        super(scene);
+    constructor(scene: Scene, ps: IParticleSystem, shaderLanguage?: ShaderLanguage) {
+        super(scene, shaderLanguage);
 
         this._particleSystem = ps;
 
@@ -121,7 +123,7 @@ export class FluidRenderingObjectParticleSystem extends FluidRenderingObject {
     }
 
     /**
-     * Releases the ressources used by the class
+     * Releases the resources used by the class
      */
     public override dispose() {
         super.dispose();

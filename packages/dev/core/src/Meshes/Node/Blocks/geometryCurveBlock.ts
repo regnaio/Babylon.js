@@ -1,8 +1,8 @@
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
-import type { float } from "core/types";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type float } from "core/types";
 import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
 import { PropertyTypeForEdition, editableInPropertyPage } from "core/Decorators/nodeDecorator";
 
@@ -75,6 +75,7 @@ export class GeometryCurveBlock extends NodeGeometryBlock {
      */
     @editableInPropertyPage("Type", PropertyTypeForEdition.List, "ADVANCED", {
         notifiers: { rebuild: true },
+        embedded: true,
         options: [
             { label: "EaseInSine", value: GeometryCurveBlockTypes.EaseInSine },
             { label: "EaseOutSine", value: GeometryCurveBlockTypes.EaseOutSine },
@@ -291,6 +292,7 @@ export class GeometryCurveBlock extends NodeGeometryBlock {
         return this;
     }
 
+    /** @internal */
     public override serialize(): any {
         const serializationObject = super.serialize();
 
@@ -299,6 +301,7 @@ export class GeometryCurveBlock extends NodeGeometryBlock {
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

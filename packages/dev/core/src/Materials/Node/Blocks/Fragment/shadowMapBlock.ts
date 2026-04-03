@@ -1,8 +1,8 @@
 import { NodeMaterialBlock } from "../../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../../nodeMaterialBuildState";
+import { type NodeMaterialBuildState } from "../../nodeMaterialBuildState";
 import { NodeMaterialBlockTargets } from "../../Enums/nodeMaterialBlockTargets";
-import type { NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
@@ -47,6 +47,7 @@ export class ShadowMapBlock extends NodeMaterialBlock {
         state._excludeVariableName("clipPos");
         state._excludeVariableName("worldPos");
         state._excludeVariableName("zSM");
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._initShaderSourceAsync(state.shaderLanguage);
     }
 
@@ -133,6 +134,10 @@ export class ShadowMapBlock extends NodeMaterialBlock {
                     search: /vertexOutputs.position/g,
                     replace: "clipPos",
                 },
+                {
+                    search: /vertexOutputs\.vDepthMetricSM/g,
+                    replace: "vDepthMetricSM",
+                },
             ],
         });
 
@@ -141,6 +146,10 @@ export class ShadowMapBlock extends NodeMaterialBlock {
                 {
                     search: /return;/g,
                     replace: "",
+                },
+                {
+                    search: /fragmentInputs\.vDepthMetricSM/g,
+                    replace: "vDepthMetricSM",
                 },
             ],
         });

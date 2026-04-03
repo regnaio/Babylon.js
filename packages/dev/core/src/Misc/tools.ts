@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 import { Observable } from "./observable";
 import { GetDOMTextContent, IsNavigatorAvailable, IsWindowObjectExist } from "./domManagement";
 import { Logger } from "./logger";
@@ -7,10 +7,10 @@ import { DeepCopier } from "./deepCopier";
 import { PrecisionDate } from "./precisionDate";
 import { _WarnImport } from "./devTools";
 import { WebRequest } from "./webRequest";
-import type { IFileRequest } from "./fileRequest";
+import { type IFileRequest } from "./fileRequest";
 import { EngineStore } from "../Engines/engineStore";
-import type { ReadFileError } from "./fileTools";
 import {
+    type ReadFileError,
     FileToolsOptions,
     DecodeBase64UrlToBinary,
     IsBase64DataUrl,
@@ -19,16 +19,22 @@ import {
     ReadFile as FileToolsReadFile,
     SetCorsBehavior,
 } from "./fileTools";
-import type { IOfflineProvider } from "../Offline/IOfflineProvider";
+import { type IOfflineProvider } from "../Offline/IOfflineProvider";
 import { TimingTools } from "./timingTools";
 import { InstantiationTools } from "./instantiationTools";
 import { RandomGUID } from "./guid";
-import type { IScreenshotSize } from "./interfaces/screenshotSize";
-import type { Camera } from "../Cameras/camera";
-import type { IColor4Like } from "../Maths/math.like";
+import { type IScreenshotSize } from "./interfaces/screenshotSize";
+import { type Camera } from "../Cameras/camera";
+import { type IColor4Like } from "../Maths/math.like";
 import { IsExponentOfTwo, Mix } from "./tools.functions";
-import type { AbstractEngine } from "../Engines/abstractEngine";
+import { type AbstractEngine } from "../Engines/abstractEngine";
+import { type RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
+import { type INative, NativeTraceLevel } from "../Engines/Native/nativeInterfaces";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
+declare const _native: INative;
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
 declare function importScripts(...urls: string[]): void;
 
 /**
@@ -115,6 +121,21 @@ export class Tools {
     }
 
     /**
+     * The base URL to use to load assets. If empty the default base url is used.
+     */
+    public static AssetBaseUrl = "";
+
+    /**
+     * Sets both the script base URL and the assets base URL to the same value.
+     * Setter only!
+     */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    public static set CDNBaseUrl(value: string) {
+        Tools.ScriptBaseUrl = value;
+        Tools.AssetBaseUrl = value;
+    }
+
+    /**
      * Sets a preprocessing function to run on a source URL before importing it
      * Note that this function will execute AFTER the base URL is appended to the URL
      */
@@ -183,7 +204,7 @@ export class Tools {
         return InstantiationTools.RegisteredExternalClasses;
     }
 
-    public static set RegisteredExternalClasses(classes: { [key: string]: Object }) {
+    public static set RegisteredExternalClasses(classes: { [key: string]: object }) {
         InstantiationTools.RegisteredExternalClasses = classes;
     }
 
@@ -211,8 +232,8 @@ export class Tools {
      * @param color defines the output color
      */
     public static FetchToRef(u: number, v: number, width: number, height: number, pixels: Uint8Array, color: IColor4Like): void {
-        const wrappedU = (Math.abs(u) * width) % width | 0;
-        const wrappedV = (Math.abs(v) * height) % height | 0;
+        const wrappedU = ((Math.abs(u) * width) % width) | 0;
+        const wrappedV = ((Math.abs(v) * height) % height) | 0;
 
         const position = (wrappedU + wrappedV * width) * 4;
         color.r = pixels[position] / 255;
@@ -354,6 +375,7 @@ export class Tools {
             return null;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return Array.isArray(obj) ? obj : [obj];
     }
 
@@ -363,24 +385,7 @@ export class Tools {
      * @returns "pointer" if touch is enabled. Else returns "mouse"
      */
     public static GetPointerPrefix(engine: AbstractEngine): string {
-        let eventPrefix = "pointer";
-
-        // Check if pointer events are supported
-        if (IsWindowObjectExist() && !window.PointerEvent) {
-            eventPrefix = "mouse";
-        }
-
-        // Special Fallback MacOS Safari...
-        if (
-            engine._badDesktopOS &&
-            !engine._badOS &&
-            // And not ipad pros who claim to be macs...
-            !(document && "ontouchend" in document)
-        ) {
-            eventPrefix = "mouse";
-        }
-
-        return eventPrefix;
+        return IsWindowObjectExist() && !window.PointerEvent ? "mouse" : "pointer";
     }
 
     /**
@@ -459,8 +464,8 @@ export class Tools {
     }
 
     // Note that this must come first since useArrayBuffer defaults to true below.
-    public static LoadFileAsync(url: string, useArrayBuffer?: true): Promise<ArrayBuffer>;
-    public static LoadFileAsync(url: string, useArrayBuffer?: false): Promise<string>;
+    public static async LoadFileAsync(url: string, useArrayBuffer?: true): Promise<ArrayBuffer>;
+    public static async LoadFileAsync(url: string, useArrayBuffer?: false): Promise<string>;
 
     /**
      * Loads a file from a url
@@ -468,8 +473,8 @@ export class Tools {
      * @param useArrayBuffer defines a boolean indicating that date must be returned as ArrayBuffer
      * @returns a promise containing an ArrayBuffer corresponding to the loaded file
      */
-    public static LoadFileAsync(url: string, useArrayBuffer = true): Promise<ArrayBuffer | string> {
-        return new Promise((resolve, reject) => {
+    public static async LoadFileAsync(url: string, useArrayBuffer = true): Promise<ArrayBuffer | string> {
+        return await new Promise((resolve, reject) => {
             FileToolsLoadFile(
                 url,
                 (data) => {
@@ -479,6 +484,7 @@ export class Tools {
                 undefined,
                 useArrayBuffer,
                 (request, exception) => {
+                    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                     reject(exception);
                 }
             );
@@ -488,7 +494,40 @@ export class Tools {
     /**
      * @internal
      */
-    public static _DefaultCdnUrl = "https://cdn.babylonjs.com";
+    public static readonly _DefaultCdnUrl = "https://cdn.babylonjs.com";
+
+    /**
+     * The CDN version to use when constructing versioned CDN URLs.
+     * Injected at build time by the version update script.
+     * When set, unversioned CDN URLs will be rewritten to include this version prefix.
+     * @internal
+     */
+    public static _CdnVersion = "9.0.0";
+
+    /**
+     * @internal
+     */
+    public static readonly _DefaultAssetsUrl = "https://assets.babylonjs.com/core";
+
+    /**
+     * This function will convert asset URLs if the AssetBaseUrl parameter is set.
+     * Any URL with `assets.babylonjs.com/core` will be replaced with the value of AssetBaseUrl.
+     * @param url the URL to convert
+     * @returns a new URL
+     */
+    public static GetAssetUrl(url: string): string {
+        if (!url) {
+            return "";
+        }
+
+        if (Tools.AssetBaseUrl && url.startsWith(Tools._DefaultAssetsUrl)) {
+            // normalize the baseUrl
+            const baseUrl = Tools.AssetBaseUrl.endsWith("/") ? Tools.AssetBaseUrl.slice(0, -1) : Tools.AssetBaseUrl;
+            return url.replace(Tools._DefaultAssetsUrl, baseUrl);
+        }
+
+        return url;
+    }
 
     /**
      * Get a script URL including preprocessing
@@ -500,19 +539,28 @@ export class Tools {
         if (!scriptUrl) {
             return "";
         }
-        // if the base URL was set, and the script Url is an absolute path change the default path
-        if (Tools.ScriptBaseUrl && scriptUrl.startsWith(Tools._DefaultCdnUrl)) {
-            // change the default host, which is https://cdn.babylonjs.com with the one defined
-            // make sure no trailing slash is present
-
-            const baseUrl = Tools.ScriptBaseUrl[Tools.ScriptBaseUrl.length - 1] === "/" ? Tools.ScriptBaseUrl.substring(0, Tools.ScriptBaseUrl.length - 1) : Tools.ScriptBaseUrl;
-            scriptUrl = scriptUrl.replace(Tools._DefaultCdnUrl, baseUrl);
+        if (scriptUrl.startsWith(Tools._DefaultCdnUrl)) {
+            if (Tools.ScriptBaseUrl) {
+                // if the base URL was set, and the script Url is an absolute path change the default path
+                // change the default host, which is https://cdn.babylonjs.com with the one defined
+                // make sure no trailing slash is present
+                const baseUrl = Tools.ScriptBaseUrl.endsWith("/") ? Tools.ScriptBaseUrl.slice(0, -1) : Tools.ScriptBaseUrl;
+                scriptUrl = scriptUrl.replace(Tools._DefaultCdnUrl, baseUrl);
+            } else if (Tools._CdnVersion) {
+                // If a CDN version is set (injected at build time), rewrite unversioned CDN URLs to versioned ones
+                const versionedBase = `${Tools._DefaultCdnUrl}/v${Tools._CdnVersion}`;
+                // Guard against double-versioning if the URL already contains the version prefix
+                // (e.g. when GetBabylonScriptURL is called multiple times on the same URL)
+                if (!scriptUrl.startsWith(versionedBase)) {
+                    scriptUrl = scriptUrl.replace(Tools._DefaultCdnUrl, versionedBase);
+                }
+            }
         }
 
         // run the preprocessor
         scriptUrl = Tools.ScriptPreprocessUrl(scriptUrl);
 
-        if (forceAbsoluteUrl) {
+        if (forceAbsoluteUrl && !Tools.IsAbsoluteUrl(scriptUrl)) {
             scriptUrl = Tools.GetAbsoluteUrl(scriptUrl);
         }
 
@@ -538,24 +586,40 @@ export class Tools {
      * @param scriptUrl defines the url of the script to laod
      * @returns a promise request object
      */
-    public static LoadBabylonScriptAsync(scriptUrl: string): Promise<void> {
+    public static async LoadBabylonScriptAsync(scriptUrl: string): Promise<void> {
         scriptUrl = Tools.GetBabylonScriptURL(scriptUrl);
-        return Tools.LoadScriptAsync(scriptUrl);
+        return await Tools.LoadScriptAsync(scriptUrl);
     }
 
-    /**
-     * This function is used internally by babylon components to load a script (identified by an url). When the url returns, the
-     * content of this file is added into a new script element, attached to the DOM (body element)
-     * @param scriptUrl defines the url of the script to load
-     * @param onSuccess defines the callback called when the script is loaded
-     * @param onError defines the callback to call if an error occurs
-     * @param scriptId defines the id of the script element
-     */
-    public static LoadScript(scriptUrl: string, onSuccess: () => void, onError?: (message?: string, exception?: any) => void, scriptId?: string) {
+    private static _LoadScriptNative(scriptUrl: string, onSuccess?: () => void, onError?: (message?: string, exception?: any) => void) {
+        if (_native) {
+            Tools.LoadFile(
+                scriptUrl,
+                (data) => {
+                    Function(data as string).apply(null);
+                    if (onSuccess) {
+                        onSuccess();
+                    }
+                },
+                undefined,
+                undefined,
+                false,
+                (_request, exception) => {
+                    if (onError) {
+                        onError("LoadScript Error", exception);
+                    }
+                }
+            );
+        }
+    }
+
+    private static _LoadScriptWeb(scriptUrl: string, onSuccess?: () => void, onError?: (message?: string, exception?: any) => void, scriptId?: string, useModule = false) {
         if (typeof importScripts === "function") {
             try {
                 importScripts(scriptUrl);
-                onSuccess();
+                if (onSuccess) {
+                    onSuccess();
+                }
             } catch (e) {
                 onError?.(`Unable to load script '${scriptUrl}' in worker`, e);
             }
@@ -566,8 +630,13 @@ export class Tools {
         }
         const head = document.getElementsByTagName("head")[0];
         const script = document.createElement("script");
-        script.setAttribute("type", "text/javascript");
-        script.setAttribute("src", scriptUrl);
+        if (useModule) {
+            script.setAttribute("type", "module");
+            script.innerText = scriptUrl;
+        } else {
+            script.setAttribute("type", "text/javascript");
+            script.setAttribute("src", scriptUrl);
+        }
         if (scriptId) {
             script.id = scriptId;
         }
@@ -588,20 +657,33 @@ export class Tools {
     }
 
     /**
+     * This function is used internally by babylon components to load a script (identified by an url). When the url returns, the
+     * content of this file is added into a new script element, attached to the DOM (body element)
+     * @param scriptUrl defines the url of the script to load
+     * @param onSuccess defines the callback called when the script is loaded
+     * @param onError defines the callback to call if an error occurs
+     * @param scriptId defines the id of the script element
+     * @param useModule defines if we should use the module strategy to load the script
+     */
+    public static LoadScript: (scriptUrl: string, onSuccess?: () => void, onError?: (message?: string, exception?: any) => void, scriptId?: string, useModule?: boolean) => void =
+        typeof _native === "undefined" ? this._LoadScriptWeb : this._LoadScriptNative;
+
+    /**
      * Load an asynchronous script (identified by an url). When the url returns, the
      * content of this file is added into a new script element, attached to the DOM (body element)
      * @param scriptUrl defines the url of the script to load
      * @param scriptId defines the id of the script element
      * @returns a promise request object
      */
-    public static LoadScriptAsync(scriptUrl: string, scriptId?: string): Promise<void> {
-        return new Promise((resolve, reject) => {
+    public static async LoadScriptAsync(scriptUrl: string, scriptId?: string): Promise<void> {
+        return await new Promise((resolve, reject) => {
             this.LoadScript(
                 scriptUrl,
                 () => {
                     resolve();
                 },
                 (message, exception) => {
+                    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                     reject(exception || new Error(message));
                 },
                 scriptId
@@ -757,6 +839,8 @@ export class Tools {
      * @param quality The quality of the image if lossy mimeType is used (e.g. image/jpeg, image/webp). See {@link https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob | HTMLCanvasElement.toBlob()}'s `quality` parameter.
      * @returns a void promise
      */
+    // Should end with Async but this is a breaking change
+    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/require-await, @typescript-eslint/naming-convention
     public static async DumpFramebuffer(
         width: number,
         height: number,
@@ -765,7 +849,7 @@ export class Tools {
         mimeType = "image/png",
         fileName?: string,
         quality?: number
-    ) {
+    ): Promise<void> {
         throw _WarnImport("DumpTools");
     }
 
@@ -808,7 +892,8 @@ export class Tools {
      * @param quality The quality of the image if lossy mimeType is used (e.g. image/jpeg, image/webp). See {@link https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob | HTMLCanvasElement.toBlob()}'s `quality` parameter.
      * @returns a promise that resolve to the final data
      */
-    public static DumpDataAsync(
+    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/require-await
+    public static async DumpDataAsync(
         width: number,
         height: number,
         data: ArrayBufferView,
@@ -851,11 +936,13 @@ export class Tools {
             };
         }
         if (Tools._IsOffScreenCanvas(canvas)) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             canvas
                 .convertToBlob({
                     type: mimeType,
                     quality,
                 })
+                // eslint-disable-next-line github/no-then
                 .then((blob) => successCallback(blob));
         } else {
             canvas.toBlob(
@@ -933,11 +1020,13 @@ export class Tools {
             );
         } else if (successCallback) {
             if (Tools._IsOffScreenCanvas(canvas)) {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
                 canvas
                     .convertToBlob({
                         type: mimeType,
                         quality,
                     })
+                    // eslint-disable-next-line github/no-then
                     .then((blob) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(blob);
@@ -1044,8 +1133,8 @@ export class Tools {
      * @returns screenshot as a string of base64-encoded characters. This string can be assigned
      * to the src parameter of an <img> to display it
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public static CreateScreenshotAsync(engine: AbstractEngine, camera: Camera, size: IScreenshotSize | number, mimeType = "image/png", quality?: number): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-restricted-syntax, @typescript-eslint/require-await
+    public static async CreateScreenshotAsync(engine: AbstractEngine, camera: Camera, size: IScreenshotSize | number, mimeType = "image/png", quality?: number): Promise<string> {
         throw _WarnImport("ScreenshotTools");
     }
 
@@ -1071,6 +1160,7 @@ export class Tools {
      * @param enableStencilBuffer Whether the stencil buffer should be enabled or not (default: false)
      * @param useLayerMask if the camera's layer mask should be used to filter what should be rendered (default: true)
      * @param quality The quality of the image if lossy mimeType is used (e.g. image/jpeg, image/webp). See {@link https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob | HTMLCanvasElement.toBlob()}'s `quality` parameter.
+     * @param customizeTexture An optional callback that can be used to modify the render target texture before taking the screenshot. This can be used, for instance, to enable camera post-processes before taking the screenshot.
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public static CreateScreenshotUsingRenderTarget(
@@ -1085,7 +1175,8 @@ export class Tools {
         renderSprites = false,
         enableStencilBuffer = false,
         useLayerMask = true,
-        quality?: number
+        quality?: number,
+        customizeTexture?: (texture: RenderTargetTexture) => void
     ): void {
         throw _WarnImport("ScreenshotTools");
     }
@@ -1106,15 +1197,16 @@ export class Tools {
      * @param samples Texture samples (default: 1)
      * @param antialiasing Whether antialiasing should be turned on or not (default: false)
      * @param fileName A name for for the downloaded file.
-     * @returns screenshot as a string of base64-encoded characters. This string can be assigned
      * @param renderSprites Whether the sprites should be rendered or not (default: false)
      * @param enableStencilBuffer Whether the stencil buffer should be enabled or not (default: false)
      * @param useLayerMask if the camera's layer mask should be used to filter what should be rendered (default: true)
      * @param quality The quality of the image if lossy mimeType is used (e.g. image/jpeg, image/webp). See {@link https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob | HTMLCanvasElement.toBlob()}'s `quality` parameter.
+     * @param customizeTexture An optional callback that can be used to modify the render target texture before taking the screenshot. This can be used, for instance, to enable camera post-processes before taking the screenshot.
+     * @returns screenshot as a string of base64-encoded characters. This string can be assigned
      * to the src parameter of an <img> to display it
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public static CreateScreenshotUsingRenderTargetAsync(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-restricted-syntax, @typescript-eslint/require-await
+    public static async CreateScreenshotUsingRenderTargetAsync(
         engine: AbstractEngine,
         camera: Camera,
         size: IScreenshotSize | number,
@@ -1125,7 +1217,8 @@ export class Tools {
         renderSprites = false,
         enableStencilBuffer = false,
         useLayerMask = true,
-        quality?: number
+        quality?: number,
+        customizeTexture?: (texture: RenderTargetTexture) => void
     ): Promise<string> {
         throw _WarnImport("ScreenshotTools");
     }
@@ -1281,24 +1374,39 @@ export class Tools {
 
     private static _Performance: Performance;
 
+    private static readonly _NativePerformanceCounterHandles = new Map<string, unknown>();
+
     /**
      * Sets the current performance log level
      */
     public static set PerformanceLogLevel(level: number) {
         if ((level & Tools.PerformanceUserMarkLogLevel) === Tools.PerformanceUserMarkLogLevel) {
-            Tools.StartPerformanceCounter = Tools._StartUserMark;
-            Tools.EndPerformanceCounter = Tools._EndUserMark;
+            if (_native?.enablePerformanceLogging) {
+                _native.enablePerformanceLogging(NativeTraceLevel.Mark);
+                Tools.StartPerformanceCounter = Tools._StartMarkNative;
+                Tools.EndPerformanceCounter = Tools._EndMarkNative;
+            } else {
+                Tools.StartPerformanceCounter = Tools._StartUserMark;
+                Tools.EndPerformanceCounter = Tools._EndUserMark;
+            }
             return;
         }
 
         if ((level & Tools.PerformanceConsoleLogLevel) === Tools.PerformanceConsoleLogLevel) {
-            Tools.StartPerformanceCounter = Tools._StartPerformanceConsole;
-            Tools.EndPerformanceCounter = Tools._EndPerformanceConsole;
+            if (_native?.enablePerformanceLogging) {
+                _native.enablePerformanceLogging(NativeTraceLevel.Log);
+                Tools.StartPerformanceCounter = Tools._StartMarkNative;
+                Tools.EndPerformanceCounter = Tools._EndMarkNative;
+            } else {
+                Tools.StartPerformanceCounter = Tools._StartPerformanceConsole;
+                Tools.EndPerformanceCounter = Tools._EndPerformanceConsole;
+            }
             return;
         }
 
         Tools.StartPerformanceCounter = Tools._StartPerformanceCounterDisabled;
         Tools.EndPerformanceCounter = Tools._EndPerformanceCounterDisabled;
+        _native?.disablePerformanceLogging?.();
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1351,6 +1459,29 @@ export class Tools {
         console.timeEnd(counterName);
     }
 
+    private static _StartMarkNative(counterName: string, condition = true): void {
+        if (condition && _native?.startPerformanceCounter) {
+            if (Tools._NativePerformanceCounterHandles.has(counterName)) {
+                Tools.Warn(`Performance counter with name ${counterName} is already started.`);
+            } else {
+                const handle = _native.startPerformanceCounter(counterName);
+                Tools._NativePerformanceCounterHandles.set(counterName, handle);
+            }
+        }
+    }
+
+    private static _EndMarkNative(counterName: string, condition = true): void {
+        if (condition && _native?.endPerformanceCounter) {
+            const handle = Tools._NativePerformanceCounterHandles.get(counterName);
+            if (handle) {
+                _native.endPerformanceCounter(handle);
+                Tools._NativePerformanceCounterHandles.delete(counterName);
+            } else {
+                Tools.Warn(`Performance counter with name ${counterName} was not started.`);
+            }
+        }
+    }
+
     /**
      * Starts a performance counter
      */
@@ -1389,7 +1520,7 @@ export class Tools {
                 name = typeof object;
             }
         }
-        return name;
+        return name as string;
     }
 
     /**
@@ -1446,8 +1577,8 @@ export class Tools {
      * @param delay Number of milliseconds to delay
      * @returns Promise that resolves after the given amount of time
      */
-    public static DelayAsync(delay: number): Promise<void> {
-        return new Promise((resolve) => {
+    public static async DelayAsync(delay: number): Promise<void> {
+        await new Promise<void>((resolve) => {
             setTimeout(() => {
                 resolve();
             }, delay);
@@ -1475,8 +1606,9 @@ export class Tools {
  * @param module The name of the Module hosting the class, optional, but strongly recommended to specify if possible. Case should be preserved.
  * @returns a decorator function to apply on the class definition.
  */
-export function className(name: string, module?: string): (target: Object) => void {
-    return (target: Object) => {
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export function className(name: string, module?: string): (target: object) => void {
+    return (target: object) => {
         (<any>target)["__bjsclassName__"] = name;
         (<any>target)["__bjsmoduleName__"] = module != null ? module : null;
     };

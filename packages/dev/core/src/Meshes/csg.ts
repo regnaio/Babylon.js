@@ -1,18 +1,18 @@
-import type { Nullable } from "../types";
-import type { Scene } from "../scene";
+import { type Nullable } from "../types";
+import { type Scene } from "../scene";
 import { Quaternion, Matrix, Vector3, Vector2 } from "../Maths/math.vector";
 import { VertexBuffer } from "../Buffers/buffer";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
 import { SubMesh } from "../Meshes/subMesh";
 import { Mesh } from "../Meshes/mesh";
-import type { Material } from "../Materials/material";
+import { type Material } from "../Materials/material";
 import { Color4 } from "../Maths/math.color";
 import { Constants } from "../Engines/constants";
 import { VertexData } from "./mesh.vertexData";
 /**
  * Unique ID when we import meshes from Babylon to CSG
  */
-let currentCSGMeshId = 0;
+let CurrentCSGMeshId = 0;
 
 /**
  * Represents a vertex of a polygon. Use your own vertex class instead of this
@@ -153,10 +153,10 @@ class CSGPlane {
      * @param back Will contain the polygons begind the plane
      */
     public splitPolygon(polygon: CSGPolygon, coplanarFront: CSGPolygon[], coplanarBack: CSGPolygon[], front: CSGPolygon[], back: CSGPolygon[]): void {
-        const COPLANAR = 0;
-        const FRONT = 1;
-        const BACK = 2;
-        const SPANNING = 3;
+        const coplanarConst = 0;
+        const frontConst = 1;
+        const backConst = 2;
+        const spanningConst = 3;
 
         // Classify each point as well as the entire polygon into one of the above
         // four classes.
@@ -166,23 +166,23 @@ class CSGPlane {
         let t: number;
         for (i = 0; i < polygon.vertices.length; i++) {
             t = Vector3.Dot(this.normal, polygon.vertices[i].pos) - this.w;
-            const type = t < -CSGPlane.EPSILON ? BACK : t > CSGPlane.EPSILON ? FRONT : COPLANAR;
+            const type = t < -CSGPlane.EPSILON ? backConst : t > CSGPlane.EPSILON ? frontConst : coplanarConst;
             polygonType |= type;
             types.push(type);
         }
 
         // Put the polygon in the correct list, splitting it when necessary
         switch (polygonType) {
-            case COPLANAR:
+            case coplanarConst:
                 (Vector3.Dot(this.normal, polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
                 break;
-            case FRONT:
+            case frontConst:
                 front.push(polygon);
                 break;
-            case BACK:
+            case backConst:
                 back.push(polygon);
                 break;
-            case SPANNING: {
+            case spanningConst: {
                 const f = [],
                     b = [];
                 for (i = 0; i < polygon.vertices.length; i++) {
@@ -191,13 +191,13 @@ class CSGPlane {
                         tj = types[j];
                     const vi = polygon.vertices[i],
                         vj = polygon.vertices[j];
-                    if (ti !== BACK) {
+                    if (ti !== backConst) {
                         f.push(vi);
                     }
-                    if (ti !== FRONT) {
-                        b.push(ti !== BACK ? vi.clone() : vi);
+                    if (ti !== frontConst) {
+                        b.push(ti !== backConst ? vi.clone() : vi);
                     }
-                    if ((ti | tj) === SPANNING) {
+                    if ((ti | tj) === spanningConst) {
                         t = (this.w - Vector3.Dot(this.normal, vi.pos)) / Vector3.Dot(this.normal, vj.pos.subtract(vi.pos));
                         const v = vi.interpolate(vj, t);
                         f.push(v);
@@ -428,6 +428,7 @@ class Node {
 
 /**
  * Class for building Constructive Solid Geometry
+ * @deprecated Please use CSG2 instead
  */
 export class CSG {
     private _polygons = new Array<CSGPolygon>();
@@ -468,7 +469,6 @@ export class CSG {
         const vertColors = data.colors;
 
         if (!indices || !positions) {
-            // eslint-disable-next-line no-throw-literal
             throw "BABYLON.CSG: VertexData must at least contain positions and indices";
         }
 
@@ -488,7 +488,7 @@ export class CSG {
                 vertices.push(vertex);
             }
 
-            polygon = new CSGPolygon(vertices, { subMeshId: 0, meshId: currentCSGMeshId, materialIndex: 0 });
+            polygon = new CSGPolygon(vertices, { subMeshId: 0, meshId: CurrentCSGMeshId, materialIndex: 0 });
 
             // To handle the case of degenerated triangle
             // polygon.plane == null <=> the polygon does not represent 1 single plane <=> the triangle is degenerated
@@ -503,7 +503,7 @@ export class CSG {
         csg.rotation = Vector3.Zero();
         csg.scaling = Vector3.One();
         csg.rotationQuaternion = Quaternion.Identity();
-        currentCSGMeshId++;
+        CurrentCSGMeshId++;
 
         return csg;
     }
@@ -543,7 +543,6 @@ export class CSG {
                 invertWinding = mesh.material.sideOrientation === Constants.MATERIAL_ClockWiseSideOrientation;
             }
         } else {
-            // eslint-disable-next-line no-throw-literal
             throw "BABYLON.CSG: Wrong Mesh type, must be BABYLON.Mesh";
         }
 
@@ -554,19 +553,19 @@ export class CSG {
             vertColors = mesh.getVerticesData(VertexBuffer.ColorKind);
 
         if (indices === null) {
-            // eslint-disable-next-line no-throw-literal
             throw "BABYLON.CSG: Mesh has no indices";
         }
         if (positions === null) {
-            // eslint-disable-next-line no-throw-literal
             throw "BABYLON.CSG: Mesh has no positions";
         }
         if (normals === null) {
-            // eslint-disable-next-line no-throw-literal
             throw "BABYLON.CSG: Mesh has no normals";
         }
 
         const subMeshes = mesh.subMeshes;
+        if (!subMeshes) {
+            throw "BABYLON.CSG: Mesh has no submeshes";
+        }
 
         for (let sm = 0, sml = subMeshes.length; sm < sml; sm++) {
             for (let i = subMeshes[sm].indexStart, il = subMeshes[sm].indexCount + subMeshes[sm].indexStart; i < il; i += 3) {
@@ -593,7 +592,7 @@ export class CSG {
                     vertices.push(vertex);
                 }
 
-                polygon = new CSGPolygon(vertices, { subMeshId: sm, meshId: currentCSGMeshId, materialIndex: subMeshes[sm].materialIndex });
+                polygon = new CSGPolygon(vertices, { subMeshId: sm, meshId: CurrentCSGMeshId, materialIndex: subMeshes[sm].materialIndex });
 
                 // To handle the case of degenerated triangle
                 // polygon.plane == null <=> the polygon does not represent 1 single plane <=> the triangle is degenerated
@@ -609,7 +608,7 @@ export class CSG {
         csg.rotation = absolute ? Vector3.Zero() : meshRotation;
         csg.scaling = absolute ? Vector3.One() : meshScaling;
         csg.rotationQuaternion = absolute && meshRotationQuaternion ? Quaternion.Identity() : meshRotationQuaternion;
-        currentCSGMeshId++;
+        CurrentCSGMeshId++;
 
         return csg;
     }
@@ -806,8 +805,8 @@ export class CSG {
         const uv = Vector2.Zero();
         const vertColor = new Color4(0, 0, 0, 0);
         const polygonIndices = [0, 0, 0];
-        const vertice_dict = {};
-        let vertex_idx;
+        const verticeDict = {};
+        let vertexIdx;
 
         for (let i = 0, il = polygons.length; i < il; i++) {
             const polygon = polygons[i];
@@ -840,11 +839,11 @@ export class CSG {
                     const localVertex = Vector3.TransformCoordinates(vertex, matrix);
                     const localNormal = Vector3.TransformNormal(normal, matrix);
 
-                    vertex_idx = (<any>vertice_dict)[localVertex.x + "," + localVertex.y + "," + localVertex.z];
+                    vertexIdx = (<any>verticeDict)[localVertex.x + "," + localVertex.y + "," + localVertex.z];
 
                     let areUvsDifferent = false;
 
-                    if (uvs && !(uvs[vertex_idx * 2] === uv.x || uvs[vertex_idx * 2 + 1] === uv.y)) {
+                    if (uvs && !(uvs[vertexIdx * 2] === uv.x || uvs[vertexIdx * 2 + 1] === uv.y)) {
                         areUvsDifferent = true;
                     }
 
@@ -853,10 +852,10 @@ export class CSG {
                     if (
                         vertColors &&
                         !(
-                            vertColors[vertex_idx * 4] === vertColor.r ||
-                            vertColors[vertex_idx * 4 + 1] === vertColor.g ||
-                            vertColors[vertex_idx * 4 + 2] === vertColor.b ||
-                            vertColors[vertex_idx * 4 + 3] === vertColor.a
+                            vertColors[vertexIdx * 4] === vertColor.r ||
+                            vertColors[vertexIdx * 4 + 1] === vertColor.g ||
+                            vertColors[vertexIdx * 4 + 2] === vertColor.b ||
+                            vertColors[vertexIdx * 4 + 3] === vertColor.a
                         )
                     ) {
                         areColorsDifferent = true;
@@ -865,10 +864,10 @@ export class CSG {
                     // Check if 2 points can be merged
                     if (
                         !(
-                            typeof vertex_idx !== "undefined" &&
-                            normals[vertex_idx * 3] === localNormal.x &&
-                            normals[vertex_idx * 3 + 1] === localNormal.y &&
-                            normals[vertex_idx * 3 + 2] === localNormal.z
+                            typeof vertexIdx !== "undefined" &&
+                            normals[vertexIdx * 3] === localNormal.x &&
+                            normals[vertexIdx * 3 + 1] === localNormal.y &&
+                            normals[vertexIdx * 3 + 2] === localNormal.z
                         ) ||
                         areUvsDifferent ||
                         areColorsDifferent
@@ -881,10 +880,10 @@ export class CSG {
                         if (vertColors) {
                             vertColors.push(vertColor.r, vertColor.g, vertColor.b, vertColor.a);
                         }
-                        vertex_idx = (<any>vertice_dict)[localVertex.x + "," + localVertex.y + "," + localVertex.z] = vertices.length / 3 - 1;
+                        vertexIdx = (<any>verticeDict)[localVertex.x + "," + localVertex.y + "," + localVertex.z] = vertices.length / 3 - 1;
                     }
 
-                    indices.push(vertex_idx);
+                    indices.push(vertexIdx);
 
                     if (onAfterPolygonProcessing) {
                         onAfterPolygonProcessing();
@@ -980,7 +979,7 @@ export class CSG {
                     );
                     materialMaxIndex = Math.max(subMeshObj.materialIndex, materialMaxIndex);
                 }
-                materialIndexOffset += ++materialMaxIndex;
+                materialIndexOffset += materialMaxIndex + 1;
             }
         }
 

@@ -1,7 +1,7 @@
-import type { Observer } from "core/Misc/observable";
+import { type Observer } from "core/Misc/observable";
 import { NodeMaterialBlockTargets } from "../Enums/nodeMaterialBlockTargets";
 import { NodeMaterialBlock } from "../nodeMaterialBlock";
-import type { NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialConnectionPoint } from "../nodeMaterialBlockConnectionPoint";
 import { NodeMaterialBlockConnectionPointTypes } from "../Enums/nodeMaterialBlockConnectionPointTypes";
 
 /**
@@ -101,7 +101,9 @@ export class BaseMathBlock extends NodeMaterialBlock {
      */
     public override dispose(): void {
         super.dispose();
-        this._connectionObservers.forEach((observer) => observer.remove());
+        for (const observer of this._connectionObservers) {
+            observer.remove();
+        }
         this._connectionObservers.length = 0;
     }
 }

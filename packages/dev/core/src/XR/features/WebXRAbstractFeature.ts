@@ -1,8 +1,7 @@
-import type { IWebXRFeature } from "../webXRFeaturesManager";
-import type { Observer, EventState } from "../../Misc/observable";
-import { Observable } from "../../Misc/observable";
-import type { Nullable } from "../../types";
-import type { WebXRSessionManager } from "../webXRSessionManager";
+import { type IWebXRFeature } from "../webXRFeaturesManager";
+import { type Observer, type EventState, Observable } from "../../Misc/observable";
+import { type Nullable } from "../../types";
+import { type WebXRSessionManager } from "../webXRSessionManager";
 import { Logger } from "core/Misc/logger";
 
 /**
@@ -119,9 +118,9 @@ export abstract class WebXRAbstractFeature implements IWebXRFeature {
             return false;
         }
         this._attached = false;
-        this._removeOnDetach.forEach((toRemove) => {
+        for (const toRemove of this._removeOnDetach) {
             toRemove.observable.remove(toRemove.observer);
-        });
+        }
         this.onFeatureDetachObservable.notifyObservers(this);
         return true;
     }

@@ -1,8 +1,8 @@
-import type { FC } from "react";
+import { type FC } from "react";
 import { useDrag } from "react-dnd";
 import { ResizeDirections, ElementTypes } from "./types";
 import { ClassNames } from "../classNames";
-import style from "./FlexibleResizeBar.modules.scss";
+import * as style from "./FlexibleResizeBar.module.scss";
 
 /**
  * Arguments for the ResizeBar component.

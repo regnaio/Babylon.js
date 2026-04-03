@@ -1,20 +1,20 @@
 import { serializeAsVector3, serialize, serializeAsMeshReference } from "../Misc/decorators";
-import type { SmartArray } from "../Misc/smartArray";
+import { type SmartArray } from "../Misc/smartArray";
 import { Logger } from "../Misc/logger";
 import { Vector2, Vector3, Matrix } from "../Maths/math.vector";
 import { VertexBuffer } from "../Buffers/buffer";
 import { AbstractMesh } from "../Meshes/abstractMesh";
-import type { SubMesh } from "../Meshes/subMesh";
-import type { Mesh } from "../Meshes/mesh";
-import type { Camera } from "../Cameras/camera";
-import type { Effect, IEffectCreationOptions } from "../Materials/effect";
+import { type SubMesh } from "../Meshes/subMesh";
+import { type Mesh } from "../Meshes/mesh";
+import { type Camera } from "../Cameras/camera";
+import { type Effect, type IEffectCreationOptions } from "../Materials/effect";
 import { Material } from "../Materials/material";
 import { StandardMaterial } from "../Materials/standardMaterial";
 import { Texture } from "../Materials/Textures/texture";
 import { RenderTargetTexture } from "../Materials/Textures/renderTargetTexture";
 import { PostProcess } from "./postProcess";
 import { Constants } from "../Engines/constants";
-import type { Scene } from "../scene";
+import { type Scene } from "../scene";
 
 import { CreatePlane } from "../Meshes/Builders/planeBuilder";
 
@@ -25,10 +25,10 @@ import "../Shaders/volumetricLightScatteringPass.fragment";
 import { Color4, Color3 } from "../Maths/math.color";
 import { Viewport } from "../Maths/math.viewport";
 import { RegisterClass } from "../Misc/typeStore";
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 
-import { BindBonesParameters, BindMorphTargetParameters, PrepareAttributesForMorphTargetsInfluencers, PushAttributesForInstances } from "../Materials/materialHelper.functions";
-import type { AbstractEngine } from "../Engines/abstractEngine";
+import { BindBonesParameters, BindMorphTargetParameters, PrepareDefinesAndAttributesForMorphTargets, PushAttributesForInstances } from "../Materials/materialHelper.functions";
+import { type AbstractEngine } from "../Engines/abstractEngine";
 import { EffectFallbacks } from "core/Materials/effectFallbacks";
 
 /**
@@ -161,7 +161,6 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
 
         // Configure mesh
         this.mesh = mesh ?? VolumetricLightScatteringPostProcess.CreateDefaultMesh("VolumetricLightScatteringMesh", scene);
-
         // Configure
         this._createPass(scene, ratio.passRatio || ratio);
 
@@ -174,7 +173,7 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
         };
 
         this.onApplyObservable.add((effect: Effect) => {
-            this._updateMeshScreenCoordinates(<Scene>scene);
+            this._updateMeshScreenCoordinates(scene);
 
             effect.setTexture("lightScatteringSampler", this._volumetricLightScatteringRTT);
             effect.setFloat("exposure", this.exposure);
@@ -211,19 +210,26 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
         const attribs = [VertexBuffer.PositionKind];
         const material = subMesh.getMaterial();
 
+        let uv1 = false;
+        let uv2 = false;
+        const color = false;
+
         // Alpha test
         if (material) {
-            if (material.needAlphaTesting()) {
+            const needAlphaTesting = material.needAlphaTestingForMesh(mesh);
+            if (needAlphaTesting) {
                 defines.push("#define ALPHATEST");
             }
 
             if (mesh.isVerticesDataPresent(VertexBuffer.UVKind)) {
                 attribs.push(VertexBuffer.UVKind);
                 defines.push("#define UV1");
+                uv1 = needAlphaTesting;
             }
             if (mesh.isVerticesDataPresent(VertexBuffer.UV2Kind)) {
                 attribs.push(VertexBuffer.UV2Kind);
                 defines.push("#define UV2");
+                uv2 = needAlphaTesting;
             }
         }
 
@@ -252,21 +258,20 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
         }
 
         // Morph targets
-        const morphTargetManager = (mesh as Mesh).morphTargetManager;
-        let numMorphInfluencers = 0;
-        if (morphTargetManager) {
-            numMorphInfluencers = morphTargetManager.numMaxInfluencers || morphTargetManager.numInfluencers;
-            if (numMorphInfluencers > 0) {
-                defines.push("#define MORPHTARGETS");
-                defines.push("#define NUM_MORPH_INFLUENCERS " + numMorphInfluencers);
-
-                if (morphTargetManager.isUsingTextureForTargets) {
-                    defines.push("#define MORPHTARGETS_TEXTURE");
-                }
-
-                PrepareAttributesForMorphTargetsInfluencers(attribs, mesh, numMorphInfluencers);
-            }
-        }
+        const numMorphInfluencers = mesh.morphTargetManager
+            ? PrepareDefinesAndAttributesForMorphTargets(
+                  mesh.morphTargetManager,
+                  defines,
+                  attribs,
+                  mesh,
+                  true, // usePositionMorph
+                  false, // useNormalMorph
+                  false, // useTangentMorph
+                  uv1, // useUVMorph
+                  uv2, // useUV2Morph
+                  color // useColorMorph
+              )
+            : 0;
 
         // Instances
         if (useInstances) {
@@ -294,7 +299,7 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
             const uniforms = [
                 "world",
                 "mBones",
-                "boneTextureWidth",
+                "boneTextureInfo",
                 "viewProjection",
                 "diffuseMatrix",
                 "morphTargetInfluences",
@@ -390,7 +395,7 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
             scene,
             false,
             true,
-            Constants.TEXTURETYPE_UNSIGNED_INT
+            Constants.TEXTURETYPE_UNSIGNED_BYTE
         );
         this._volumetricLightScatteringRTT.wrapU = Texture.CLAMP_ADDRESSMODE;
         this._volumetricLightScatteringRTT.wrapV = Texture.CLAMP_ADDRESSMODE;
@@ -463,7 +468,7 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
                     effect.setMatrix("viewProjection", scene.getTransformMatrix());
 
                     // Alpha test
-                    if (material.needAlphaTesting()) {
+                    if (material.needAlphaTestingForMesh(effectiveMesh)) {
                         const alphaTexture = material.getAlphaTestTexture();
 
                         if (alphaTexture) {

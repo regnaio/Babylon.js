@@ -3,11 +3,11 @@ import { HeaderComponent } from "../headerComponent";
 import { Resizable } from "re-resizable";
 import { SceneExplorerComponent } from "../sceneExplorer/sceneExplorerComponent";
 import { ActionTabsComponent } from "../actionTabs/actionTabsComponent";
-import type { Scene } from "core/scene";
-import type { GlobalState } from "../../components/globalState";
-import type { IExplorerExtensibilityGroup, DebugLayerTab, IExplorerAdditionalNode } from "core/Debug/debugLayer";
+import { type Scene } from "core/scene";
+import { type GlobalState } from "../../components/globalState";
+import { type IExplorerExtensibilityGroup, type DebugLayerTab, type IExplorerAdditionalNode } from "core/Debug/debugLayer";
 
-const Split = require("split.js").default;
+import Split from "split.js";
 
 const ResizableCasted = Resizable as any as React.ComponentClass<any>;
 
@@ -47,7 +47,7 @@ export class EmbedHostComponent extends React.Component<IEmbedHostComponentProps
             return;
         }
 
-        Split([this._topPartRef.current, this._bottomPartRef.current], {
+        Split([this._topPartRef.current!, this._bottomPartRef.current!], {
             direction: "vertical",
             minSize: [200, 200],
             gutterSize: 4,
@@ -130,7 +130,7 @@ export class EmbedHostComponent extends React.Component<IEmbedHostComponentProps
                 id="embed"
                 minWidth={300}
                 maxWidth={600}
-                size={{ height: "100%" }}
+                defaultSize={{ height: "100%" }}
                 minHeight="100%"
                 enable={{ top: false, right: false, bottom: false, left: true, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
             >

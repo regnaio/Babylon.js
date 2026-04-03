@@ -1,42 +1,41 @@
-import type { IEasingFunction, EasingFunction } from "./easing";
+import { type IEasingFunction, type EasingFunction } from "./easing";
 import { Vector3, Quaternion, Vector2, Matrix, TmpVectors } from "../Maths/math.vector";
 import { Color3, Color4 } from "../Maths/math.color";
-import { Scalar } from "../Maths/math.scalar";
-import type { DeepImmutable, Nullable } from "../types";
-import type { Scene } from "../scene";
+import { Hermite, Lerp } from "../Maths/math.scalar.functions";
+import { type DeepImmutable, type Nullable } from "../types";
+import { type Scene } from "../scene";
 import { RegisterClass } from "../Misc/typeStore";
-import type { IAnimationKey } from "./animationKey";
-import { AnimationKeyInterpolation } from "./animationKey";
+import { type IAnimationKey, AnimationKeyInterpolation } from "./animationKey";
 import { AnimationRange } from "./animationRange";
-import type { AnimationEvent } from "./animationEvent";
+import { type AnimationEvent } from "./animationEvent";
 import { Node } from "../node";
-import type { IAnimatable } from "./animatable.interface";
+import { type IAnimatable } from "./animatable.interface";
 import { Size } from "../Maths/math.size";
 import { WebRequest } from "../Misc/webRequest";
 import { Constants } from "../Engines/constants";
-import type { Animatable } from "./animatable";
-import type { RuntimeAnimation } from "./runtimeAnimation";
+import { type Animatable } from "./animatable";
+import { type RuntimeAnimation } from "./runtimeAnimation";
 import { SerializationHelper } from "../Misc/decorators.serialization";
 
 // Static values to help the garbage collector
 
 // Quaternion
-export const _staticOffsetValueQuaternion: DeepImmutable<Quaternion> = Object.freeze(new Quaternion(0, 0, 0, 0));
+export const _StaticOffsetValueQuaternion: DeepImmutable<Quaternion> = Object.freeze(new Quaternion(0, 0, 0, 0));
 
 // Vector3
-export const _staticOffsetValueVector3: DeepImmutable<Vector3> = Object.freeze(Vector3.Zero());
+export const _StaticOffsetValueVector3: DeepImmutable<Vector3> = Object.freeze(Vector3.Zero());
 
 // Vector2
-export const _staticOffsetValueVector2: DeepImmutable<Vector2> = Object.freeze(Vector2.Zero());
+export const _StaticOffsetValueVector2: DeepImmutable<Vector2> = Object.freeze(Vector2.Zero());
 
 // Size
-export const _staticOffsetValueSize: DeepImmutable<Size> = Object.freeze(Size.Zero());
+export const _StaticOffsetValueSize: DeepImmutable<Size> = Object.freeze(Size.Zero());
 
 // Color3
-export const _staticOffsetValueColor3: DeepImmutable<Color3> = Object.freeze(Color3.Black());
+export const _StaticOffsetValueColor3: DeepImmutable<Color3> = Object.freeze(Color3.Black());
 
 // Color4
-export const _staticOffsetValueColor4: DeepImmutable<Color4> = Object.freeze(new Color4(0, 0, 0, 0));
+export const _StaticOffsetValueColor4: DeepImmutable<Color4> = Object.freeze(new Color4(0, 0, 0, 0));
 
 /**
  * Options to be used when creating an additive animation
@@ -87,7 +86,7 @@ export interface _IAnimationState {
     highLimitValue?: any;
 }
 
-const evaluateAnimationState: _IAnimationState = {
+const EvaluateAnimationState: _IAnimationState = {
     key: 0,
     repeatCount: 0,
     loopMode: 2 /*Animation.ANIMATIONLOOPMODE_CONSTANT*/,
@@ -154,6 +153,9 @@ export class Animation {
      * Stores the animation ranges for the animation
      */
     private _ranges: { [name: string]: Nullable<AnimationRange> } = {};
+
+    /** @internal */
+    public _coreAnimation: Nullable<Animation> = null;
 
     /**
      * @internal Internal use
@@ -263,7 +265,7 @@ export class Animation {
             return null;
         }
 
-        return scene.beginDirectAnimation(target, [animation], 0, totalFrame, animation.loopMode === 1, 1.0, onAnimationEnd);
+        return scene.beginDirectAnimation(target, [animation], 0, totalFrame, animation.loopMode !== Animation.ANIMATIONLOOPMODE_CONSTANT, 1.0, onAnimationEnd);
     }
 
     /**
@@ -449,8 +451,8 @@ export class Animation {
 
         // Interpolate the reference value from the animation
         else {
-            evaluateAnimationState.key = 0;
-            const value = animation._interpolate(referenceFrame, evaluateAnimationState);
+            EvaluateAnimationState.key = 0;
+            const value = animation._interpolate(referenceFrame, EvaluateAnimationState);
             valueStore.referenceValue = value.clone ? value.clone() : value;
         }
 
@@ -480,6 +482,7 @@ export class Animation {
                     outTangent: key.outTangent,
                     interpolation: key.interpolation,
                     lockedTangent: key.lockedTangent,
+                    easingFunction: key.easingFunction,
                 };
                 if (clippedKeys) {
                     if (startFrame === Number.MAX_VALUE) {
@@ -542,6 +545,8 @@ export class Animation {
      * @param transition The transition type we want to use
      * @param duration The duration of the animation, in milliseconds
      * @param onAnimationEnd Callback trigger at the end of the animation
+     * @param stopCurrent If true, will stop the current animation on the property
+     * @param customKeys defines custom keys to use for the animation instead of the from-to keys
      * @returns Nullable animation
      */
     public static TransitionTo(
@@ -552,7 +557,9 @@ export class Animation {
         frameRate: number,
         transition: Animation,
         duration: number,
-        onAnimationEnd: Nullable<() => void> = null
+        onAnimationEnd: Nullable<() => void> = null,
+        stopCurrent: boolean = true,
+        customKeys?: IAnimationKey[]
     ): Nullable<Animatable> {
         if (duration <= 0) {
             host[property] = targetValue;
@@ -564,16 +571,18 @@ export class Animation {
 
         const endFrame: number = frameRate * (duration / 1000);
 
-        transition.setKeys([
-            {
-                frame: 0,
-                value: host[property].clone ? host[property].clone() : host[property],
-            },
-            {
-                frame: endFrame,
-                value: targetValue,
-            },
-        ]);
+        transition.setKeys(
+            customKeys ?? [
+                {
+                    frame: 0,
+                    value: host[property].clone ? host[property].clone() : host[property],
+                },
+                {
+                    frame: endFrame,
+                    value: targetValue,
+                },
+            ]
+        );
 
         if (!host.animations) {
             host.animations = [];
@@ -581,8 +590,7 @@ export class Animation {
 
         host.animations.push(transition);
 
-        const animation: Animatable = scene.beginAnimation(host, 0, endFrame, false);
-        animation.onAnimationEnd = onAnimationEnd;
+        const animation: Animatable = scene.beginAnimation(host, 0, endFrame, false, 1.0, onAnimationEnd ?? undefined, undefined, stopCurrent);
         return animation;
     }
 
@@ -784,7 +792,7 @@ export class Animation {
      * @returns Interpolated scalar value
      */
     public floatInterpolateFunction(startValue: number, endValue: number, gradient: number): number {
-        return Scalar.Lerp(startValue, endValue, gradient);
+        return Lerp(startValue, endValue, gradient);
     }
 
     /**
@@ -797,7 +805,7 @@ export class Animation {
      * @returns Interpolated scalar value
      */
     public floatInterpolateFunctionWithTangents(startValue: number, outTangent: number, endValue: number, inTangent: number, gradient: number): number {
-        return Scalar.Hermite(startValue, outTangent, endValue, inTangent, gradient);
+        return Hermite(startValue, outTangent, endValue, inTangent, gradient);
     }
 
     /**
@@ -948,9 +956,12 @@ export class Animation {
      * @returns the animation value
      */
     public evaluate(currentFrame: number) {
-        evaluateAnimationState.key = 0;
-        return this._interpolate(currentFrame, evaluateAnimationState);
+        EvaluateAnimationState.key = 0;
+        return this._interpolate(currentFrame, EvaluateAnimationState);
     }
+
+    /** @internal */
+    public _key: number;
 
     /**
      * @internal Internal use only
@@ -961,24 +972,32 @@ export class Animation {
         }
 
         const keys = this._keys;
-        const keysLength = keys.length;
+        let key: number;
 
-        let key = state.key;
+        if (!this._coreAnimation) {
+            const keysLength = keys.length;
 
-        while (key >= 0 && currentFrame < keys[key].frame) {
-            --key;
-        }
+            key = state.key;
 
-        while (key + 1 <= keysLength - 1 && currentFrame >= keys[key + 1].frame) {
-            ++key;
-        }
+            while (key >= 0 && currentFrame < keys[key].frame) {
+                --key;
+            }
 
-        state.key = key;
+            while (key + 1 <= keysLength - 1 && currentFrame >= keys[key + 1].frame) {
+                ++key;
+            }
 
-        if (key < 0) {
-            return searchClosestKeyOnly ? undefined : this._getKeyValue(keys[0].value);
-        } else if (key + 1 > keysLength - 1) {
-            return searchClosestKeyOnly ? undefined : this._getKeyValue(keys[keysLength - 1].value);
+            state.key = key;
+
+            if (key < 0) {
+                return searchClosestKeyOnly ? undefined : this._getKeyValue(keys[0].value);
+            } else if (key + 1 > keysLength - 1) {
+                return searchClosestKeyOnly ? undefined : this._getKeyValue(keys[keysLength - 1].value);
+            }
+
+            this._key = key;
+        } else {
+            key = this._coreAnimation._key;
         }
 
         const startKey = keys[key];
@@ -987,7 +1006,6 @@ export class Animation {
         if (searchClosestKeyOnly && (currentFrame === startKey.frame || currentFrame === endKey.frame)) {
             return undefined;
         }
-
         const startValue = this._getKeyValue(startKey.value);
         const endValue = this._getKeyValue(endKey.value);
         if (startKey.interpolation === AnimationKeyInterpolation.STEP) {
@@ -1006,7 +1024,8 @@ export class Animation {
 
         // check for easingFunction and correction of gradient
         const easingFunction = startKey.easingFunction || this.getEasingFunction();
-        if (easingFunction !== null) {
+        // can also be undefined, if not provided
+        if (easingFunction) {
             gradient = easingFunction.ease(gradient);
         }
 
@@ -1039,7 +1058,7 @@ export class Animation {
                         return quatValue;
                     case Animation.ANIMATIONLOOPMODE_RELATIVE:
                     case Animation.ANIMATIONLOOPMODE_RELATIVE_FROM_CURRENT:
-                        return quatValue.addInPlace((state.offsetValue || _staticOffsetValueQuaternion).scale(state.repeatCount));
+                        return quatValue.addInPlace((state.offsetValue || _StaticOffsetValueQuaternion).scale(state.repeatCount));
                 }
 
                 return quatValue;
@@ -1056,7 +1075,7 @@ export class Animation {
                         return vec3Value;
                     case Animation.ANIMATIONLOOPMODE_RELATIVE:
                     case Animation.ANIMATIONLOOPMODE_RELATIVE_FROM_CURRENT:
-                        return vec3Value.add((state.offsetValue || _staticOffsetValueVector3).scale(state.repeatCount));
+                        return vec3Value.add((state.offsetValue || _StaticOffsetValueVector3).scale(state.repeatCount));
                 }
                 break;
             }
@@ -1072,7 +1091,7 @@ export class Animation {
                         return vec2Value;
                     case Animation.ANIMATIONLOOPMODE_RELATIVE:
                     case Animation.ANIMATIONLOOPMODE_RELATIVE_FROM_CURRENT:
-                        return vec2Value.add((state.offsetValue || _staticOffsetValueVector2).scale(state.repeatCount));
+                        return vec2Value.add((state.offsetValue || _StaticOffsetValueVector2).scale(state.repeatCount));
                 }
                 break;
             }
@@ -1085,7 +1104,7 @@ export class Animation {
                         return this.sizeInterpolateFunction(startValue, endValue, gradient);
                     case Animation.ANIMATIONLOOPMODE_RELATIVE:
                     case Animation.ANIMATIONLOOPMODE_RELATIVE_FROM_CURRENT:
-                        return this.sizeInterpolateFunction(startValue, endValue, gradient).add((state.offsetValue || _staticOffsetValueSize).scale(state.repeatCount));
+                        return this.sizeInterpolateFunction(startValue, endValue, gradient).add((state.offsetValue || _StaticOffsetValueSize).scale(state.repeatCount));
                 }
                 break;
             }
@@ -1101,7 +1120,7 @@ export class Animation {
                         return color3Value;
                     case Animation.ANIMATIONLOOPMODE_RELATIVE:
                     case Animation.ANIMATIONLOOPMODE_RELATIVE_FROM_CURRENT:
-                        return color3Value.add((state.offsetValue || _staticOffsetValueColor3).scale(state.repeatCount));
+                        return color3Value.add((state.offsetValue || _StaticOffsetValueColor3).scale(state.repeatCount));
                 }
                 break;
             }
@@ -1117,7 +1136,7 @@ export class Animation {
                         return color4Value;
                     case Animation.ANIMATIONLOOPMODE_RELATIVE:
                     case Animation.ANIMATIONLOOPMODE_RELATIVE_FROM_CURRENT:
-                        return color4Value.add((state.offsetValue || _staticOffsetValueColor4).scale(state.repeatCount));
+                        return color4Value.add((state.offsetValue || _StaticOffsetValueColor4).scale(state.repeatCount));
                 }
                 break;
             }
@@ -1170,16 +1189,18 @@ export class Animation {
 
     /**
      * Makes a copy of the animation
+     * @param cloneKeys Whether to clone the keys or not (default is false, so the keys are not cloned). Note that the key array itself is always cloned (that is, a new array is created),
+     *  but the individual keys inside the array are only cloned if this parameter is true.
      * @returns Cloned animation
      */
-    public clone(): Animation {
+    public clone(cloneKeys = false): Animation {
         const clone = new Animation(this.name, this.targetPropertyPath.join("."), this.framePerSecond, this.dataType, this.loopMode);
 
         clone.enableBlending = this.enableBlending;
         clone.blendingSpeed = this.blendingSpeed;
 
         if (this._keys) {
-            clone.setKeys(this._keys);
+            clone.setKeys(this._keys, false, cloneKeys);
         }
 
         if (this._ranges) {
@@ -1200,9 +1221,29 @@ export class Animation {
      * Sets the key frames of the animation
      * @param values The animation key frames to set
      * @param dontClone Whether to clone the keys or not (default is false, so the array of keys is cloned)
+     * @param cloneKeys Whether to clone the individual keys inside the array or not (default is false). If true, each key object inside the array will be cloned, and the fields
+     *   that have a clone() method will be cloned by calling that method.
      */
-    public setKeys(values: Array<IAnimationKey>, dontClone = false): void {
-        this._keys = !dontClone ? values.slice(0) : values;
+    public setKeys(values: Array<IAnimationKey>, dontClone = false, cloneKeys = false): void {
+        if (!dontClone) {
+            this._keys = values.slice(0);
+            if (cloneKeys) {
+                for (let i = 0; i < this._keys.length; i++) {
+                    const key = this._keys[i];
+                    this._keys[i] = {
+                        frame: key.frame,
+                        value: key.value.clone ? key.value.clone() : key.value,
+                        inTangent: key.inTangent && key.inTangent.clone ? key.inTangent.clone() : key.inTangent,
+                        outTangent: key.outTangent && key.outTangent.clone ? key.outTangent.clone() : key.outTangent,
+                        interpolation: key.interpolation,
+                        lockedTangent: key.lockedTangent,
+                        easingFunction: key.easingFunction,
+                    };
+                }
+            }
+        } else {
+            this._keys = values;
+        }
     }
 
     /**
@@ -1212,12 +1253,12 @@ export class Animation {
      */
     public createKeyForFrame(frame: number) {
         // Find the key corresponding to frame
-        evaluateAnimationState.key = 0;
-        const value = this._interpolate(frame, evaluateAnimationState, true);
+        EvaluateAnimationState.key = 0;
+        const value = this._interpolate(frame, EvaluateAnimationState, true);
 
         if (!value) {
             // A key corresponding to this frame already exists
-            return this._keys[evaluateAnimationState.key].frame === frame ? evaluateAnimationState.key : evaluateAnimationState.key + 1;
+            return this._keys[EvaluateAnimationState.key].frame === frame ? EvaluateAnimationState.key : EvaluateAnimationState.key + 1;
         }
 
         // The frame is between two keys, so create a new key
@@ -1226,9 +1267,9 @@ export class Animation {
             value: value.clone ? value.clone() : value,
         };
 
-        this._keys.splice(evaluateAnimationState.key + 1, 0, newKey);
+        this._keys.splice(EvaluateAnimationState.key + 1, 0, newKey);
 
-        return evaluateAnimationState.key + 1;
+        return EvaluateAnimationState.key + 1;
     }
 
     /**
@@ -1328,35 +1369,35 @@ export class Animation {
     /**
      * Float animation type
      */
-    public static readonly ANIMATIONTYPE_FLOAT = 0;
+    public static readonly ANIMATIONTYPE_FLOAT = Constants.ANIMATIONTYPE_FLOAT;
     /**
      * Vector3 animation type
      */
-    public static readonly ANIMATIONTYPE_VECTOR3 = 1;
+    public static readonly ANIMATIONTYPE_VECTOR3 = Constants.ANIMATIONTYPE_VECTOR3;
     /**
      * Quaternion animation type
      */
-    public static readonly ANIMATIONTYPE_QUATERNION = 2;
+    public static readonly ANIMATIONTYPE_QUATERNION = Constants.ANIMATIONTYPE_QUATERNION;
     /**
      * Matrix animation type
      */
-    public static readonly ANIMATIONTYPE_MATRIX = 3;
+    public static readonly ANIMATIONTYPE_MATRIX = Constants.ANIMATIONTYPE_MATRIX;
     /**
      * Color3 animation type
      */
-    public static readonly ANIMATIONTYPE_COLOR3 = 4;
+    public static readonly ANIMATIONTYPE_COLOR3 = Constants.ANIMATIONTYPE_COLOR3;
     /**
      * Color3 animation type
      */
-    public static readonly ANIMATIONTYPE_COLOR4 = 7;
+    public static readonly ANIMATIONTYPE_COLOR4 = Constants.ANIMATIONTYPE_COLOR4;
     /**
      * Vector2 animation type
      */
-    public static readonly ANIMATIONTYPE_VECTOR2 = 5;
+    public static readonly ANIMATIONTYPE_VECTOR2 = Constants.ANIMATIONTYPE_VECTOR2;
     /**
      * Size animation type
      */
-    public static readonly ANIMATIONTYPE_SIZE = 6;
+    public static readonly ANIMATIONTYPE_SIZE = Constants.ANIMATIONTYPE_SIZE;
     /**
      * Relative Loop Mode
      */
@@ -1544,8 +1585,8 @@ export class Animation {
      * @param url defines the url to load from
      * @returns a promise that will resolve to the new animation or an array of animations
      */
-    public static ParseFromFileAsync(name: Nullable<string>, url: string): Promise<Animation | Array<Animation>> {
-        return new Promise((resolve, reject) => {
+    public static async ParseFromFileAsync(name: Nullable<string>, url: string): Promise<Animation | Array<Animation>> {
+        return await new Promise((resolve, reject) => {
             const request = new WebRequest();
             request.addEventListener("readystatechange", () => {
                 if (request.readyState == 4) {
@@ -1572,6 +1613,7 @@ export class Animation {
                             resolve(output);
                         }
                     } else {
+                        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                         reject("Unable to load the animation");
                     }
                 }
@@ -1587,8 +1629,8 @@ export class Animation {
      * @param snippetId defines the snippet to load
      * @returns a promise that will resolve to the new animation or a new array of animations
      */
-    public static ParseFromSnippetAsync(snippetId: string): Promise<Animation | Array<Animation>> {
-        return new Promise((resolve, reject) => {
+    public static async ParseFromSnippetAsync(snippetId: string): Promise<Animation | Array<Animation>> {
+        return await new Promise((resolve, reject) => {
             const request = new WebRequest();
             request.addEventListener("readystatechange", () => {
                 if (request.readyState == 4) {
@@ -1614,6 +1656,7 @@ export class Animation {
                             resolve(output);
                         }
                     } else {
+                        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                         reject("Unable to load the snippet " + snippetId);
                     }
                 }

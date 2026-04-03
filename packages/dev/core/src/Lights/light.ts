@@ -1,20 +1,17 @@
 import { serialize, serializeAsColor3, expandToProperty } from "../Misc/decorators";
-import type { Nullable } from "../types";
-import type { Scene } from "../scene";
-import type { Matrix } from "../Maths/math.vector";
-import { Vector3 } from "../Maths/math.vector";
+import { type Nullable } from "../types";
+import { type Scene } from "../scene";
+import { type Matrix, Vector3 } from "../Maths/math.vector";
 import { Color3, TmpColors } from "../Maths/math.color";
 import { Node } from "../node";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
-import type { Effect } from "../Materials/effect";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
+import { type Effect } from "../Materials/effect";
 import { UniformBuffer } from "../Materials/uniformBuffer";
-import type { IShadowGenerator } from "./Shadows/shadowGenerator";
+import { type IShadowGenerator } from "./Shadows/shadowGenerator";
 import { GetClass } from "../Misc/typeStore";
-import type { ISortableLight } from "./lightConstants";
-import { LightConstants } from "./lightConstants";
-import type { Camera } from "../Cameras/camera";
+import { type ISortableLight, LightConstants } from "./lightConstants";
+import { type Camera } from "../Cameras/camera";
 import { SerializationHelper } from "../Misc/decorators.serialization";
-
 /**
  * Base class of all the lights in Babylon. It groups all the generic information about lights.
  * Lights are used, as you would expect, to affect how meshes are seen, in terms of both illumination and colour.
@@ -108,6 +105,11 @@ export abstract class Light extends Node implements ISortableLight {
     public static readonly LIGHTTYPEID_HEMISPHERICLIGHT = LightConstants.LIGHTTYPEID_HEMISPHERICLIGHT;
 
     /**
+     * Light type const id of the area light.
+     */
+    public static readonly LIGHTTYPEID_RECT_AREALIGHT = LightConstants.LIGHTTYPEID_RECT_AREALIGHT;
+
+    /**
      * Diffuse gives the basic color to an object.
      */
     @serializeAsColor3()
@@ -140,7 +142,8 @@ export abstract class Light extends Node implements ISortableLight {
     public intensity = 1.0;
 
     private _range = Number.MAX_VALUE;
-    protected _inverseSquaredRange = 0;
+    /** @internal */
+    public _inverseSquaredRange = 0;
 
     /**
      * Defines how far from the source the light is impacting in scene units.
@@ -364,21 +367,32 @@ export abstract class Light extends Node implements ISortableLight {
     private _lastUseSpecular: boolean;
 
     /**
+     * Used internally by ClusteredLight to sort lights
+     * @internal
+     */
+    public _currentViewDepth = 0;
+
+    /**
      * Creates a Light object in the scene.
      * Documentation : https://doc.babylonjs.com/features/featuresDeepDive/lights/lights_introduction
      * @param name The friendly name of the light
      * @param scene The scene the light belongs too
+     * @param dontAddToScene True to not add the light to the scene
      */
-    constructor(name: string, scene?: Scene) {
+    constructor(name: string, scene?: Scene, dontAddToScene?: boolean) {
         super(name, scene, false);
-        this.getScene().addLight(this);
+        if (!dontAddToScene) {
+            this.getScene().addLight(this);
+        }
         this._uniformBuffer = new UniformBuffer(this.getScene().getEngine(), undefined, undefined, name);
         this._buildUniformLayout();
 
         this.includedOnlyMeshes = [] as AbstractMesh[];
         this.excludedMeshes = [] as AbstractMesh[];
 
-        this._resyncMeshes();
+        if (!dontAddToScene) {
+            this._resyncMeshes();
+        }
     }
 
     protected abstract _buildUniformLayout(): void;
@@ -479,7 +493,7 @@ export abstract class Light extends Node implements ISortableLight {
      */
     public override toString(fullDetails?: boolean): string {
         let ret = "Name: " + this.name;
-        ret += ", type: " + ["Point", "Directional", "Spot", "Hemispheric"][this.getTypeID()];
+        ret += ", type: " + ["Point", "Directional", "Spot", "Hemispheric", "Clustered"][this.getTypeID()];
         if (this.animations) {
             for (let i = 0; i < this.animations.length; i++) {
                 ret += ", animation[0]: " + this.animations[i].toString(fullDetails);
@@ -606,6 +620,7 @@ export abstract class Light extends Node implements ISortableLight {
      * Returns the light type ID (integer).
      * @returns The light Type id as a constant defines in Light.LIGHTTYPEID_x
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public getTypeID(): number {
         return 0;
     }
@@ -663,16 +678,16 @@ export abstract class Light extends Node implements ISortableLight {
         // Inclusion / exclusions
         if (this.excludedMeshes.length > 0) {
             serializationObject.excludedMeshesIds = [];
-            this.excludedMeshes.forEach((mesh: AbstractMesh) => {
+            for (const mesh of this.excludedMeshes) {
                 serializationObject.excludedMeshesIds.push(mesh.id);
-            });
+            }
         }
 
         if (this.includedOnlyMeshes.length > 0) {
             serializationObject.includedOnlyMeshesIds = [];
-            this.includedOnlyMeshes.forEach((mesh: AbstractMesh) => {
+            for (const mesh of this.includedOnlyMeshes) {
                 serializationObject.includedOnlyMeshesIds.push(mesh.id);
-            });
+            }
         }
 
         // Animations
@@ -784,7 +799,7 @@ export abstract class Light extends Node implements ISortableLight {
 
         const oldSplice = array.splice;
         array.splice = (index: number, deleteCount?: number) => {
-            const deleted = oldSplice.apply(array, [index, deleteCount]);
+            const deleted = oldSplice.call(array, index, deleteCount ?? array.length);
 
             for (const item of deleted) {
                 item._resyncLightSource(this);
@@ -810,7 +825,7 @@ export abstract class Light extends Node implements ISortableLight {
 
         const oldSplice = array.splice;
         array.splice = (index: number, deleteCount?: number) => {
-            const deleted = oldSplice.apply(array, [index, deleteCount]);
+            const deleted = oldSplice.call(array, index, deleteCount ?? array.length);
 
             this._resyncMeshes();
 
@@ -924,4 +939,11 @@ export abstract class Light extends Node implements ISortableLight {
      * @param lightIndex defines the index of the light for the effect
      */
     public abstract prepareLightSpecificDefines(defines: any, lightIndex: number): void;
+
+    /**
+     * @internal
+     */
+    public _isReady() {
+        return true;
+    }
 }

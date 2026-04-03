@@ -1,16 +1,16 @@
-import type { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
+import { type Vector2, type Vector3, type Vector4 } from "core/Maths/math.vector";
 import { BlockTools } from "../../blockTools";
-import type { IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
-import type { INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
-import styles from "./inputDisplayManager.modules.scss";
-import type { GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
+import { type IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
+import { type INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
+import * as styles from "./inputDisplayManager.module.scss";
+import { type GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
 import { NodeGeometryBlockConnectionPointTypes } from "core/Meshes/Node/Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryContextualSources } from "core/Meshes/Node/Enums/nodeGeometryContextualSources";
-import type { Nullable } from "core/types";
-import type { StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
-import type { NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
+import { type Nullable } from "core/types";
+import { type StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
+import { type NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
 
-const predicate = (b: NodeGeometryBlock) => !!(b as any).getExecutionIndex;
+const Predicate = (b: NodeGeometryBlock) => !!(b as any).getExecutionIndex;
 
 export class InputDisplayManager implements IDisplayManager {
     private _hasHighlights = false;
@@ -38,7 +38,7 @@ export class InputDisplayManager implements IDisplayManager {
     }
 
     public getBackgroundColor(nodeData: INodeData): string {
-        let color = "";
+        let color: string;
         const inputBlock = nodeData.data as GeometryInputBlock;
 
         switch (inputBlock.type) {
@@ -104,6 +104,12 @@ export class InputDisplayManager implements IDisplayManager {
                 case NodeGeometryContextualSources.Colors:
                     value = "Colors";
                     break;
+                case NodeGeometryContextualSources.LatticeID:
+                    value = "LatticeID";
+                    break;
+                case NodeGeometryContextualSources.LatticeControl:
+                    value = "LatticeControl";
+                    break;
             }
         } else {
             switch (inputBlock.type) {
@@ -140,7 +146,7 @@ export class InputDisplayManager implements IDisplayManager {
         if (!block.isContextual) {
             return;
         }
-        const contextGenerationBlock = block.getDescendantOfPredicate(predicate);
+        const contextGenerationBlock = block.getDescendantOfPredicate(Predicate);
 
         if (selectedData !== nodeData) {
             if (this._hasHighlights) {
@@ -148,7 +154,7 @@ export class InputDisplayManager implements IDisplayManager {
 
                 if (selectedData && selectedData.data.getClassName() === "GeometryInputBlock") {
                     const otherSelection = selectedData.data as GeometryInputBlock;
-                    const otherContextGenerationBlock = otherSelection.getDescendantOfPredicate(predicate);
+                    const otherContextGenerationBlock = otherSelection.getDescendantOfPredicate(Predicate);
 
                     removeHighlight = contextGenerationBlock !== otherContextGenerationBlock;
                 } else {
@@ -174,7 +180,7 @@ export class InputDisplayManager implements IDisplayManager {
             return;
         }
 
-        const contextGenerationBlock = block.getDescendantOfPredicate(predicate);
+        const contextGenerationBlock = block.getDescendantOfPredicate(Predicate);
 
         if (contextGenerationBlock) {
             manager.onHighlightNodeObservable.notifyObservers({ data: contextGenerationBlock, active: false });

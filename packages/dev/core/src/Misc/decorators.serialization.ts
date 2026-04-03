@@ -1,19 +1,19 @@
-import type { FresnelParameters } from "../Materials/fresnelParameters";
-import type { ImageProcessingConfiguration } from "../Materials/imageProcessingConfiguration";
+import { type FresnelParameters } from "../Materials/fresnelParameters";
+import { type ImageProcessingConfiguration } from "../Materials/imageProcessingConfiguration";
 import { _WarnImport } from "./devTools";
-import type { ColorCurves } from "../Materials/colorCurves";
-import type { Scene } from "../scene";
-import type { Nullable } from "../types";
-import type { BaseTexture } from "../Materials/Textures/baseTexture";
-import type { IAnimatable } from "../Animations/animatable.interface";
+import { type ColorCurves } from "../Materials/colorCurves";
+import { type Scene } from "../scene";
+import { type Nullable } from "../types";
+import { type BaseTexture } from "../Materials/Textures/baseTexture";
+import { type IAnimatable } from "../Animations/animatable.interface";
 import { Tags } from "./tags";
 import { Color3, Color4 } from "../Maths/math.color";
 import { Matrix, Quaternion, Vector2, Vector3 } from "../Maths/math.vector";
-import type { Camera } from "../Cameras/camera";
+import { type Camera } from "../Cameras/camera";
 import { GetMergedStore } from "./decorators.functions";
 
 /** @internal */
-export interface CopySourceOptions {
+export interface ICopySourceOptions {
     /*
      * if a texture is used in more than one channel (e.g diffuse and opacity),
      * only clone it once and reuse it on the other channels. Default false
@@ -21,7 +21,7 @@ export interface CopySourceOptions {
     cloneTexturesOnlyOnce?: boolean;
 }
 
-const _copySource = function <T>(creationFunction: () => T, source: T, instanciate: boolean, options: CopySourceOptions = {}): T {
+const CopySource = function <T>(creationFunction: () => T, source: T, instanciate: boolean, options: ICopySourceOptions = {}): T {
     const destination = creationFunction();
 
     // Tags
@@ -44,8 +44,13 @@ const _copySource = function <T>(creationFunction: () => T, source: T, instancia
             switch (propertyType) {
                 case 0: // Value
                 case 6: // Mesh reference
+                case 9: // Image processing configuration reference
                 case 11: // Camera reference
-                    (<any>destination)[property] = sourceProperty;
+                    if (typeof sourceProperty.slice === "function") {
+                        (<any>destination)[property] = sourceProperty.slice();
+                    } else {
+                        (<any>destination)[property] = sourceProperty;
+                    }
                     break;
                 case 1: // Texture
                     if (options.cloneTexturesOnlyOnce && textureMap[sourceProperty.uniqueId]) {
@@ -60,6 +65,7 @@ const _copySource = function <T>(creationFunction: () => T, source: T, instancia
                 case 4: // Vector2
                 case 5: // Vector3
                 case 7: // Color Curves
+                case 8: // Color 4
                 case 10: // Quaternion
                 case 12: // Matrix
                     (<any>destination)[property] = instanciate ? sourceProperty : sourceProperty.clone();
@@ -152,7 +158,11 @@ export class SerializationHelper {
             if (sourceProperty !== undefined && sourceProperty !== null && (property !== "uniqueId" || SerializationHelper.AllowLoadingUniqueId)) {
                 switch (propertyType) {
                     case 0: // Value
-                        serializationObject[targetPropertyName] = sourceProperty;
+                        if (Array.isArray(sourceProperty)) {
+                            serializationObject[targetPropertyName] = sourceProperty.slice();
+                        } else {
+                            serializationObject[targetPropertyName] = sourceProperty;
+                        }
                         break;
                     case 1: // Texture
                         serializationObject[targetPropertyName] = sourceProperty.serialize();
@@ -218,7 +228,7 @@ export class SerializationHelper {
             const propertyType = propertyDescriptor.type;
 
             if (sourceProperty !== undefined && sourceProperty !== null && (property !== "uniqueId" || SerializationHelper.AllowLoadingUniqueId)) {
-                const dest = <any>destination;
+                const dest = destination;
                 switch (propertyType) {
                     case 0: // Value
                         dest[property] = sourceProperty;
@@ -298,8 +308,8 @@ export class SerializationHelper {
      * @param options defines the options to use
      * @returns the cloned object
      */
-    public static Clone<T>(creationFunction: () => T, source: T, options: CopySourceOptions = {}): T {
-        return _copySource(creationFunction, source, false, options);
+    public static Clone<T>(creationFunction: () => T, source: T, options: ICopySourceOptions = {}): T {
+        return CopySource(creationFunction, source, false, options);
     }
 
     /**
@@ -309,6 +319,6 @@ export class SerializationHelper {
      * @returns the new object
      */
     public static Instanciate<T>(creationFunction: () => T, source: T): T {
-        return _copySource(creationFunction, source, true);
+        return CopySource(creationFunction, source, true);
     }
 }

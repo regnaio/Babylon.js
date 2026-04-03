@@ -1,8 +1,7 @@
-import type { Nullable } from "../types";
-import type { Camera } from "../Cameras/camera";
-import type { PostProcessOptions } from "./postProcess";
-import { PostProcess } from "./postProcess";
-import type { Engine } from "../Engines/engine";
+import { type Nullable } from "../types";
+import { type Camera } from "../Cameras/camera";
+import { type PostProcessOptions, PostProcess } from "./postProcess";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
 import { Constants } from "../Engines/constants";
 
 /**
@@ -27,16 +26,16 @@ export class HighlightsPostProcess extends PostProcess {
      * @param samplingMode The sampling mode to be used when computing the pass. (default: 0)
      * @param engine The engine which the post process will be applied. (default: current engine)
      * @param reusable If the post process can be reused on the same frame. (default: false)
-     * @param textureType Type of texture for the post process (default: Engine.TEXTURETYPE_UNSIGNED_INT)
+     * @param textureType Type of texture for the post process (default: Engine.TEXTURETYPE_UNSIGNED_BYTE)
      */
     constructor(
         name: string,
         options: number | PostProcessOptions,
         camera: Nullable<Camera>,
         samplingMode?: number,
-        engine?: Engine,
+        engine?: AbstractEngine,
         reusable?: boolean,
-        textureType: number = Constants.TEXTURETYPE_UNSIGNED_INT
+        textureType: number = Constants.TEXTURETYPE_UNSIGNED_BYTE
     ) {
         super(name, "highlights", null, null, options, camera, samplingMode, engine, reusable, null, textureType);
     }

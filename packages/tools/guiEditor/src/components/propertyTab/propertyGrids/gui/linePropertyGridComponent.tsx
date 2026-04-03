@@ -1,9 +1,9 @@
 import * as React from "react";
-import type { Observable } from "core/Misc/observable";
-import type { PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
+import { type Observable } from "core/Misc/observable";
+import { type PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
 import { CommonControlPropertyGridComponent } from "../gui/commonControlPropertyGridComponent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
-import type { Line } from "gui/2D/controls/line";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type Line } from "gui/2D/controls/line";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
@@ -15,7 +15,7 @@ import linePoint2Icon from "shared-ui-components/imgs/linePoint2Icon.svg";
 import lineDashIcon from "shared-ui-components/imgs/lineDashIcon.svg";
 import { IconComponent } from "shared-ui-components/lines/iconComponent";
 import { UnitButton } from "shared-ui-components/lines/unitButton";
-import type { GlobalState } from "../../../../globalState";
+import { type GlobalState } from "../../../../globalState";
 
 interface ILinePropertyGridComponentProps {
     lines: Line[];
@@ -35,15 +35,15 @@ export class LinePropertyGridComponent extends React.Component<ILinePropertyGrid
         for (const line of this.props.lines) {
             line.dash = [];
 
-            split.forEach((v) => {
+            for (const v of split) {
                 const int = parseInt(v);
 
                 if (isNaN(int)) {
-                    return;
+                    continue;
                 }
 
                 line.dash.push(int);
-            });
+            }
         }
         this.forceUpdate();
     }
@@ -53,15 +53,18 @@ export class LinePropertyGridComponent extends React.Component<ILinePropertyGrid
         const proxy = makeTargetsProxy(lines, onPropertyChangedObservable);
         let dashes = lines[0].dash;
         for (const line of lines) {
-            if (dashes.length === 0) break;
+            if (dashes.length === 0) {
+                break;
+            }
             if (line.dash.length !== dashes.length) {
                 dashes = [];
             }
-            dashes.forEach((dash, index) => {
-                if (line.dash[index] !== dash) {
+            for (let i = 0; i < dashes.length; i++) {
+                const dash = dashes[i];
+                if (line.dash[i] !== dash) {
                     dashes = [];
                 }
-            });
+            }
         }
         const dashString = dashes.join(",");
 

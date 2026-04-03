@@ -49,9 +49,12 @@ attribute uv2: vec2f;
 
 @vertex
 fn main(input : VertexInputs) -> FragmentInputs {
-	var positionUpdated: vec3f = input.position;
+	var positionUpdated: vec3f = vertexInputs.position;
 #ifdef UV1
-    var uvUpdated: vec2f = input.uv;
+    var uvUpdated: vec2f = vertexInputs.uv;
+#endif
+#ifdef UV2
+		var uv2Updated: vec2f = vertexInputs.uv2;
 #endif
 
 #include<morphTargetsVertexGlobal>
@@ -65,7 +68,7 @@ var worldPos: vec4f = finalWorld *  vec4f(positionUpdated, 1.0);
 
 #ifdef CUBEMAP
 	vertexOutputs.vPosition = worldPos;
-	vertexOutputs.position = uniforms.viewProjection * finalWorld *  vec4f(input.position, 1.0);
+	vertexOutputs.position = uniforms.viewProjection * finalWorld *  vec4f(vertexInputs.position, 1.0);
 #else
 	vertexOutputs.vPosition = uniforms.viewProjection * worldPos;
 	vertexOutputs.position = vertexOutputs.vPosition;
@@ -76,7 +79,7 @@ var worldPos: vec4f = finalWorld *  vec4f(positionUpdated, 1.0);
 		vertexOutputs.vUVDiffuse =  (uniforms.diffuseMatrix *  vec4f(uvUpdated, 1.0, 0.0)).xy;
 	#endif
 	#ifdef DIFFUSEUV2
-		vertexOutputs.vUVDiffuse =  (uniforms.diffuseMatrix *  vec4f(input.uv2, 1.0, 0.0)).xy;
+		vertexOutputs.vUVDiffuse =  (uniforms.diffuseMatrix *  vec4f(uv2Updated, 1.0, 0.0)).xy;
 	#endif
 #endif
 
@@ -85,7 +88,7 @@ var worldPos: vec4f = finalWorld *  vec4f(positionUpdated, 1.0);
 		vertexOutputs.vUVOpacity =  (uniforms.opacityMatrix *  vec4f(uvUpdated, 1.0, 0.0)).xy;
 	#endif
 	#ifdef OPACITYUV2
-		vertexOutputs.vUVOpacity =  (uniforms.opacityMatrix *  vec4f(input.uv2, 1.0, 0.0)).xy;
+		vertexOutputs.vUVOpacity =  (uniforms.opacityMatrix *  vec4f(uv2Updated, 1.0, 0.0)).xy;
 	#endif
 #endif
 
@@ -94,12 +97,12 @@ var worldPos: vec4f = finalWorld *  vec4f(positionUpdated, 1.0);
 		vertexOutputs.vUVEmissive =  (uniforms.emissiveMatrix *  vec4f(uvUpdated, 1.0, 0.0)).xy;
 	#endif
 	#ifdef EMISSIVEUV2
-		vertexOutputs.vUVEmissive =  (uniforms.emissiveMatrix *  vec4f(input.uv2, 1.0, 0.0)).xy;
+		vertexOutputs.vUVEmissive =  (uniforms.emissiveMatrix *  vec4f(uv2Updated, 1.0, 0.0)).xy;
 	#endif
 #endif
 
 #ifdef VERTEXALPHA
-    vertexOutputs.vColor = color;
+    vertexOutputs.vColor = vertexInputs.color;
 #endif
 
 #include<clipPlaneVertex>

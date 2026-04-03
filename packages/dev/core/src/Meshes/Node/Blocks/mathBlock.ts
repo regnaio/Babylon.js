@@ -1,11 +1,11 @@
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryBuildState } from "../nodeGeometryBuildState";
+import { type NodeGeometryBuildState } from "../nodeGeometryBuildState";
 import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
 import { PropertyTypeForEdition, editableInPropertyPage } from "../../../Decorators/nodeDecorator";
-import type { Observer } from "core/Misc/observable";
+import { type Observer } from "core/Misc/observable";
 
 /**
  * Operations supported by the Math block
@@ -34,6 +34,7 @@ export class MathBlock extends NodeGeometryBlock {
      */
     @editableInPropertyPage("Operation", PropertyTypeForEdition.List, "ADVANCED", {
         notifiers: { rebuild: true },
+        embedded: true,
         options: [
             { label: "Add", value: MathBlockOperations.Add },
             { label: "Subtract", value: MathBlockOperations.Subtract },
@@ -316,7 +317,9 @@ export class MathBlock extends NodeGeometryBlock {
      */
     public override dispose() {
         super.dispose();
-        this._connectionObservers.forEach((observer) => observer.remove());
+        for (const observer of this._connectionObservers) {
+            observer.remove();
+        }
         this._connectionObservers.length = 0;
     }
 
@@ -332,6 +335,7 @@ export class MathBlock extends NodeGeometryBlock {
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

@@ -1,10 +1,10 @@
 import * as React from "react";
-import type { GlobalState } from "../globalState";
+import { type GlobalState } from "../globalState";
 import { DropUpButton } from "./dropUpButton";
-import type { Scene } from "core/scene";
-import type { Observer } from "core/Misc/observable";
-import type { Nullable } from "core/types";
-import type { AnimationGroup } from "core/Animations/animationGroup";
+import { type Scene } from "core/scene";
+import { type Observer } from "core/Misc/observable";
+import { type Nullable } from "core/types";
+import { type AnimationGroup } from "core/Animations/animationGroup";
 
 import iconPlay from "../img/icon-play.svg";
 import iconPause from "../img/icon-pause.svg";
@@ -31,6 +31,7 @@ export class AnimationBar extends React.Component<IAnimationBarProps, { groupInd
         this.state = { groupIndex: 0 };
 
         props.globalState.onSceneLoaded.add((info) => {
+            this.setState({ groupIndex: 0 });
             this.registerBeforeRender(info.scene);
         });
 

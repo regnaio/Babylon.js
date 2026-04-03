@@ -1,33 +1,34 @@
-import type { ProcessingOptions, ShaderCustomProcessingFunction } from "../Engines/Processors/shaderProcessingOptions";
-import type { Nullable } from "../types";
+import { type _IProcessingOptions, type ShaderCustomProcessingFunction } from "../Engines/Processors/shaderProcessingOptions";
+import { type Nullable } from "../types";
 import { Material } from "./material";
-import type {
-    MaterialPluginPrepareEffect,
-    MaterialPluginBindForSubMesh,
-    MaterialPluginDisposed,
-    MaterialPluginGetActiveTextures,
-    MaterialPluginGetAnimatables,
-    MaterialPluginGetDefineNames,
-    MaterialPluginHasTexture,
-    MaterialPluginIsReadyForSubMesh,
-    MaterialPluginPrepareDefines,
-    MaterialPluginPrepareUniformBuffer,
-    MaterialPluginHardBindForSubMesh,
-    MaterialPluginHasRenderTargetTextures,
-    MaterialPluginFillRenderTargetTextures,
+import {
+    type MaterialPluginPrepareEffect,
+    type MaterialPluginBindForSubMesh,
+    type MaterialPluginDisposed,
+    type MaterialPluginGetActiveTextures,
+    type MaterialPluginGetAnimatables,
+    type MaterialPluginGetDefineNames,
+    type MaterialPluginHasTexture,
+    type MaterialPluginIsReadyForSubMesh,
+    type MaterialPluginPrepareDefines,
+    type MaterialPluginPrepareUniformBuffer,
+    type MaterialPluginHardBindForSubMesh,
+    type MaterialPluginHasRenderTargetTextures,
+    type MaterialPluginFillRenderTargetTextures,
+    MaterialPluginEvent,
 } from "./materialPluginEvent";
-import { MaterialPluginEvent } from "./materialPluginEvent";
-import type { Observer } from "core/Misc/observable";
+import { type Observer } from "core/Misc/observable";
 import { EngineStore } from "../Engines/engineStore";
 
-import type { Scene } from "../scene";
-import type { AbstractEngine } from "../Engines/abstractEngine";
-import type { MaterialPluginBase } from "./materialPluginBase";
-import { _ProcessIncludes } from "../Engines/Processors/shaderProcessor";
+import { type Scene } from "../scene";
+import { type AbstractEngine } from "../Engines/abstractEngine";
+import { type MaterialPluginBase } from "./materialPluginBase";
+import { ProcessIncludes } from "../Engines/Processors/shaderProcessor";
 import { ShaderLanguage } from "./shaderLanguage";
 import { ShaderStore } from "../Engines/shaderStore";
 
 declare module "./material" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Material {
         /**
          * Plugin manager for this material
@@ -36,7 +37,7 @@ declare module "./material" {
     }
 }
 
-const rxOption = new RegExp("^([gimus]+)!");
+const RxOption = new RegExp("^([gimus]+)!");
 
 /**
  * Class that manages the plugins of a material
@@ -90,8 +91,8 @@ export class MaterialPluginManager {
         }
 
         if (this._material._uniformBufferLayoutBuilt) {
-            // eslint-disable-next-line no-throw-literal
-            throw `The plugin "${plugin.name}" can't be added to the material "${this._material.name}" because this material has already been used for rendering! Please add plugins to materials before any rendering with this material occurs.`;
+            this._material.resetDrawCache();
+            this._material._createUniformBuffer();
         }
 
         if (!plugin.isCompatible(this._material.shaderLanguage)) {
@@ -319,7 +320,11 @@ export class MaterialPluginManager {
                                                 break;
                                         }
 
-                                        this._uboDeclaration += `uniform ${uniform.name}: ${type}${arraySize > 0 ? `[${arraySize}]` : ""};\n`;
+                                        if (arraySize > 0) {
+                                            this._uboDeclaration += `uniform ${uniform.name}: array<${type}, ${arraySize}>;\n`;
+                                        } else {
+                                            this._uboDeclaration += `uniform ${uniform.name}: ${type};\n`;
+                                        }
                                     } else {
                                         this._uboDeclaration += `${uniform.type} ${uniform.name}${arraySize > 0 ? `[${arraySize}]` : ""};\n`;
                                     }
@@ -332,6 +337,12 @@ export class MaterialPluginManager {
                         }
                         if (uniforms.fragment) {
                             this._fragmentDeclaration += uniforms.fragment + "\n";
+                        }
+
+                        // These are uniforms which are used by the shader but not updated by the plugin directly.
+                        // They still need to be present in the _uniformList so the Effect can determine their locations.
+                        if (uniforms.externalUniforms) {
+                            this._uniformList.push(...uniforms.externalUniforms);
                         }
                     }
                     plugin.getSamplers(this._samplerList);
@@ -372,17 +383,17 @@ export class MaterialPluginManager {
             if (!points) {
                 return code;
             }
-            let processorOptions: Nullable<ProcessingOptions> = null;
+            let processorOptions: Nullable<_IProcessingOptions> = null;
             for (let pointName in points) {
                 let injectedCode = "";
                 for (const plugin of this._activePlugins) {
-                    let customCode = plugin.getCustomCode(shaderType, this._material.shaderLanguage)?.[pointName];
+                    const shaderLanguage = this._material.shaderLanguage;
+                    let customCode = plugin.getCustomCode(shaderType, shaderLanguage)?.[pointName];
                     if (!customCode) {
                         continue;
                     }
                     if (plugin.resolveIncludes) {
                         if (processorOptions === null) {
-                            const shaderLanguage = ShaderLanguage.GLSL;
                             processorOptions = {
                                 defines: [], // not used by _ProcessIncludes
                                 indexParameters: eventData.indexParameters,
@@ -401,7 +412,7 @@ export class MaterialPluginManager {
                             };
                         }
                         processorOptions.isFragment = shaderType === "fragment";
-                        _ProcessIncludes(customCode, processorOptions, (code) => (customCode = code));
+                        ProcessIncludes(customCode, processorOptions, (code) => (customCode = code));
                     }
                     injectedCode += customCode + "\n";
                 }
@@ -417,7 +428,7 @@ export class MaterialPluginManager {
                             pointName = pointName.substring(1);
                         } else {
                             // get the flag(s)
-                            const matchOption = rxOption.exec(pointName);
+                            const matchOption = RxOption.exec(pointName);
                             if (matchOption && matchOption.length >= 2) {
                                 regexFlags = matchOption[1];
                                 pointName = pointName.substring(regexFlags.length + 1);
@@ -456,9 +467,9 @@ export class MaterialPluginManager {
  */
 export type PluginMaterialFactory = (material: Material) => Nullable<MaterialPluginBase>;
 
-const plugins: Array<[string, PluginMaterialFactory]> = [];
-let inited = false;
-let observer: Nullable<Observer<Material>> = null;
+const Plugins: Array<[string, PluginMaterialFactory]> = [];
+let Inited = false;
+let MaterialObserver: Nullable<Observer<Material>> = null;
 
 /**
  * Registers a new material plugin through a factory, or updates it. This makes the plugin available to all materials instantiated after its registration.
@@ -467,19 +478,19 @@ let observer: Nullable<Observer<Material>> = null;
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function RegisterMaterialPlugin(pluginName: string, factory: PluginMaterialFactory): void {
-    if (!inited) {
-        observer = Material.OnEventObservable.add((material: Material) => {
-            for (const [, factory] of plugins) {
+    if (!Inited) {
+        MaterialObserver = Material.OnEventObservable.add((material: Material) => {
+            for (const [, factory] of Plugins) {
                 factory(material);
             }
         }, MaterialPluginEvent.Created);
-        inited = true;
+        Inited = true;
     }
-    const existing = plugins.filter(([name, _factory]) => name === pluginName);
+    const existing = Plugins.filter(([name, _factory]) => name === pluginName);
     if (existing.length > 0) {
         existing[0][1] = factory;
     } else {
-        plugins.push([pluginName, factory]);
+        Plugins.push([pluginName, factory]);
     }
 }
 
@@ -490,10 +501,10 @@ export function RegisterMaterialPlugin(pluginName: string, factory: PluginMateri
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function UnregisterMaterialPlugin(pluginName: string): boolean {
-    for (let i = 0; i < plugins.length; ++i) {
-        if (plugins[i][0] === pluginName) {
-            plugins.splice(i, 1);
-            if (plugins.length === 0) {
+    for (let i = 0; i < Plugins.length; ++i) {
+        if (Plugins[i][0] === pluginName) {
+            Plugins.splice(i, 1);
+            if (Plugins.length === 0) {
                 UnregisterAllMaterialPlugins();
             }
             return true;
@@ -507,8 +518,8 @@ export function UnregisterMaterialPlugin(pluginName: string): boolean {
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function UnregisterAllMaterialPlugins(): void {
-    plugins.length = 0;
-    inited = false;
-    Material.OnEventObservable.remove(observer);
-    observer = null;
+    Plugins.length = 0;
+    Inited = false;
+    Material.OnEventObservable.remove(MaterialObserver);
+    MaterialObserver = null;
 }

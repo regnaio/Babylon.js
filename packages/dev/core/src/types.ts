@@ -3,17 +3,14 @@
 export type Nullable<T> = T | null;
 /**
  * Alias type for number that are floats
- * @ignorenaming
  */
 export type float = number;
 /**
  * Alias type for number that are doubles.
- * @ignorenaming
  */
 export type double = number;
 /**
  * Alias type for number that are integer
- * @ignorenaming
  */
 export type int = number;
 
@@ -138,14 +135,30 @@ export type FloatArray = number[] | Float32Array;
 export type IndicesArray = number[] | Int32Array | Uint32Array | Uint16Array;
 
 /**
+ * Alias type for all TypedArrays
+ */
+export type TypedArray =
+    | Int8Array
+    | Uint8Array
+    | Uint8ClampedArray
+    | Int16Array
+    | Uint16Array
+    | Int32Array
+    | Uint32Array
+    | Float32Array
+    | Float64Array
+    | BigInt64Array
+    | BigUint64Array;
+
+/**
  * Alias for types that can be used by a Buffer or VertexBuffer.
  */
-export type DataArray = number[] | ArrayBuffer | ArrayBufferView;
+export type DataArray = number[] | ArrayBufferLike | ArrayBufferView;
 
 /**
  * Alias type for primitive types
- * @ignorenaming
  */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 type Primitive = undefined | null | boolean | string | number | Function | Element;
 
 /**
@@ -169,6 +182,16 @@ export type DeepImmutable<T> = T extends Primitive
         DeepImmutableObject<T>;
 
 /**
+ * Type modifier to make all the properties of an object NonNullable
+ */
+export type NonNullableFields<T> = { [P in keyof T]: NonNullable<T[P]> };
+
+/**
+ * Type modifier to make all the properties of an object Writable (remove "readonly")
+ */
+export type WritableObject<T> = { -readonly [P in keyof T]: T[P] };
+
+/**
  * Type modifier to make object properties readonly.
  */
 export type DeepImmutableObject<T> = { readonly [K in keyof T]: DeepImmutable<T[K]> };
@@ -186,3 +209,27 @@ export type Constructor<C extends new (...args: any[]) => any, I extends Instanc
  * Alias type for image sources
  */
 export type ImageSource = ImageBitmap | ImageData | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | OffscreenCanvas;
+
+/**
+ * Type for typed array like objects
+ */
+export interface TypedArrayLike extends ArrayBufferView {
+    /**
+     * The size in bytes of the array.
+     */
+    readonly length: number;
+    [n: number]: number;
+}
+
+/**
+ * Interface for a constructor of a TypedArray.
+ */
+export interface TypedArrayConstructor<T extends TypedArray = TypedArray> {
+    new (length: number): T;
+    new (elements: Iterable<number>): T;
+    new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): T;
+    /**
+     * The size in bytes of each element in the array.
+     */
+    readonly BYTES_PER_ELEMENT: number;
+}

@@ -1,7 +1,7 @@
-/* eslint-disable import/export */
-/* eslint-disable import/no-internal-modules */
+/* eslint-disable @typescript-eslint/no-restricted-imports */
 export * from "./abstractMesh";
 import "./abstractMesh.decalMap";
+export * from "./abstractMesh.hotSpot";
 export * from "./Compression/index";
 export * from "./csg";
 export * from "./meshUVSpaceRenderer";
@@ -21,6 +21,8 @@ export * from "./polygonMesh";
 export * from "./geodesicMesh";
 export * from "./subMesh";
 export * from "./subMesh.project";
+export * from "./lattice";
+export * from "./lattice.material";
 export * from "./meshLODLevel";
 export * from "./transformNode";
 export * from "./Builders/index";
@@ -29,11 +31,15 @@ export * from "./WebGPU/webgpuDataBuffer";
 export * from "./GreasedLine/greasedLineMesh";
 export * from "./GreasedLine/greasedLineRibbonMesh";
 export * from "./GreasedLine/greasedLineBaseMesh";
+export * from "./csg2";
+export * from "./mesh.vertexData.functions";
+export * from "./mesh.vertexData.subdivide";
 import "./thinInstanceMesh";
-// eslint-disable-next-line no-duplicate-imports
 export * from "./thinInstanceMesh";
 export * from "./Node/index";
+export * from "./GaussianSplatting/gaussianSplattingMeshBase";
 export * from "./GaussianSplatting/gaussianSplattingMesh";
+export * from "./GaussianSplatting/gaussianSplattingCompoundMesh";
 
 // LineMesh
 export * from "../Shaders/color.fragment";

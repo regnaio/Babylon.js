@@ -1,12 +1,12 @@
 import { WebXRFeatureName, WebXRFeaturesManager } from "../webXRFeaturesManager";
-import type { WebXRSessionManager } from "../webXRSessionManager";
+import { type WebXRSessionManager } from "../webXRSessionManager";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
 import { Observable } from "../../Misc/observable";
 import { Constants } from "../../Engines/constants";
 import { WebGLHardwareTexture } from "../../Engines/WebGL/webGLHardwareTexture";
 import { InternalTexture, InternalTextureSource } from "../../Materials/Textures/internalTexture";
 import { BaseTexture } from "../../Materials/Textures/baseTexture";
-import type { ThinEngine } from "../../Engines";
+import { type ThinEngine } from "../../Engines";
 
 /**
  * Options for raw camera access
@@ -85,7 +85,7 @@ export class WebXRRawCameraAccess extends WebXRAbstractFeature {
         this.xrNativeFeatureName = "camera-access";
     }
 
-    public override attach(force?: boolean | undefined): boolean {
+    public override attach(force?: boolean): boolean {
         if (!super.attach(force)) {
             return false;
         }
@@ -102,8 +102,12 @@ export class WebXRRawCameraAccess extends WebXRAbstractFeature {
         }
         this._glBinding = undefined;
         if (!this.options.doNotDisposeOnDetach) {
-            this._cachedInternalTextures.forEach((t) => t.dispose());
-            this.texturesData.forEach((t) => t.dispose());
+            for (const t of this._cachedInternalTextures) {
+                t.dispose();
+            }
+            for (const t of this.texturesData) {
+                t.dispose();
+            }
             this._cachedInternalTextures.length = 0;
             this.texturesData.length = 0;
             this.cameraIntrinsics.length = 0;
@@ -168,7 +172,7 @@ export class WebXRRawCameraAccess extends WebXRAbstractFeature {
             internalTexture.invertY = false;
             internalTexture.format = Constants.TEXTUREFORMAT_RGBA;
             internalTexture.generateMipMaps = true;
-            internalTexture.type = Constants.TEXTURETYPE_FLOAT;
+            internalTexture.type = Constants.TEXTURETYPE_UNSIGNED_BYTE;
             internalTexture.samplingMode = Constants.TEXTURE_LINEAR_LINEAR_MIPLINEAR;
             internalTexture.width = view.camera.width;
             internalTexture.height = view.camera.height;
@@ -199,9 +203,10 @@ export class WebXRRawCameraAccess extends WebXRAbstractFeature {
             return;
         }
         let updated = true;
-        pose.views.forEach((view, index) => {
+        for (let index = 0; index < pose.views.length; index++) {
+            const view = pose.views[index];
             updated = updated && this._updateInternalTextures(view, index);
-        });
+        }
         if (updated) {
             this.onTexturesUpdatedObservable.notifyObservers(this.texturesData);
         }

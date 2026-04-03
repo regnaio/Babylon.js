@@ -1,15 +1,15 @@
-import type { Nullable } from "../types";
-import type { Vector2 } from "../Maths/math.vector";
-import type { Camera } from "../Cameras/camera";
-import type { Effect } from "../Materials/effect";
+import { type Nullable } from "../types";
+import { type Vector2 } from "../Maths/math.vector";
+import { type Camera } from "../Cameras/camera";
+import { type Effect } from "../Materials/effect";
 import { Texture } from "../Materials/Textures/texture";
-import type { PostProcess, PostProcessOptions } from "./postProcess";
+import { type PostProcess, type PostProcessOptions } from "./postProcess";
 import { BlurPostProcess } from "./blurPostProcess";
-import type { Scene } from "../scene";
+import { type Scene } from "../scene";
 import { Constants } from "../Engines/constants";
 import { RegisterClass } from "../Misc/typeStore";
-import { serialize } from "../Misc/decorators";
-import type { AbstractEngine } from "core/Engines/abstractEngine";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+import { ThinDepthOfFieldBlurPostProcess } from "./thinDepthOfFieldBlurPostProcess";
 
 /**
  * The DepthOfFieldBlurPostProcess applied a blur in a give direction.
@@ -18,12 +18,6 @@ import type { AbstractEngine } from "core/Engines/abstractEngine";
  * See section 2.6.2 http://fileadmin.cs.lth.se/cs/education/edan35/lectures/12dof.pdf
  */
 export class DepthOfFieldBlurPostProcess extends BlurPostProcess {
-    /**
-     * The direction the blur should be applied
-     */
-    @serialize()
-    public override direction: Vector2;
-
     /**
      * Gets a string identifying the name of the class
      * @returns "DepthOfFieldBlurPostProcess" string
@@ -35,7 +29,7 @@ export class DepthOfFieldBlurPostProcess extends BlurPostProcess {
     /**
      * Creates a new instance DepthOfFieldBlurPostProcess
      * @param name The name of the effect.
-     * @param scene The scene the effect belongs to.
+     * @param _scene The scene the effect belongs to (not used, you can pass null)
      * @param direction The direction the blur should be applied.
      * @param kernel The size of the kernel used to blur.
      * @param options The required width/height ratio to downsize to before computing the render pass.
@@ -51,7 +45,7 @@ export class DepthOfFieldBlurPostProcess extends BlurPostProcess {
      */
     constructor(
         name: string,
-        scene: Scene,
+        _scene: Nullable<Scene>,
         direction: Vector2,
         kernel: number,
         options: number | PostProcessOptions,
@@ -61,27 +55,29 @@ export class DepthOfFieldBlurPostProcess extends BlurPostProcess {
         samplingMode = Texture.BILINEAR_SAMPLINGMODE,
         engine?: AbstractEngine,
         reusable?: boolean,
-        textureType = Constants.TEXTURETYPE_UNSIGNED_INT,
+        textureType = Constants.TEXTURETYPE_UNSIGNED_BYTE,
         blockCompilation = false,
         textureFormat = Constants.TEXTUREFORMAT_RGBA
     ) {
-        super(
-            name,
-            direction,
-            kernel,
-            options,
+        const localOptions = {
+            size: typeof options === "number" ? options : undefined,
             camera,
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            (samplingMode = Constants.TEXTURE_BILINEAR_SAMPLINGMODE),
+            samplingMode: (samplingMode = Constants.TEXTURE_BILINEAR_SAMPLINGMODE),
             engine,
             reusable,
             textureType,
-            `#define DOF 1\n`,
+            defines: `#define DOF 1\n`,
             blockCompilation,
-            textureFormat
-        );
+            textureFormat,
+            ...(options as PostProcessOptions),
+        };
 
-        this.direction = direction;
+        super(name, direction, kernel, {
+            effectWrapper: typeof options === "number" || !options.effectWrapper ? new ThinDepthOfFieldBlurPostProcess(name, engine, direction, kernel, localOptions) : undefined,
+            ...localOptions,
+        });
+
         this.externalTextureSamplerBinding = !!imageToBlur;
 
         this.onApplyObservable.add((effect: Effect) => {

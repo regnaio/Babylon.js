@@ -47,6 +47,8 @@ struct SimParams {
     randomTextureSize: i32,
     lifeTime : vec2<f32>,
     emitPower : vec2<f32>,
+    emitIndex : f32,
+    emitCount : f32,
 
     #ifndef COLORGRADIENTS
         color1 : vec4<f32>,
@@ -68,6 +70,11 @@ struct SimParams {
 
     #ifdef NOISE
         noiseStrength : vec3<f32>,
+    #endif
+
+    #ifdef FLOWMAP
+        flowMapProjection : mat4x4<f32>,
+        flowMapStrength : f32,
     #endif
 
     #ifndef LOCAL
@@ -167,6 +174,11 @@ struct SimParams {
     @binding(11) @group(1) var noiseTexture : texture_2d<f32>;
 #endif
 
+#ifdef FLOWMAP
+    @binding(12) @group(1) var flowMapSampler : sampler;
+    @binding(13) @group(1) var flowMapTexture : texture_2d<f32>;
+#endif
+
 fn getRandomVec3(offset : f32, vertexID : f32) -> vec3<f32> {
     return textureLoad(randomTexture2, vec2<i32>(i32(vertexID * offset / params.currentCount * f32(params.randomTextureSize)) % params.randomTextureSize, 0), 0).rgb;
 }
@@ -191,8 +203,19 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     let seed : vec4<f32> = particlesIn.particles[index].seed;
     let direction : vec3<f32> = particlesIn.particles[index].direction;
 
-    // If particle is dead and system is not stopped, spawn as new particle
-    if (newAge >= life && params.stopFactor != 0.) {
+    // Check if this particle should emit
+#ifdef EMITRATECTRL
+    var offsetFromEmitIndex : f32 = vertexID - params.emitIndex;
+    if (offsetFromEmitIndex < 0.0) {
+        offsetFromEmitIndex += params.currentCount; // wrap around circular buffer
+    }
+    let shouldEmit : bool = offsetFromEmitIndex < params.emitCount && params.stopFactor != 0.;
+#else
+    // Legacy mode: recycle dead particles immediately
+    let shouldEmit : bool = newAge >= life && params.stopFactor != 0.;
+#endif
+
+    if (shouldEmit) {
         var newPosition : vec3<f32>;
         var newDirection : vec3<f32>;
 
@@ -202,7 +225,11 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
         // Age and life
         let outLife : f32 = params.lifeTime.x + (params.lifeTime.y - params.lifeTime.x) * randoms.r;
         particlesOut.particles[index].life = outLife;
+#ifdef EMITRATECTRL
+        particlesOut.particles[index].age = 0.0;
+#else
         particlesOut.particles[index].age = newAge - life;
+#endif
 
         // Seed
         particlesOut.particles[index].seed = seed;
@@ -275,7 +302,7 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
 
             // Direction
             #ifdef DIRECTEDSPHEREEMITTER
-                newDirection = normalize(params.direction1 + (params.direction2 - params.direction1) * randoms3);
+                newDirection = params.direction1 + (params.direction2 - params.direction1) * randoms3;
             #else
                 newDirection = normalize(newPosition + params.directionRandomizer * randoms3);
             #endif
@@ -426,6 +453,15 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
             particlesOut.particles[index].direction = direction;
         #else
             var updatedDirection : vec3<f32> = direction + params.gravity * timeDelta;
+
+            #ifdef FLOWMAP
+                var clipSpace = (params.flowMapProjection * vec4f(position, 1.));
+                var ndcSpace = clipSpace.xyz / clipSpace.w;
+                var flowMapUV = ndcSpace.xy * 0.5 + 0.5;
+                var flowMapValue = textureSampleLevel(flowMapTexture, flowMapSampler, flowMapUV, 0.);
+                var flowMapDirection = (flowMapValue.xyz * 2.0 - 1.0) * flowMapValue.w;
+                updatedDirection += flowMapDirection * timeDelta * params.flowMapStrength;
+            #endif
 
             #ifdef LIMITVELOCITYGRADIENTS
                 let limitVelocity : f32 = textureSampleLevel(limitVelocityGradientTexture, limitVelocityGradientSampler, vec2<f32>(ageGradient, 0.), 0.).r;

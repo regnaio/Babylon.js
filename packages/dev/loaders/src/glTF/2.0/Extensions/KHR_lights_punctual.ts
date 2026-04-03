@@ -1,23 +1,23 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { Vector3 } from "core/Maths/math.vector";
 import { Color3 } from "core/Maths/math.color";
 import { DirectionalLight } from "core/Lights/directionalLight";
 import { PointLight } from "core/Lights/pointLight";
 import { SpotLight } from "core/Lights/spotLight";
 import { Light } from "core/Lights/light";
-import type { TransformNode } from "core/Meshes/transformNode";
+import { type TransformNode } from "core/Meshes/transformNode";
 
-import type { IKHRLightsPunctual_LightReference } from "babylonjs-gltf2interface";
-import { KHRLightsPunctual_LightType } from "babylonjs-gltf2interface";
-import type { INode, IKHRLightsPunctual_Light } from "../glTFLoaderInterfaces";
-import type { IGLTFLoaderExtension } from "../glTFLoaderExtension";
+import { type IKHRLightsPunctual_LightReference, KHRLightsPunctual_LightType } from "babylonjs-gltf2interface";
+import { type INode, type IKHRLightsPunctual_Light } from "../glTFLoaderInterfaces";
+import { type IGLTFLoaderExtension } from "../glTFLoaderExtension";
 import { GLTFLoader, ArrayItem } from "../glTFLoader";
+import { registerGLTFExtension, unregisterGLTFExtension } from "../glTFLoaderExtensionRegistry";
 
 const NAME = "KHR_lights_punctual";
 
 declare module "../../glTFFileLoader" {
-    // eslint-disable-next-line jsdoc/require-jsdoc
+    // eslint-disable-next-line jsdoc/require-jsdoc, @typescript-eslint/naming-convention
     export interface GLTFLoaderExtensionOptions {
         /**
          * Defines options for the KHR_lights_punctual extension.
@@ -64,7 +64,7 @@ export class KHR_lights implements IGLTFLoaderExtension {
     public onLoading(): void {
         const extensions = this._loader.gltf.extensions;
         if (extensions && extensions[this.name]) {
-            const extension = extensions[this.name] as any;
+            const extension = extensions[this.name];
             this._lights = extension.lights;
             ArrayItem.Assign(this._lights);
         }
@@ -73,11 +73,12 @@ export class KHR_lights implements IGLTFLoaderExtension {
     /**
      * @internal
      */
+    // eslint-disable-next-line no-restricted-syntax
     public loadNodeAsync(context: string, node: INode, assign: (babylonTransformNode: TransformNode) => void): Nullable<Promise<TransformNode>> {
-        return GLTFLoader.LoadExtensionAsync<IKHRLightsPunctual_LightReference, TransformNode>(context, node, this.name, (extensionContext, extension) => {
+        return GLTFLoader.LoadExtensionAsync<IKHRLightsPunctual_LightReference, TransformNode>(context, node, this.name, async (extensionContext, extension) => {
             this._loader._allMaterialsDirtyRequired = true;
 
-            return this._loader.loadNodeAsync(context, node, (babylonMesh) => {
+            return await this._loader.loadNodeAsync(context, node, (babylonMesh) => {
                 let babylonLight: Light;
 
                 const light = ArrayItem.Get(extensionContext, this._lights, extension.light);
@@ -129,4 +130,5 @@ export class KHR_lights implements IGLTFLoaderExtension {
     }
 }
 
-GLTFLoader.RegisterExtension(NAME, (loader) => new KHR_lights(loader));
+unregisterGLTFExtension(NAME);
+registerGLTFExtension(NAME, true, (loader) => new KHR_lights(loader));

@@ -1,9 +1,8 @@
 import * as React from "react";
-import type { IToolParameters, IToolData, IToolType, IToolGUIProps } from "../textureEditorComponent";
-import type { PointerInfo } from "core/Events/pointerEvents";
-import { PointerEventTypes } from "core/Events/pointerEvents";
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
+import { type IToolParameters, type IToolData, type IToolType, type IToolGUIProps } from "../textureEditorComponent";
+import { type PointerInfo, PointerEventTypes } from "core/Events/pointerEvents";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
 import { Vector2 } from "core/Maths/math.vector";
 import { Color3 } from "core/Maths/math.color";
 
@@ -61,6 +60,7 @@ class PaintbrushTool implements IToolType {
     setup() {
         const { scene } = this.getParameters();
 
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         this.pointerObserver = scene.onPointerObservable.add(async (pointerInfo) => {
             const { startPainting, stopPainting, metadata } = this.getParameters();
             if (!this.isPainting) {
@@ -78,7 +78,7 @@ class PaintbrushTool implements IToolType {
                     circleCtx.imageSmoothingEnabled = false;
                     const pixels = new Array(4 * this.width * this.width);
                     const dis = (this.width * this.width) / 4;
-                    const rgb = Color3.FromHexString(metadata.color)!;
+                    const rgb = Color3.FromHexString(metadata.color);
                     const r = Math.floor(rgb.r * 255);
                     const g = Math.floor(rgb.g * 255);
                     const b = Math.floor(rgb.b * 255);

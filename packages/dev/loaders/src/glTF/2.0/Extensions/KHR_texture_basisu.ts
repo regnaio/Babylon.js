@@ -1,14 +1,15 @@
-import type { IGLTFLoaderExtension } from "../glTFLoaderExtension";
+import { type IGLTFLoaderExtension } from "../glTFLoaderExtension";
 import { GLTFLoader, ArrayItem } from "../glTFLoader";
-import type { ITexture } from "../glTFLoaderInterfaces";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
-import type { Nullable } from "core/types";
-import type { IKHRTextureBasisU } from "babylonjs-gltf2interface";
+import { type ITexture } from "../glTFLoaderInterfaces";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type Nullable } from "core/types";
+import { type IKHRTextureBasisU } from "babylonjs-gltf2interface";
+import { registerGLTFExtension, unregisterGLTFExtension } from "../glTFLoaderExtensionRegistry";
 
 const NAME = "KHR_texture_basisu";
 
 declare module "../../glTFFileLoader" {
-    // eslint-disable-next-line jsdoc/require-jsdoc
+    // eslint-disable-next-line jsdoc/require-jsdoc, @typescript-eslint/naming-convention
     export interface GLTFLoaderExtensionOptions {
         /**
          * Defines options for the KHR_texture_basisu extension.
@@ -47,11 +48,12 @@ export class KHR_texture_basisu implements IGLTFLoaderExtension {
     /**
      * @internal
      */
+    // eslint-disable-next-line no-restricted-syntax
     public _loadTextureAsync(context: string, texture: ITexture, assign: (babylonTexture: BaseTexture) => void): Nullable<Promise<BaseTexture>> {
-        return GLTFLoader.LoadExtensionAsync<IKHRTextureBasisU, BaseTexture>(context, texture, this.name, (extensionContext, extension) => {
+        return GLTFLoader.LoadExtensionAsync<IKHRTextureBasisU, BaseTexture>(context, texture, this.name, async (extensionContext, extension) => {
             const sampler = texture.sampler == undefined ? GLTFLoader.DefaultSampler : ArrayItem.Get(`${context}/sampler`, this._loader.gltf.samplers, texture.sampler);
             const image = ArrayItem.Get(`${extensionContext}/source`, this._loader.gltf.images, extension.source);
-            return this._loader._createTextureAsync(
+            return await this._loader._createTextureAsync(
                 context,
                 sampler,
                 image,
@@ -65,4 +67,5 @@ export class KHR_texture_basisu implements IGLTFLoaderExtension {
     }
 }
 
-GLTFLoader.RegisterExtension(NAME, (loader) => new KHR_texture_basisu(loader));
+unregisterGLTFExtension(NAME);
+registerGLTFExtension(NAME, true, (loader) => new KHR_texture_basisu(loader));

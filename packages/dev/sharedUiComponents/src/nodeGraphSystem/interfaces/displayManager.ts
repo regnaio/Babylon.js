@@ -1,8 +1,9 @@
-import type { Nullable } from "core/types";
-import type { StateManager } from "../stateManager";
-import type { INodeData } from "./nodeData";
-import type { IPortData } from "./portData";
+import { type Nullable } from "core/types";
+import { type StateManager } from "../stateManager";
+import { type INodeData } from "./nodeData";
+import { type IPortData } from "./portData";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface VisualContentDescription {
     [key: string]: HTMLElement;
 }

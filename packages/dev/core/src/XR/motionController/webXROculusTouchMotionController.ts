@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { IMinimalMotionControllerObject, MotionControllerHandedness, IMotionControllerLayoutMap } from "./webXRAbstractMotionController";
-import { WebXRAbstractMotionController } from "./webXRAbstractMotionController";
+import {
+    type IMinimalMotionControllerObject,
+    type MotionControllerHandedness,
+    type IMotionControllerLayoutMap,
+    WebXRAbstractMotionController,
+} from "./webXRAbstractMotionController";
 import { WebXRMotionControllerManager } from "./webXRMotionControllerManager";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
-import type { Scene } from "../../scene";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
+import { type Scene } from "../../scene";
 import { Mesh } from "../../Meshes/mesh";
 import { Quaternion } from "../../Maths/math.vector";
 
@@ -44,7 +48,7 @@ export class WebXROculusTouchMotionController extends WebXRAbstractMotionControl
     }
 
     protected _getFilenameAndPath(): { filename: string; path: string } {
-        let filename = "";
+        let filename: string;
         if (this.handedness === "left") {
             filename = WebXROculusTouchMotionController.MODEL_LEFT_FILENAME;
         } else {
@@ -67,7 +71,9 @@ export class WebXROculusTouchMotionController extends WebXRAbstractMotionControl
         const isQuest = this._isQuest();
         const triggerDirection = this.handedness === "right" ? -1 : 1;
 
-        this.getComponentIds().forEach((id) => {
+        const ids = this.getComponentIds();
+
+        for (const id of ids) {
             const comp = id && this.getComponent(id);
             if (comp) {
                 comp.onButtonStateChangedObservable.add(
@@ -117,7 +123,7 @@ export class WebXROculusTouchMotionController extends WebXRAbstractMotionControl
                     true
                 );
             }
-        });
+        }
     }
 
     protected _setRootMesh(meshes: AbstractMesh[]): void {
@@ -126,9 +132,9 @@ export class WebXROculusTouchMotionController extends WebXRAbstractMotionControl
             this.rootMesh.rotationQuaternion = Quaternion.FromEulerAngles(0, Math.PI, 0);
         }
 
-        meshes.forEach((mesh) => {
+        for (const mesh of meshes) {
             mesh.isPickable = false;
-        });
+        }
         if (this._isQuest()) {
             this._modelRootNode = meshes[0];
         } else {

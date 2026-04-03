@@ -1,7 +1,7 @@
-import type { NodeMaterial } from "core/Materials/Node/nodeMaterial";
+import { type NodeMaterial } from "core/Materials/Node/nodeMaterial";
 import { Observable } from "core/Misc/observable";
-import type { LogEntry } from "./components/log/logComponent";
-import type { NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
+import { LogEntry } from "./components/log/logComponent";
+import { type NodeMaterialBlock } from "core/Materials/Node/nodeMaterialBlock";
 import { PreviewType } from "./components/preview/previewType";
 import { DataStorage } from "core/Misc/dataStorage";
 import { Color4 } from "core/Maths/math.color";
@@ -9,29 +9,31 @@ import { NodeMaterialModes } from "core/Materials/Node/Enums/nodeMaterialModes";
 import { ParticleSystem } from "core/Particles/particleSystem";
 import { RegisterElbowSupport } from "./graphSystem/registerElbowSupport";
 import { RegisterNodePortDesign } from "./graphSystem/registerNodePortDesign";
-import type { GraphNode } from "shared-ui-components/nodeGraphSystem/graphNode";
-import type { GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
-import type { Nullable } from "core/types";
+import { type GraphNode } from "shared-ui-components/nodeGraphSystem/graphNode";
+import { type GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
+import { type Nullable } from "core/types";
 import { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { StateManager } from "shared-ui-components/nodeGraphSystem/stateManager";
 import { RegisterDefaultInput } from "./graphSystem/registerDefaultInput";
 import { RegisterExportData } from "./graphSystem/registerExportData";
-import type { FilesInput } from "core/Misc/filesInput";
+import { type FilesInput } from "core/Misc/filesInput";
 import { RegisterDebugSupport } from "./graphSystem/registerDebugSupport";
+import { SerializationTools } from "./serializationTools";
+import { type RenderTargetTexture } from "core/Materials/Textures/renderTargetTexture";
+import { type NodeMaterialDebugBlock } from "core/Materials/Node/Blocks/debugBlock";
 
 export class GlobalState {
-    nodeMaterial: NodeMaterial;
     hostElement: HTMLElement;
     hostDocument: Document;
     hostWindow: Window;
     stateManager: StateManager;
     onBuiltObservable = new Observable<void>();
     onResetRequiredObservable = new Observable<boolean>();
+    onClearUndoStack = new Observable<void>();
     onZoomToFitRequiredObservable = new Observable<void>();
     onReOrganizedRequiredObservable = new Observable<void>();
     onLogRequiredObservable = new Observable<LogEntry>();
     onIsLoadingChanged = new Observable<boolean>();
-    onPreviewCommandActivated = new Observable<boolean>();
     onLightUpdated = new Observable<void>();
     onBackgroundHDRUpdated = new Observable<void>();
     onPreviewBackgroundChanged = new Observable<void>();
@@ -63,6 +65,12 @@ export class GlobalState {
     pointerOverCanvas: boolean = false;
     filesInput: FilesInput;
     onRefreshPreviewMeshControlComponentRequiredObservable = new Observable<void>();
+    previewTexture: Nullable<RenderTargetTexture> = null;
+    pickingTexture: Nullable<RenderTargetTexture> = null;
+    onPreviewSceneAfterRenderObservable = new Observable<void>();
+    onPreviewUpdatedObservable = new Observable<NodeMaterial>();
+    debugBlocksToRefresh: NodeMaterialDebugBlock[] = [];
+    forcedDebugBlock: Nullable<NodeMaterialDebugBlock> = null;
 
     /** Gets the mode */
     public get mode(): NodeMaterialModes {
@@ -73,7 +81,7 @@ export class GlobalState {
     public set mode(m: NodeMaterialModes) {
         DataStorage.WriteNumber("Mode", m);
         this._mode = m;
-        this.onPreviewCommandActivated.notifyObservers(true);
+        this.stateManager.onPreviewCommandActivated.notifyObservers(true);
     }
 
     /** Gets the engine */
@@ -89,6 +97,32 @@ export class GlobalState {
         DataStorage.WriteNumber("Engine", e);
         this._engine = e;
         location.reload();
+    }
+
+    private _nodeMaterial: NodeMaterial;
+
+    /**
+     * Gets the current node material
+     */
+    public get nodeMaterial(): NodeMaterial {
+        return this._nodeMaterial;
+    }
+
+    /**
+     * Sets the current node material
+     */
+    public set nodeMaterial(nodeMaterial: NodeMaterial) {
+        this._nodeMaterial = nodeMaterial;
+        nodeMaterial.onBuildObservable.add(() => {
+            this.onLogRequiredObservable.notifyObservers(new LogEntry("Node material build successful", false));
+
+            SerializationTools.UpdateLocations(nodeMaterial, this);
+
+            this.onBuiltObservable.notifyObservers();
+        });
+        nodeMaterial.onBuildErrorObservable.add((err: string) => {
+            this.onLogRequiredObservable.notifyObservers(new LogEntry(err, true));
+        });
     }
 
     customSave?: { label: string; action: (data: string) => Promise<void> };
@@ -109,6 +143,7 @@ export class GlobalState {
         this.stateManager = new StateManager();
         this.stateManager.data = this;
         this.stateManager.lockObject = this.lockObject;
+        this.stateManager.getScene = () => this.nodeMaterial.getScene();
 
         RegisterElbowSupport(this.stateManager);
         RegisterDebugSupport(this.stateManager);

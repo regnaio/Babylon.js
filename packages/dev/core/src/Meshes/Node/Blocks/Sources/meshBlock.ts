@@ -1,10 +1,10 @@
 import { NodeGeometryBlockConnectionPointTypes } from "../../Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryBlock } from "../../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
-import type { Mesh } from "../../../../Meshes/mesh";
+import { type Mesh } from "../../../../Meshes/mesh";
 import { VertexData } from "../../../../Meshes/mesh.vertexData";
-import type { Nullable } from "../../../../types";
+import { type Nullable } from "../../../../types";
 import { PropertyTypeForEdition, editableInPropertyPage } from "core/Decorators/nodeDecorator";
 
 /**
@@ -22,7 +22,7 @@ export class MeshBlock extends NodeGeometryBlock {
     /**
      * Gets or sets a boolean indicating that this block should serialize its cached data
      */
-    @editableInPropertyPage("Serialize cached data", PropertyTypeForEdition.Boolean, "ADVANCED", { notifiers: { rebuild: true } })
+    @editableInPropertyPage("Serialize cached data", PropertyTypeForEdition.Boolean, "ADVANCED", { embedded: true, notifiers: { rebuild: true } })
     public serializedCachedData = false;
 
     /**
@@ -123,6 +123,7 @@ export class MeshBlock extends NodeGeometryBlock {
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

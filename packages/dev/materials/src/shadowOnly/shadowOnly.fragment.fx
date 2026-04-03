@@ -1,7 +1,7 @@
 ﻿precision highp float;
 
 // Constants
-uniform vec4 vEyePosition;
+#include<__decl__sceneFragment>
 uniform float alpha;
 uniform vec3 shadowColor;
 
@@ -32,6 +32,9 @@ varying vec3 vNormalW;
 // Fog
 #include<fogFragmentDeclaration>
 
+#if defined(CLUSTLIGHT_BATCH) && CLUSTLIGHT_BATCH > 0
+varying float vViewDepth;
+#endif
 
 #define CUSTOM_FRAGMENT_DEFINITIONS
 

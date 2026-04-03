@@ -2,12 +2,14 @@ import { Tools } from "../Misc/tools";
 import { Observable } from "../Misc/observable";
 import { Scene } from "../scene";
 import { EngineStore } from "../Engines/engineStore";
-import type { IInspectable } from "../Misc/iInspectable";
-import type { Camera } from "../Cameras/camera";
+import { type IInspectable } from "../Misc/iInspectable";
+import { type Camera } from "../Cameras/camera";
 import { AbstractEngine } from "core/Engines/abstractEngine";
 
 // declare INSPECTOR namespace for compilation issue
+// eslint-disable-next-line @typescript-eslint/naming-convention
 declare let INSPECTOR: any;
+// eslint-disable-next-line @typescript-eslint/naming-convention
 declare let BABYLON: any;
 // load the inspector using require, if not present in the global namespace.
 
@@ -76,7 +78,8 @@ export interface IExplorerAdditionalNode {
     getContent(): IExplorerAdditionalChild[];
 }
 
-export type IInspectorContextMenuType = "pipeline" | "node" | "materials" | "spriteManagers" | "particleSystems";
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export type IInspectorContextMenuType = "pipeline" | "node" | "materials" | "spriteManagers" | "particleSystems" | "frameGraphs";
 
 /**
  * Context menu item
@@ -165,12 +168,13 @@ export interface IInspectorOptions {
 }
 
 declare module "../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /**
          * @internal
          * Backing field
          */
-        _debugLayer: DebugLayer;
+        _debugLayer?: DebugLayer;
 
         /**
          * Gets the debug layer (aka Inspector) associated with the scene
@@ -244,7 +248,7 @@ export class DebugLayer {
     private _scene: Scene;
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    private BJSINSPECTOR = this._getGlobalInspector();
+    protected BJSINSPECTOR = this._getGlobalInspector();
 
     private _onPropertyChangedObservable?: Observable<{ object: any; property: string; value: any; initialValue: any }>;
     /**
@@ -308,7 +312,7 @@ export class DebugLayer {
         }
 
         if (this._onPropertyChangedObservable) {
-            for (const observer of this._onPropertyChangedObservable!.observers) {
+            for (const observer of this._onPropertyChangedObservable.observers) {
                 this.BJSINSPECTOR.Inspector.OnPropertyChangedObservable.add(observer);
             }
             this._onPropertyChangedObservable.clear();
@@ -316,7 +320,7 @@ export class DebugLayer {
         }
 
         if (this._onSelectionChangedObservable) {
-            for (const observer of this._onSelectionChangedObservable!.observers) {
+            for (const observer of this._onSelectionChangedObservable.observers) {
                 this.BJSINSPECTOR.Inspector.OnSelectionChangedObservable.add(observer);
             }
             this._onSelectionChangedObservable.clear();
@@ -347,7 +351,20 @@ export class DebugLayer {
                     this.BJSINSPECTOR.Inspector.MarkMultipleLineContainerTitlesForHighlighting(lineContainerTitles);
                 }
             }
-            this.BJSINSPECTOR.Inspector.OnSelectionChangeObservable.notifyObservers(entity);
+            if (!this.BJSINSPECTOR.Inspector.IsVisible) {
+                const waitAndCheck = () => {
+                    setTimeout(() => {
+                        if (this.BJSINSPECTOR.Inspector.IsVisible) {
+                            this.select(entity, lineContainerTitles);
+                        } else {
+                            waitAndCheck();
+                        }
+                    }, 100);
+                };
+                waitAndCheck();
+            } else {
+                this.BJSINSPECTOR.Inspector.OnSelectionChangeObservable.notifyObservers(entity);
+            }
         }
     }
 
@@ -387,6 +404,17 @@ export class DebugLayer {
     }
 
     /**
+     * Get the number of opened panes in the inspector
+     */
+    public get openedPanes() {
+        if (this.BJSINSPECTOR) {
+            return this.BJSINSPECTOR.Inspector._OpenedPane;
+        }
+
+        return 0;
+    }
+
+    /**
      * Update the scene in the inspector
      */
     public setAsActiveScene() {
@@ -418,8 +446,9 @@ export class DebugLayer {
      * @param config Define the configuration of the inspector
      * @returns a promise fulfilled when the debug layer is visible
      */
-    public show(config?: IInspectorOptions): Promise<DebugLayer> {
-        return new Promise((resolve) => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    public async show(config?: IInspectorOptions): Promise<DebugLayer> {
+        return await new Promise((resolve) => {
             if (typeof this.BJSINSPECTOR == "undefined") {
                 const inspectorUrl = config && config.inspectorURL ? config.inspectorURL : DebugLayer.InspectorURL;
 

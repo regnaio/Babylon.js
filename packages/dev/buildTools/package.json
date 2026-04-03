@@ -13,16 +13,12 @@
         "compile": "tsc -b tsconfig.build.json"
     },
     "sideEffects": true,
-    "devDependencies": {
-        "@types/glob": "^7.2.0",
-        "@types/mv": "^2.1.2",
-        "@types/node": "^16.11.6",
-        "mv": "^2.1.1"
-    },
     "bin": {
         "build-tools": "./dist/index.js"
     },
     "dependencies": {
-        "dotenv": "^16.0.0"
+        "@pmmmwh/react-refresh-webpack-plugin": "^0.6.0",
+        "dotenv": "^16.0.0",
+        "react-refresh-typescript": "^2.0.10"
     }
 }

@@ -1,7 +1,6 @@
-import type { Observer } from "../Misc/observable";
-import { Observable } from "../Misc/observable";
-import type { Nullable } from "../types";
-import type { IDisposable } from "../scene";
+import { type Observer, Observable } from "../Misc/observable";
+import { type Nullable } from "../types";
+import { type IDisposable } from "../scene";
 
 /**
  * Construction options for a timer
@@ -94,6 +93,7 @@ export const enum TimerState {
  * @param options options with which to initialize this timer
  * @returns an observer that can be used to stop the timer
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export function setAndStartTimer<T = any>(options: ITimerOptions<T>): Nullable<Observer<T>> {
     let timer = 0;
     const startTime = Date.now();
@@ -109,15 +109,17 @@ export function setAndStartTimer<T = any>(options: ITimerOptions<T>): Nullable<O
                 completeRate: timer / options.timeout,
                 payload,
             };
-            options.onTick && options.onTick(data);
-            if (options.breakCondition && options.breakCondition()) {
+            if (options.breakCondition && options.breakCondition(data)) {
                 options.contextObservable.remove(observer);
                 options.onAborted && options.onAborted(data);
+                return;
             }
             if (timer >= options.timeout) {
                 options.contextObservable.remove(observer);
                 options.onEnded && options.onEnded(data);
+                return;
             }
+            options.onTick && options.onTick(data);
         },
         options.observableParameters.mask,
         options.observableParameters.insertFirst,

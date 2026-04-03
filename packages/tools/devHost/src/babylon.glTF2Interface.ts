@@ -938,7 +938,7 @@ interface IGLTFValidationOptions {
     /** Ignored issues */
     ignoredIssues?: Array<string>;
     /** Value to override severy settings */
-    severityOverrides?: Object;
+    severityOverrides?: object;
 }
 
 /**
@@ -1027,13 +1027,61 @@ interface IKHRLightsPunctual {
     lights: IKHRLightsPunctual_Light[];
 }
 
+/**
+ * Interfaces from the EXT_lights_area extension
+ */
+
 /** @internal */
-interface IMaterialExtension {
-    hasTextures?(): boolean;
+export const enum EXT_lights_area_LightType {
+    RECT = "rect",
+    DISK = "disk",
 }
 
 /** @internal */
-interface IKHRMaterialsClearcoat extends IMaterialExtension {
+interface IEXT_lights_area_LightReference {
+    light: number;
+}
+
+/** @internal */
+interface IEXT_lights_area_Light extends IChildRootProperty {
+    type: EXT_lights_area_LightType;
+    color?: number[];
+    intensity?: number;
+    size?: number;
+    rect?: {
+        aspect?: number;
+    };
+}
+
+/** @internal */
+interface IEXT_lights_area {
+    lights: IEXT_lights_area_Light[];
+}
+
+/** @internal */
+interface IKHRLightsPunctual_LightReference {
+    light: number;
+}
+
+/** @internal */
+interface IKHRLightsPunctual_Light extends IChildRootProperty {
+    type: KHRLightsPunctual_LightType;
+    color?: number[];
+    intensity?: number;
+    range?: number;
+    spot?: {
+        innerConeAngle?: number;
+        outerConeAngle?: number;
+    };
+}
+
+/** @internal */
+interface IKHRLightsPunctual {
+    lights: IKHRLightsPunctual_Light[];
+}
+
+/** @internal */
+interface IKHRMaterialsClearcoat {
     clearcoatFactor?: number;
     clearcoatTexture?: ITextureInfo;
     clearcoatRoughnessFactor?: number;
@@ -1042,7 +1090,7 @@ interface IKHRMaterialsClearcoat extends IMaterialExtension {
 }
 
 /** @internal */
-interface IKHRMaterialsIridescence extends IMaterialExtension {
+interface IKHRMaterialsIridescence {
     iridescenceFactor?: number;
     iridescenceIor?: number;
     iridescenceThicknessMinimum?: number;
@@ -1052,7 +1100,7 @@ interface IKHRMaterialsIridescence extends IMaterialExtension {
 }
 
 /** @internal */
-interface IKHRMaterialsAnisotropy extends IMaterialExtension {
+interface IKHRMaterialsAnisotropy {
     anisotropyStrength?: number;
     anisotropyRotation?: number;
     anisotropyTexture?: ITextureInfo;
@@ -1063,7 +1111,7 @@ interface IKHRMaterialsAnisotropy extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsIor extends IMaterialExtension {
+interface IKHRMaterialsIor {
     ior?: number;
 }
 
@@ -1072,7 +1120,7 @@ interface IKHRMaterialsIor extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsVolume extends IMaterialExtension {
+interface IKHRMaterialsVolume {
     thicknessFactor?: number;
     thicknessTexture?: ITextureInfo;
     attenuationDistance?: number;
@@ -1084,7 +1132,7 @@ interface IKHRMaterialsVolume extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsDispersion extends IMaterialExtension {
+interface IKHRMaterialsDispersion {
     dispersion?: number;
 }
 
@@ -1093,7 +1141,7 @@ interface IKHRMaterialsDispersion extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsSpecular extends IMaterialExtension {
+interface IKHRMaterialsSpecular {
     specularFactor?: number;
     specularColorFactor?: number[];
     specularTexture?: ITextureInfo;
@@ -1105,7 +1153,7 @@ interface IKHRMaterialsSpecular extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsTransmission extends IMaterialExtension {
+interface IKHRMaterialsTransmission {
     transmissionFactor?: number;
     transmissionTexture?: ITextureInfo;
 }
@@ -1115,7 +1163,7 @@ interface IKHRMaterialsTransmission extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsEmissiveStrength extends IMaterialExtension {
+interface IKHRMaterialsEmissiveStrength {
     emissiveStrength: number;
 }
 
@@ -1124,7 +1172,7 @@ interface IKHRMaterialsEmissiveStrength extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsPbrSpecularGlossiness extends IMaterialExtension {
+interface IKHRMaterialsPbrSpecularGlossiness {
     diffuseFactor: number[];
     diffuseTexture: ITextureInfo;
     specularFactor: number[];
@@ -1137,7 +1185,7 @@ interface IKHRMaterialsPbrSpecularGlossiness extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsSheen extends IMaterialExtension {
+interface IKHRMaterialsSheen {
     sheenColorFactor?: number[];
     sheenColorTexture?: ITextureInfo;
     sheenRoughnessFactor?: number;
@@ -1150,7 +1198,7 @@ interface IKHRMaterialsSheen extends IMaterialExtension {
  */
 
 /** @internal */
-interface IKHRMaterialsDiffuseTransmission extends IMaterialExtension {
+interface IKHRMaterialsDiffuseTransmission {
     diffuseTransmissionFactor?: number;
     diffuseTransmissionTexture?: ITextureInfo;
     diffuseTransmissionColorFactor?: number;

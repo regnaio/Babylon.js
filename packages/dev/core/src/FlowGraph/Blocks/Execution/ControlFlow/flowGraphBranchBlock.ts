@@ -1,14 +1,14 @@
 import { RichTypeBoolean } from "../../../flowGraphRichTypes";
-import type { FlowGraphContext } from "../../../flowGraphContext";
-import type { FlowGraphDataConnection } from "../../../flowGraphDataConnection";
+import { type FlowGraphContext } from "../../../flowGraphContext";
+import { type FlowGraphDataConnection } from "../../../flowGraphDataConnection";
 import { FlowGraphExecutionBlock } from "../../../flowGraphExecutionBlock";
-import type { FlowGraphSignalConnection } from "../../../flowGraphSignalConnection";
+import { type FlowGraphSignalConnection } from "../../../flowGraphSignalConnection";
 import { RegisterClass } from "../../../../Misc/typeStore";
-import type { IFlowGraphBlockConfiguration } from "../../../flowGraphBlock";
+import { type IFlowGraphBlockConfiguration } from "../../../flowGraphBlock";
+import { FlowGraphBlockNames } from "../../flowGraphBlockNames";
 
 /**
- * @experimental
- * A block that evaluates a condition and executes one of two branches.
+ * A block that evaluates a condition and activates one of two branches.
  */
 export class FlowGraphBranchBlock extends FlowGraphExecutionBlock {
     /**
@@ -45,7 +45,7 @@ export class FlowGraphBranchBlock extends FlowGraphExecutionBlock {
      * @returns class name of the block.
      */
     public override getClassName(): string {
-        return "FGBranchBlock";
+        return FlowGraphBlockNames.Branch;
     }
 }
-RegisterClass("FGBranchBlock", FlowGraphBranchBlock);
+RegisterClass(FlowGraphBlockNames.Branch, FlowGraphBranchBlock);

@@ -1,12 +1,12 @@
 import { ValueAndUnit } from "gui/2D/valueAndUnit";
 import { Control } from "gui/2D/controls/control";
-import type { Grid } from "gui/2D/controls/grid";
-import type { Rectangle } from "gui/2D/controls/rectangle";
+import { type Grid } from "gui/2D/controls/grid";
+import { type Rectangle } from "gui/2D/controls/rectangle";
 import { Matrix2D } from "gui/2D/math2D";
 import { Vector2 } from "core/Maths/math.vector";
-import type { Observable } from "core/Misc/observable";
-import type { GlobalState } from "../globalState";
-import type { PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
+import { type Observable } from "core/Misc/observable";
+import { type GlobalState } from "../globalState";
+import { type PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
 import { Measure } from "gui/2D/measure";
 
 export type DimensionProperties =
@@ -52,8 +52,8 @@ export class Rect {
     }
 }
 
-const roundFactor = 100;
-const round = (value: number) => Math.round(value * roundFactor) / roundFactor;
+const RoundFactor = 100;
+const Round = (value: number) => Math.round(value * RoundFactor) / RoundFactor;
 
 export class CoordinateHelper {
     private static _MatrixCache: Matrix2D[] = [Matrix2D.Identity(), Matrix2D.Identity(), Matrix2D.Identity(), Matrix2D.Identity()];
@@ -223,8 +223,8 @@ export class CoordinateHelper {
         const worldMatrix = this.NodeToRTTWorldMatrix(node, storedValues, stopAt);
         worldMatrix.transformCoordinates(x, y, reference);
         // round
-        reference.x = round(reference.x);
-        reference.y = round(reference.y);
+        reference.x = Round(reference.x);
+        reference.y = Round(reference.y);
         return reference;
     }
 
@@ -234,8 +234,8 @@ export class CoordinateHelper {
         worldMatrix.invertToRef(inv);
         inv.transformCoordinates(x, y, reference);
         // round
-        reference.x = round(reference.x);
-        reference.y = round(reference.y);
+        reference.x = Round(reference.x);
+        reference.y = Round(reference.y);
         return reference;
     }
 
@@ -251,9 +251,9 @@ export class CoordinateHelper {
     }
 
     private static _ResetMatrixArray() {
-        this._MatrixCache.forEach((matrix) => {
+        for (const matrix of this._MatrixCache) {
             Matrix2D.IdentityToRef(matrix);
-        });
+        }
     }
 
     public static ComputeLocalBounds(node: Control) {

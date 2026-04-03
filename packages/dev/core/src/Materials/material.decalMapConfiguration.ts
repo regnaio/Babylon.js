@@ -3,13 +3,13 @@ import { MaterialDefines } from "./materialDefines";
 import { MaterialPluginBase } from "./materialPluginBase";
 import { Constants } from "../Engines/constants";
 import { MaterialFlags } from "./materialFlags";
-import type { Scene } from "core/scene";
-import type { Engine } from "core/Engines/engine";
-import type { SubMesh } from "core/Meshes/subMesh";
-import type { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { UniformBuffer } from "./uniformBuffer";
-import type { PBRBaseMaterial } from "./PBR/pbrBaseMaterial";
-import type { StandardMaterial } from "./standardMaterial";
+import { type Scene } from "core/scene";
+import { type Engine } from "core/Engines/engine";
+import { type SubMesh } from "core/Meshes/subMesh";
+import { type AbstractMesh } from "core/Meshes/abstractMesh";
+import { type UniformBuffer } from "./uniformBuffer";
+import { type PBRBaseMaterial } from "./PBR/pbrBaseMaterial";
+import { type StandardMaterial } from "./standardMaterial";
 import { RegisterClass } from "core/Misc/typeStore";
 import { BindTextureMatrix, PrepareDefinesForMergedUV } from "./materialHelper.functions";
 
@@ -84,7 +84,7 @@ export class DecalMapConfiguration extends MaterialPluginBase {
         return decalMap.isReady();
     }
 
-    public override prepareDefines(defines: DecalMapDefines, scene: Scene, mesh: AbstractMesh): void {
+    public override prepareDefinesBeforeAttributes(defines: DecalMapDefines, scene: Scene, mesh: AbstractMesh): void {
         const decalMap = mesh.decalMap;
 
         if (!this._isEnabled || !decalMap?.texture || !MaterialFlags.DecalMapEnabled || !scene.texturesEnabled) {

@@ -1,18 +1,18 @@
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
-import type { Vector2 } from "core/Maths/math";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type Vector2 } from "core/Maths/math";
 import { Rectangle } from "../rectangle";
 import { Grid } from "../grid";
-import type { Image } from "../image";
+import { type Image } from "../image";
 import { Control } from "../control";
-import type { Container } from "../container";
-import type { Measure } from "../../measure";
-import type { AdvancedDynamicTexture } from "../../advancedDynamicTexture";
+import { type Container } from "../container";
+import { type Measure } from "../../measure";
+import { type AdvancedDynamicTexture } from "../../advancedDynamicTexture";
 import { _ScrollViewerWindow } from "./scrollViewerWindow";
 import { ScrollBar } from "../sliders/scrollBar";
 import { ImageScrollBar } from "../sliders/imageScrollBar";
 import { RegisterClass } from "core/Misc/typeStore";
-import type { ICanvasRenderingContext } from "core/Engines/ICanvas";
+import { type ICanvasRenderingContext } from "core/Engines/ICanvas";
 import { serialize } from "core/Misc/decorators";
 
 /**
@@ -35,12 +35,12 @@ export class ScrollViewer extends Rectangle {
     private _verticalBarBackgroundImage: Image;
     private _barSize: number = 20;
     private _window: _ScrollViewerWindow;
-    private _pointerIsOver: Boolean = false;
+    private _pointerIsOver: boolean = false;
     private _wheelPrecision: number = 0.05;
     private _onWheelObserver: Nullable<Observer<Vector2>>;
     private _clientWidth: number;
     private _clientHeight: number;
-    private _useImageBar: Boolean;
+    private _useImageBar: boolean;
     private _thumbLength: number = 0.5;
     private _thumbHeight: number = 1;
     private _barImageHeight: number = 1;

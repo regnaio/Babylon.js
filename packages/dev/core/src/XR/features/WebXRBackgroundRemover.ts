@@ -1,6 +1,6 @@
 import { WebXRFeaturesManager, WebXRFeatureName } from "../webXRFeaturesManager";
-import type { WebXRSessionManager } from "../webXRSessionManager";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
+import { type WebXRSessionManager } from "../webXRSessionManager";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
 import { Observable } from "../../Misc/observable";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
 
@@ -126,7 +126,9 @@ export class WebXRBackgroundRemover extends WebXRAbstractFeature {
         }
 
         if (this.options.backgroundMeshes) {
-            this.options.backgroundMeshes.forEach((mesh) => mesh.setEnabled(newState));
+            for (const mesh of this.options.backgroundMeshes) {
+                mesh.setEnabled(newState);
+            }
         }
 
         this.onBackgroundStateChangedObservable.notifyObservers(newState);

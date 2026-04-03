@@ -1,12 +1,13 @@
-import type { AbstractEngine } from "core/Engines/abstractEngine";
-import type { IPipelineGenerationOptions } from "./effect.functions";
-import { _processShaderCode, createAndPreparePipelineContext } from "./effect.functions";
-import type { IPipelineContext } from "core/Engines/IPipelineContext";
-import { _executeWhenRenderingStateIsCompiled, _preparePipelineContext, createPipelineContext, getStateObject } from "core/Engines/thinEngine.functions";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+import { type IPipelineGenerationOptions, _ProcessShaderCode, createAndPreparePipelineContext } from "./effect.functions";
+import { type IPipelineContext } from "core/Engines/IPipelineContext";
+import { _executeWhenRenderingStateIsCompiled, _isRenderingStateCompiled, _preparePipelineContext, createPipelineContext, getStateObject } from "core/Engines/thinEngine.functions";
 import { ShaderLanguage } from "./shaderLanguage";
-import { _getGlobalDefines } from "core/Engines/abstractEngine.functions";
-import type { ProcessingOptions } from "core/Engines/Processors/shaderProcessingOptions";
+import { _GetGlobalDefines } from "core/Engines/abstractEngine.functions";
+import { type _IProcessingOptions } from "core/Engines/Processors/shaderProcessingOptions";
 import { ShaderStore } from "core/Engines/shaderStore";
+import { WebGL2ShaderProcessor } from "core/Engines/WebGL/webGL2ShaderProcessors";
+import { _RetryWithInterval } from "core/Misc/timingTools";
 
 /**
  * Generate a pipeline context from the provided options
@@ -17,11 +18,12 @@ import { ShaderStore } from "core/Engines/shaderStore";
  * @param _preparePipelineContextInjection the function to prepare the pipeline context
  * @returns a promise that resolves to the pipeline context
  */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export async function generatePipelineContext(
     options: IPipelineGenerationOptions,
     context: WebGL2RenderingContext | WebGLRenderingContext,
     createPipelineContextInjection: typeof AbstractEngine.prototype.createPipelineContext = createPipelineContext.bind(null, context),
-    _preparePipelineContextInjection: typeof AbstractEngine.prototype._preparePipelineContext = _preparePipelineContext
+    _preparePipelineContextInjection: typeof AbstractEngine.prototype._preparePipelineContextAsync = _preparePipelineContext
 ): Promise<IPipelineContext> {
     // make sure the state object exists
     getStateObject(context);
@@ -37,18 +39,19 @@ export async function generatePipelineContext(
                 break;
             case "WEBGL2":
             default:
-                processor = new (await import("core/Engines/WebGL/webGL2ShaderProcessors")).WebGL2ShaderProcessor();
+                // default to WebGL2, which is included in the package. Avoid async-load the default.
+                processor = new WebGL2ShaderProcessor();
                 break;
         }
     }
     const shaderDef: any = options.shaderNameOrContent;
     const vertex = shaderDef.vertex || shaderDef.vertexSource || shaderDef;
     const fragment = shaderDef.fragment || shaderDef.fragmentSource || shaderDef;
-    const globalDefines = _getGlobalDefines()?.split("\n") || [];
+    const globalDefines = _GetGlobalDefines()?.split("\n") || [];
     const defines = [...(options.defines || []), ...(options.addGlobalDefines ? globalDefines : [])];
     const key = options.key?.replace(/\r/g, "").replace(/\n/g, "|") || vertex + "+" + fragment + "@" + defines.join("|");
     // defaults, extended with optionally provided options
-    const processorOptions: ProcessingOptions = {
+    const processorOptions: _IProcessingOptions = {
         defines,
         indexParameters: undefined,
         isFragment: false,
@@ -64,9 +67,9 @@ export async function generatePipelineContext(
         useReverseDepthBuffer: false,
         ...options.extendedProcessingOptions,
     };
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
         try {
-            _processShaderCode(
+            _ProcessShaderCode(
                 processorOptions,
                 shaderDef,
                 undefined,
@@ -81,20 +84,32 @@ export async function generatePipelineContext(
                                 defines: defines.length ? defines.join("\n") : null,
                                 shaderProcessingContext: options.extendedProcessingOptions?.processingContext || null,
                                 transformFeedbackVaryings: null,
+                                disableParallelCompilation: options.disableParallelCompilation,
                                 ...options.extendedCreatePipelineOptions,
                             },
                             createPipelineContextInjection,
                             _preparePipelineContext,
                             _executeWhenRenderingStateIsCompiled
                         );
-                        resolve(pipeline);
+                        // the default behavior so far. If not async or no request to wait for isReady, resolve immediately
+                        if (!options.waitForIsReady || !pipeline.isAsync) {
+                            resolve(pipeline);
+                        } else {
+                            _RetryWithInterval(
+                                () => _isRenderingStateCompiled(pipeline, context),
+                                () => resolve(pipeline),
+                                () => reject(new Error("Timeout while waiting for pipeline to be ready"))
+                            );
+                        }
                     } catch (e) {
+                        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                         reject(e);
                     }
                 },
                 language
             );
         } catch (e) {
+            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
             reject(e);
         }
     });

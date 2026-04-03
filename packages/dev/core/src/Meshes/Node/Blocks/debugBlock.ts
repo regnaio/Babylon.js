@@ -2,8 +2,8 @@ import { Vector2ToFixed, Vector3ToFixed, Vector4ToFixed } from "../../../Maths/m
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
-import type { NodeGeometryBuildState } from "../nodeGeometryBuildState";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryBuildState } from "../nodeGeometryBuildState";
 
 /**
  * Defines a block used to debug values going through it
@@ -35,7 +35,7 @@ export class DebugBlock extends NodeGeometryBlock {
      * Gets the time spent to build this block (in ms)
      */
     public override get buildExecutionTime() {
-        return 0;
+        return -1;
     }
 
     /**

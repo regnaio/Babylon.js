@@ -1,17 +1,17 @@
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
 import { Vector3 } from "core/Maths/math.vector";
 import { PointerEventTypes } from "core/Events/pointerEvents";
-import type { TransformNode } from "core/Meshes/transformNode";
+import { type TransformNode } from "core/Meshes/transformNode";
 import { AbstractMesh } from "core/Meshes/abstractMesh";
-import type { IBehaviorAware, Behavior } from "core/Behaviors/behavior";
-import type { IDisposable, Scene } from "core/scene";
+import { type IBehaviorAware, type Behavior } from "core/Behaviors/behavior";
+import { type IDisposable, type Scene } from "core/scene";
 
-import type { GUI3DManager } from "../gui3DManager";
+import { type GUI3DManager } from "../gui3DManager";
 import { Vector3WithInfo } from "../vector3WithInfo";
-import type { Container3D } from "./container3D";
+import { type Container3D } from "./container3D";
 
-import type { TouchButton3D } from "./touchButton3D";
+import { type TouchButton3D } from "./touchButton3D";
 
 /**
  * Class used as base class for controls
@@ -29,39 +29,46 @@ export class Control3D implements IDisposable, IBehaviorAware<Control3D> {
     /** @internal */
     public _isScaledByManager = false;
 
+    private _position?: Vector3;
+    private _scaling?: Vector3;
+
     /** Gets or sets the control position in world space */
     public get position(): Vector3 {
         if (!this._node) {
-            return Vector3.Zero();
+            this._position = this._position || Vector3.Zero();
+            return this._position;
         }
 
         return this._node.position;
     }
 
     public set position(value: Vector3) {
+        this._position = value;
         if (!this._node) {
             return;
         }
 
-        this._node.position = value;
+        this._node.position = this._position;
     }
 
     /** Gets or sets the control scaling in world space */
     public get scaling(): Vector3 {
         if (!this._node) {
-            return new Vector3(1, 1, 1);
+            this._scaling = this._scaling || new Vector3(1, 1, 1);
+            return this._scaling;
         }
 
         return this._node.scaling;
     }
 
     public set scaling(value: Vector3) {
+        this._scaling = value;
         if (!this._node) {
             return;
         }
 
         this._isScaledByManager = false;
-        this._node.scaling = value;
+        this._node.scaling = this._scaling;
     }
 
     /** Callback used to start pointer enter animation */
@@ -240,7 +247,7 @@ export class Control3D implements IDisposable, IBehaviorAware<Control3D> {
      */
     public get mesh(): Nullable<AbstractMesh> {
         if (this._node instanceof AbstractMesh) {
-            return this._node as AbstractMesh;
+            return this._node;
         }
 
         return null;
@@ -267,6 +274,12 @@ export class Control3D implements IDisposable, IBehaviorAware<Control3D> {
 
             if (!this.node) {
                 return;
+            }
+            if (this._position) {
+                this.node.position = this._position;
+            }
+            if (this._scaling) {
+                this.node.scaling = this._scaling;
             }
             this._injectGUI3DReservedDataStore(this.node).control = this; // Store the control on the reservedDataStore field in order to get it when picking
 
@@ -418,7 +431,7 @@ export class Control3D implements IDisposable, IBehaviorAware<Control3D> {
             this._onPointerUp(this, Vector3.Zero(), pointerId, 0, true);
         } else {
             for (const key in this._downPointerIds) {
-                this._onPointerUp(this, Vector3.Zero(), +key as number, 0, true);
+                this._onPointerUp(this, Vector3.Zero(), +key, 0, true);
             }
             if (this._downCount > 0) {
                 this._downCount = 1;

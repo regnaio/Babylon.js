@@ -1,12 +1,13 @@
 import { Observable } from "core/Misc/observable";
-import type { Scene } from "core/scene";
+import { Vector2 } from "core/Maths/math.vector";
+import { type Scene } from "core/scene";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
 import { FileButtonLine } from "shared-ui-components/lines/fileButtonLineComponent";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
-import type { IPerfLayoutSize } from "../../../graph/graphSupportingTypes";
-import type { PerformanceViewerCollector } from "core/Misc/PerformanceViewer/performanceViewerCollector";
+import { type IPerfLayoutSize } from "../../../graph/graphSupportingTypes";
+import { type PerformanceViewerCollector } from "core/Misc/PerformanceViewer/performanceViewerCollector";
 import { PerfCollectionStrategy } from "core/Misc/PerformanceViewer/performanceViewerCollectionStrategies";
 import { Tools } from "core/Misc/tools";
 import "core/Misc/PerformanceViewer/performanceViewerSceneExtension";
@@ -21,16 +22,17 @@ interface IPerformanceViewerComponentProps {
 }
 
 // arbitrary window size
-const initialWindowSize = { width: 1024, height: 512 };
-const initialGraphSize = { width: 724, height: 512 };
+const InitialWindowSize = { width: 1024, height: 512 };
+const InitialGraphSize = new Vector2(724, 512);
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export enum IPerfMetadataCategory {
     Count = "Count",
     FrameSteps = "Frame Steps Duration",
 }
 
 // list of strategies to add to perf graph automatically.
-const defaultStrategiesList = [
+const DefaultStrategiesList = [
     { strategyCallback: PerfCollectionStrategy.FpsStrategy() },
     { strategyCallback: PerfCollectionStrategy.TotalMeshesStrategy(), category: IPerfMetadataCategory.Count, hidden: true },
     { strategyCallback: PerfCollectionStrategy.ActiveMeshesStrategy(), category: IPerfMetadataCategory.Count, hidden: true },
@@ -91,7 +93,7 @@ export const PerformanceViewerComponent: React.FC<IPerformanceViewerComponentPro
                         title: "Realtime Performance Viewer",
                         onClose: onClosePerformanceViewer,
                         onResize: onResize,
-                        size: initialWindowSize,
+                        size: InitialWindowSize,
                     },
                     children: (
                         <PerformanceViewerPopupComponent
@@ -99,7 +101,7 @@ export const PerformanceViewerComponent: React.FC<IPerformanceViewerComponentPro
                             layoutObservable={layoutObservable}
                             returnToLiveObservable={returnToLiveObservable}
                             performanceCollector={performanceCollector}
-                            initialGraphSize={initialGraphSize}
+                            initialGraphSize={InitialGraphSize}
                         />
                     ),
                 },
@@ -150,7 +152,7 @@ export const PerformanceViewerComponent: React.FC<IPerformanceViewerComponentPro
     };
 
     const addStrategies = (perfCollector: PerformanceViewerCollector) => {
-        perfCollector.addCollectionStrategies(...defaultStrategiesList);
+        perfCollector.addCollectionStrategies(...DefaultStrategiesList);
         if (PressureObserverWrapper.IsAvailable) {
             // Do not enable for now as the Pressure API does not
             // report factors at the moment.

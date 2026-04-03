@@ -1,8 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { IMotionControllerLayoutMap, IMinimalMotionControllerObject, MotionControllerHandedness } from "./webXRAbstractMotionController";
-import { WebXRAbstractMotionController } from "./webXRAbstractMotionController";
-import type { Scene } from "../../scene";
-import type { AbstractMesh } from "../../Meshes/abstractMesh";
+import {
+    type IMotionControllerLayoutMap,
+    type IMinimalMotionControllerObject,
+    type MotionControllerHandedness,
+    WebXRAbstractMotionController,
+} from "./webXRAbstractMotionController";
+import { type Scene } from "../../scene";
+import { type AbstractMesh } from "../../Meshes/abstractMesh";
 import { Mesh } from "../../Meshes/mesh";
 import { Quaternion } from "../../Maths/math.vector";
 import { WebXRMotionControllerManager } from "./webXRMotionControllerManager";
@@ -49,7 +53,9 @@ export class WebXRHTCViveMotionController extends WebXRAbstractMotionController 
     }
 
     protected _processLoadedModel(_meshes: AbstractMesh[]): void {
-        this.getComponentIds().forEach((id) => {
+        const ids = this.getComponentIds();
+
+        for (const id of ids) {
             const comp = id && this.getComponent(id);
             if (comp) {
                 comp.onButtonStateChangedObservable.add(
@@ -72,15 +78,15 @@ export class WebXRHTCViveMotionController extends WebXRAbstractMotionController 
                     true
                 );
             }
-        });
+        }
     }
 
     protected _setRootMesh(meshes: AbstractMesh[]): void {
         this.rootMesh = new Mesh(this.profileId + " " + this.handedness, this.scene);
 
-        meshes.forEach((mesh) => {
+        for (const mesh of meshes) {
             mesh.isPickable = false;
-        });
+        }
         this._modelRootNode = meshes[1];
         this._modelRootNode.parent = this.rootMesh;
         if (!this.scene.useRightHandedSystem) {

@@ -1,14 +1,14 @@
 import { NodeMaterialBlock } from "../../nodeMaterialBlock";
 import { NodeMaterialBlockConnectionPointTypes } from "../../Enums/nodeMaterialBlockConnectionPointTypes";
-import type { NodeMaterialBuildState } from "../../nodeMaterialBuildState";
+import { type NodeMaterialBuildState } from "../../nodeMaterialBuildState";
 import { NodeMaterialBlockTargets } from "../../Enums/nodeMaterialBlockTargets";
-import type { NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
+import { type NodeMaterialConnectionPoint } from "../../nodeMaterialBlockConnectionPoint";
 import { RegisterClass } from "../../../../Misc/typeStore";
-import type { Effect } from "../../../effect";
-import type { NodeMaterial, NodeMaterialDefines } from "../../nodeMaterial";
-import type { Mesh } from "../../../../Meshes/mesh";
-import type { AbstractMesh } from "../../../../Meshes/abstractMesh";
-import { bindClipPlane } from "../../../../Materials/clipPlaneMaterialHelper";
+import { type Effect } from "../../../effect";
+import { type NodeMaterial, type NodeMaterialDefines } from "../../nodeMaterial";
+import { type Mesh } from "../../../../Meshes/mesh";
+import { type AbstractMesh } from "../../../../Meshes/abstractMesh";
+import { BindClipPlane } from "../../../../Materials/clipPlaneMaterialHelper";
 import { ShaderLanguage } from "core/Materials/shaderLanguage";
 /**
  * Block used to implement clip planes
@@ -50,6 +50,7 @@ export class ClipPlanesBlock extends NodeMaterialBlock {
         state._excludeVariableName("vClipPlane6");
         state._excludeVariableName("fClipDistance6");
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._initShaderSourceAsync(state.shaderLanguage);
     }
 
@@ -83,13 +84,25 @@ export class ClipPlanesBlock extends NodeMaterialBlock {
         return this._inputs[0];
     }
 
+    /** {@inheritDoc} */
     public override get target() {
         return NodeMaterialBlockTargets.VertexAndFragment;
     }
 
+    /** {@inheritDoc} */
     public override set target(value: NodeMaterialBlockTargets) {}
 
-    public override prepareDefines(mesh: AbstractMesh, nodeMaterial: NodeMaterial, defines: NodeMaterialDefines) {
+    /**
+     * Prepares the shader defines related to clip planes for the given mesh
+     * @param defines - the material defines
+     * @param nodeMaterial - the node material
+     * @param mesh - the mesh to prepare for
+     */
+    public override prepareDefines(defines: NodeMaterialDefines, nodeMaterial: NodeMaterial, mesh?: AbstractMesh) {
+        if (!mesh) {
+            return;
+        }
+
         const scene = mesh.getScene();
 
         const useClipPlane1 = (nodeMaterial.clipPlane ?? scene.clipPlane) ? true : false;
@@ -107,6 +120,12 @@ export class ClipPlanesBlock extends NodeMaterialBlock {
         defines.setValue("CLIPPLANE6", useClipPlane6, true);
     }
 
+    /**
+     * Bind data to effect
+     * @param effect - the effect to bind to
+     * @param nodeMaterial - the node material
+     * @param mesh - the mesh to bind for
+     */
     public override bind(effect: Effect, nodeMaterial: NodeMaterial, mesh?: Mesh) {
         if (!mesh) {
             return;
@@ -114,7 +133,7 @@ export class ClipPlanesBlock extends NodeMaterialBlock {
 
         const scene = mesh.getScene();
 
-        bindClipPlane(effect, nodeMaterial, scene);
+        BindClipPlane(effect, nodeMaterial, scene);
     }
 
     protected override _buildBlock(state: NodeMaterialBuildState) {

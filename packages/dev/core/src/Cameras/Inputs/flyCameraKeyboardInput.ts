@@ -1,15 +1,13 @@
-import type { Nullable } from "../../types";
+import { type Nullable } from "../../types";
 import { serialize } from "../../Misc/decorators";
-import type { Observer } from "../../Misc/observable";
-import type { ICameraInput } from "../../Cameras/cameraInputsManager";
-import { CameraInputTypes } from "../../Cameras/cameraInputsManager";
-import type { FlyCamera } from "../../Cameras/flyCamera";
-import type { KeyboardInfo } from "../../Events/keyboardEvents";
-import { KeyboardEventTypes } from "../../Events/keyboardEvents";
-import type { Scene } from "../../scene";
+import { type Observer } from "../../Misc/observable";
+import { type ICameraInput, CameraInputTypes } from "../../Cameras/cameraInputsManager";
+import { type FlyCamera } from "../../Cameras/flyCamera";
+import { type KeyboardInfo, KeyboardEventTypes } from "../../Events/keyboardEvents";
+import { type Scene } from "../../scene";
 import { Vector3 } from "../../Maths/math.vector";
 import { Tools } from "../../Misc/tools";
-import type { AbstractEngine } from "../../Engines/abstractEngine";
+import { type AbstractEngine } from "../../Engines/abstractEngine";
 
 /**
  * Listen to keyboard events to control the camera.
@@ -68,7 +66,6 @@ export class FlyCameraKeyboardInput implements ICameraInput<FlyCamera> {
      * @param noPreventDefault Defines whether event caught by the controls should call preventdefault() (https://developer.mozilla.org/en-US/docs/Web/API/Event/preventDefault)
      */
     public attachControl(noPreventDefault?: boolean): void {
-        // eslint-disable-next-line prefer-rest-params
         noPreventDefault = Tools.BackCompatCameraNoPreventDefault(arguments);
         if (this._onCanvasBlurObserver) {
             return;

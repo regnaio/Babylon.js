@@ -1,12 +1,12 @@
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
+import { type GlobalState } from "../../globalState";
 import { Color3 } from "core/Maths/math.color";
-import type { GradientBlockColorStep } from "core/Materials/Node/Blocks/gradientBlock";
+import { type GradientBlockColorStep } from "core/Materials/Node/Blocks/gradientBlock";
 import { ColorPickerLine } from "shared-ui-components/lines/colorPickerComponent";
 
 import deleteButton from "../lines/delete.svg";
-import copyIcon from "../lines/copyStep.svg";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import copyIcon from "shared-ui-components/imgs/copyStep.svg";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 
 interface IGradientStepComponentProps {
     globalState: GlobalState;
@@ -76,7 +76,9 @@ export class GradientStepComponent extends React.Component<IGradientStepComponen
                 <div
                     className="gradient-copy"
                     onClick={() => {
-                        if (this.props.onCopy) this.props.onCopy();
+                        if (this.props.onCopy) {
+                            this.props.onCopy();
+                        }
                     }}
                     title="Copy Step"
                 >

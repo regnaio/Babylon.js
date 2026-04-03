@@ -1,16 +1,16 @@
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
-import type { Vector2 } from "core/Maths/math.vector";
+import { type Vector2 } from "core/Maths/math.vector";
 
 import { Control } from "./control";
 import { ValueAndUnit } from "../valueAndUnit";
-import type { VirtualKeyboard } from "./virtualKeyboard";
+import { type VirtualKeyboard } from "./virtualKeyboard";
 import { RegisterClass } from "core/Misc/typeStore";
-import type { Measure } from "../measure";
+import { type Measure } from "../measure";
 import { InputText } from "./inputText";
-import type { ICanvasRenderingContext } from "core/Engines/ICanvas";
-import type { PointerInfo, PointerInfoBase } from "core/Events/pointerEvents";
-import type { IKeyboardEvent } from "core/Events/deviceInputEvents";
+import { type ICanvasRenderingContext } from "core/Engines/ICanvas";
+import { type PointerInfo, type PointerInfoBase } from "core/Events/pointerEvents";
+import { type IKeyboardEvent } from "core/Events/deviceInputEvents";
 
 import { serialize } from "core/Misc/decorators";
 
@@ -348,8 +348,8 @@ export class InputTextArea extends InputText {
                     const currentLine = this._lines[this._cursorInfo.currentLineIndex];
                     const upperLine = this._lines[this._cursorInfo.currentLineIndex - 1];
 
-                    let tmpIndex = 0;
-                    let relativeIndex = 0;
+                    let tmpIndex: number;
+                    let relativeIndex: number;
                     if (!this._isTextHighlightOn || this._cursorInfo.currentLineIndex < this._highlightCursorInfo.initialLineIndex) {
                         tmpIndex = this._cursorInfo.globalStartIndex;
                         relativeIndex = this._cursorInfo.relativeStartIndex;
@@ -358,7 +358,7 @@ export class InputTextArea extends InputText {
                         relativeIndex = this._cursorInfo.relativeEndIndex;
                     }
 
-                    const currentText = currentLine.text.substr(0, relativeIndex);
+                    const currentText = currentLine.text.substring(0, relativeIndex);
                     const currentWidth = this._contextForBreakLines.measureText(currentText).width;
 
                     let upperWidth = 0;
@@ -372,7 +372,7 @@ export class InputTextArea extends InputText {
                         tmpIndex++;
                         upperLineRelativeIndex++;
                         previousWidth = Math.abs(currentWidth - upperWidth);
-                        upperWidth = this._contextForBreakLines.measureText(upperLine.text.substr(0, upperLineRelativeIndex)).width;
+                        upperWidth = this._contextForBreakLines.measureText(upperLine.text.substring(0, upperLineRelativeIndex)).width;
                     }
 
                     // Find closest move
@@ -420,8 +420,8 @@ export class InputTextArea extends InputText {
                     const currentLine = this._lines[this._cursorInfo.currentLineIndex];
                     const underLine = this._lines[this._cursorInfo.currentLineIndex + 1];
 
-                    let tmpIndex = 0;
-                    let relativeIndex = 0;
+                    let tmpIndex: number;
+                    let relativeIndex: number;
                     if (!this._isTextHighlightOn || this._cursorInfo.currentLineIndex < this._highlightCursorInfo.initialLineIndex) {
                         tmpIndex = this._cursorInfo.globalStartIndex;
                         relativeIndex = this._cursorInfo.relativeStartIndex;
@@ -430,7 +430,7 @@ export class InputTextArea extends InputText {
                         relativeIndex = this._cursorInfo.relativeEndIndex;
                     }
 
-                    const currentText = currentLine.text.substr(0, relativeIndex);
+                    const currentText = currentLine.text.substring(0, relativeIndex);
                     const currentWidth = this._contextForBreakLines.measureText(currentText).width;
 
                     let underWidth = 0;
@@ -443,7 +443,7 @@ export class InputTextArea extends InputText {
                         tmpIndex++;
                         underLineRelativeIndex++;
                         previousWidth = Math.abs(currentWidth - underWidth);
-                        underWidth = this._contextForBreakLines.measureText(underLine.text.substr(0, underLineRelativeIndex)).width;
+                        underWidth = this._contextForBreakLines.measureText(underLine.text.substring(0, underLineRelativeIndex)).width;
                     }
 
                     // Find closest move
@@ -472,7 +472,7 @@ export class InputTextArea extends InputText {
 
         // special case - select all. Use key instead of code to support all keyboard layouts
         if (key === "a" && evt && (evt.ctrlKey || evt.metaKey)) {
-            this._selectAllText();
+            this.selectAllText();
             evt.preventDefault();
             return;
         }
@@ -613,7 +613,8 @@ export class InputTextArea extends InputText {
             this._autoStretchHeight = true;
         }
 
-        this._availableHeight = this._height.getValueInPixel(this._host, parentMeasure.height) - marginWidth;
+        const marginHeight = this._margin.getValueInPixel(this._host, parentMeasure.height) * 2;
+        this._availableHeight = this._height.getValueInPixel(this._host, parentMeasure.height) - marginHeight;
 
         if (this._isFocused) {
             this._cursorInfo.currentLineIndex = 0;
@@ -699,8 +700,8 @@ export class InputTextArea extends InputText {
         if (this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY) {
             context.shadowColor = this.shadowColor;
             context.shadowBlur = this.shadowBlur;
-            context.shadowOffsetX = this.shadowOffsetX;
-            context.shadowOffsetY = this.shadowOffsetY;
+            context.shadowOffsetX = this.shadowOffsetX * this._host.idealRatio;
+            context.shadowOffsetY = this.shadowOffsetY * this._host.idealRatio;
         }
 
         if (this.outlineWidth) {
@@ -753,7 +754,7 @@ export class InputTextArea extends InputText {
      * @internal
      */
     protected override _onPasteText(ev: ClipboardEvent): void {
-        let data: string = "";
+        let data: string;
         if (ev.clipboardData && ev.clipboardData.types.indexOf("text/plain") !== -1) {
             data = ev.clipboardData.getData("text/plain");
         } else {
@@ -787,8 +788,8 @@ export class InputTextArea extends InputText {
         if (this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY) {
             context.shadowColor = this.shadowColor;
             context.shadowBlur = this.shadowBlur;
-            context.shadowOffsetX = this.shadowOffsetX;
-            context.shadowOffsetY = this.shadowOffsetY;
+            context.shadowOffsetX = this.shadowOffsetX * this._host.idealRatio;
+            context.shadowOffsetY = this.shadowOffsetY * this._host.idealRatio;
         }
 
         // Background
@@ -865,7 +866,8 @@ export class InputTextArea extends InputText {
         if (this._isFocused) {
             // Render cursor
             if (!this._blinkIsEven || this._isTextHighlightOn) {
-                let cursorLeft = this._scrollLeft + context.measureText(this._lines[this._cursorInfo.currentLineIndex].text.substr(0, this._cursorInfo.relativeStartIndex)).width;
+                let cursorLeft =
+                    this._scrollLeft + context.measureText(this._lines[this._cursorInfo.currentLineIndex].text.substring(0, this._cursorInfo.relativeStartIndex)).width;
 
                 if (cursorLeft < this._clipTextLeft) {
                     this._scrollLeft += this._clipTextLeft - cursorLeft;
@@ -902,7 +904,7 @@ export class InputTextArea extends InputText {
 
                 this._highlightedText = this.text.substring(this._cursorInfo.globalStartIndex, this._cursorInfo.globalEndIndex);
 
-                context.globalAlpha = this._highligherOpacity;
+                context.globalAlpha = this._highlighterOpacity;
                 context.fillStyle = this._textHighlightColor;
 
                 const startLineIndex = Math.min(this._cursorInfo.currentLineIndex, this._highlightCursorInfo.initialLineIndex);
@@ -913,7 +915,7 @@ export class InputTextArea extends InputText {
                 for (let i = startLineIndex; i <= endLineIndex; i++) {
                     const line = this._lines[i];
 
-                    let highlightRootX = this._scrollLeft as number;
+                    let highlightRootX = this._scrollLeft;
                     switch (this._textHorizontalAlignment) {
                         case Control.HORIZONTAL_ALIGNMENT_LEFT:
                             highlightRootX += 0;
@@ -929,7 +931,7 @@ export class InputTextArea extends InputText {
                     const begin = i === startLineIndex ? this._cursorInfo.relativeStartIndex : 0;
                     const end = i === endLineIndex ? this._cursorInfo.relativeEndIndex : line.text.length;
 
-                    const leftOffsetWidth = context.measureText(line.text.substr(0, begin)).width;
+                    const leftOffsetWidth = context.measureText(line.text.substring(0, begin)).width;
                     const selectedText = line.text.substring(begin, end);
                     const hightlightWidth = context.measureText(selectedText).width;
 
@@ -1079,7 +1081,7 @@ export class InputTextArea extends InputText {
                 while (currentSize < relativeXPosition && this._lines[this._cursorInfo.currentLineIndex].text.length > relativeIndex) {
                     relativeIndex++;
                     previousDist = Math.abs(relativeXPosition - currentSize);
-                    currentSize = this._contextForBreakLines.measureText(this._lines[this._cursorInfo.currentLineIndex].text.substr(0, relativeIndex)).width;
+                    currentSize = this._contextForBreakLines.measureText(this._lines[this._cursorInfo.currentLineIndex].text.substring(0, relativeIndex)).width;
                 }
 
                 // Find closest move
@@ -1188,7 +1190,7 @@ export class InputTextArea extends InputText {
     }
 
     /** @internal */
-    protected override _selectAllText() {
+    public override selectAllText() {
         this._isTextHighlightOn = true;
         this._blinkIsEven = true;
 

@@ -11,6 +11,13 @@
 			vLightFalloff: vec4f,
 		#elif defined(HEMILIGHT{X})
 			vLightGround: vec3f,
+		#elif defined(CLUSTLIGHT{X})
+			vSliceData: vec2f,
+			vSliceRanges: array<vec4f, CLUSTLIGHT_SLICES>,
+		#endif
+		#if defined(AREALIGHT{X}) && defined(AREALIGHTUSED) && defined(AREALIGHTSUPPORTED)
+			vLightWidth: vec4f,
+			vLightHeight: vec4f,
 		#endif
 		shadowsInfo: vec4f,
 		depthValues: vec2f

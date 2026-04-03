@@ -1,15 +1,14 @@
 import * as React from "react";
-import type { GlobalState } from "../../../../globalState";
-import type { IValueGradient } from "core/Misc/gradients";
-import { FactorGradient, ColorGradient, Color3Gradient } from "core/Misc/gradients";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type GlobalState } from "../../../../globalState";
+import { type IValueGradient, FactorGradient, ColorGradient, Color3Gradient } from "core/Misc/gradients";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
 import { FactorGradientStepGridComponent } from "./factorGradientStepGridComponent";
-import type { Nullable } from "core/types";
+import { type Nullable } from "core/types";
 import { ColorGradientStepGridComponent } from "./colorGradientStepGridComponent";
 import { Color4, Color3 } from "core/Maths/math.color";
 import { LinkButtonComponent } from "shared-ui-components/lines/linkButtonComponent";
-import type { IParticleSystem } from "core/Particles/IParticleSystem";
+import { type IParticleSystem } from "core/Particles/IParticleSystem";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export enum GradientGridMode {
@@ -28,6 +27,7 @@ interface IValueGradientGridComponent {
     host: IParticleSystem;
     codeRecorderPropertyName: string;
     onCreateRequired: () => void;
+    onRemoveRequired: (step: IValueGradient) => void;
 }
 
 export class ValueGradientGridComponent extends React.Component<IValueGradientGridComponent> {
@@ -41,7 +41,7 @@ export class ValueGradientGridComponent extends React.Component<IValueGradientGr
         const index = gradients.indexOf(step);
 
         if (index > -1) {
-            gradients.splice(index, 1);
+            this.props.onRemoveRequired(step);
             this.updateAndSync();
         }
     }
@@ -96,7 +96,7 @@ export class ValueGradientGridComponent extends React.Component<IValueGradientGr
     }
 
     override render() {
-        const gradients = this.props.gradients as Nullable<Array<IValueGradient>>;
+        const gradients = this.props.gradients;
 
         return (
             <div>
@@ -107,7 +107,9 @@ export class ValueGradientGridComponent extends React.Component<IValueGradientGr
                             url={this.props.docLink}
                             icon={faTrash}
                             onIconClick={() => {
-                                gradients!.length = 0;
+                                for (let i = 0; i < gradients.length; i++) {
+                                    this.props.onRemoveRequired(gradients[i]);
+                                }
                                 this.updateAndSync();
                             }}
                             buttonLabel="Add new step"

@@ -1,23 +1,34 @@
-import type { Nullable } from "../types";
+import { type Nullable } from "../types";
 import { Constants } from "../Engines/constants";
-import type { IMatrixLike } from "../Maths/math.like";
-import type { AbstractEngine } from "../Engines/abstractEngine";
-import type { DataBuffer } from "../Buffers/dataBuffer";
+import { type IMatrixLike } from "../Maths/math.like";
+import { type AbstractEngine } from "../Engines/abstractEngine";
+import { type DataBuffer } from "../Buffers/dataBuffer";
 import { Buffer, VertexBuffer } from "../Buffers/buffer";
 import { DrawWrapper } from "../Materials/drawWrapper";
-import type { ThinSprite } from "./thinSprite";
-import type { ISize } from "../Maths/math.size";
+import { type ThinSprite } from "./thinSprite";
+import { type ISize } from "../Maths/math.size";
 
-import type { ThinTexture } from "../Materials/Textures/thinTexture";
-import type { Scene } from "../scene";
+import { type ThinTexture } from "../Materials/Textures/thinTexture";
+import { type Scene } from "../scene";
+import { type ThinEngine } from "../Engines/thinEngine";
+import { Logger } from "../Misc/logger";
+import { BindLogDepth } from "../Materials/materialHelper.functions.pure";
+import { ShaderLanguage } from "../Materials/shaderLanguage";
+import { Vector3 } from "../Maths/math.vector";
 
-import "../Engines/Extensions/engine.alpha";
-import "../Engines/Extensions/engine.dynamicBuffer";
-
-import type { ThinEngine } from "../Engines/thinEngine";
-import { Logger } from "core/Misc/logger";
-import { BindLogDepth } from "core/Materials/materialHelper.functions";
-import { ShaderLanguage } from "core/Materials/shaderLanguage";
+/**
+ * Options for the SpriteRenderer
+ */
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export interface SpriteRendererOptions {
+    /**
+     * Sets a boolean indicating if the renderer must render sprites with pixel perfect rendering.
+     * In this mode, sprites are rendered as "pixel art", which means that they appear as pixelated but remain stable when moving or when rotated or scaled.
+     * Note that for this mode to work as expected, the sprite texture must use the BILINEAR sampling mode, not NEAREST!
+     * Default is false.
+     */
+    pixelPerfect?: boolean;
+}
 
 /**
  * Class used to render sprites.
@@ -155,18 +166,23 @@ export class SpriteRenderer {
     private _vertexBuffers: { [key: string]: VertexBuffer } = {};
     private _spriteBuffer: Nullable<Buffer>;
     private _indexBuffer: DataBuffer;
-    private _drawWrapperBase: DrawWrapper;
-    private _drawWrapperDepth: DrawWrapper;
+    /** @internal */
+    public _drawWrapperBase: DrawWrapper;
+    /** @internal */
+    public _drawWrapperDepth: DrawWrapper;
     private _vertexArrayObject: WebGLVertexArrayObject;
+    private _isDisposed = false;
 
     /**
-     * Creates a new sprite Renderer
+     * Creates a new sprite renderer
      * @param engine defines the engine the renderer works with
      * @param capacity defines the maximum allowed number of sprites
      * @param epsilon defines the epsilon value to align texture (0.01 by default)
      * @param scene defines the hosting scene
+     * @param rendererOptions options for the sprite renderer
      */
-    constructor(engine: AbstractEngine, capacity: number, epsilon: number = 0.01, scene: Nullable<Scene> = null) {
+    constructor(engine: AbstractEngine, capacity: number, epsilon: number = 0.01, scene: Nullable<Scene> = null, rendererOptions?: SpriteRendererOptions) {
+        this._pixelPerfect = rendererOptions?.pixelPerfect ?? false;
         this._capacity = capacity;
         this._epsilon = epsilon;
 
@@ -193,7 +209,16 @@ export class SpriteRenderer {
         let offsets: VertexBuffer;
 
         if (this._useInstancing) {
-            const spriteData = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
+            const spriteData = new Float32Array([
+                this._epsilon,
+                this._epsilon,
+                1 - this._epsilon,
+                this._epsilon,
+                this._epsilon,
+                1 - this._epsilon,
+                1 - this._epsilon,
+                1 - this._epsilon,
+            ]);
             this._spriteBuffer = new Buffer(engine, spriteData, false, 2);
             offsets = this._spriteBuffer.createVertexBuffer("offsets", 0, 2);
         } else {
@@ -212,6 +237,7 @@ export class SpriteRenderer {
         this._vertexBuffers["cellInfo"] = cellInfo;
         this._vertexBuffers[VertexBuffer.ColorKind] = colors;
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._initShaderSourceAsync();
     }
 
@@ -233,6 +259,10 @@ export class SpriteRenderer {
     }
 
     private _createEffects() {
+        if (this._isDisposed || !this._shadersLoaded) {
+            return;
+        }
+
         this._drawWrapperBase?.dispose();
         this._drawWrapperDepth?.dispose();
 
@@ -272,6 +302,7 @@ export class SpriteRenderer {
         );
 
         this._drawWrapperDepth.effect = this._drawWrapperBase.effect;
+        this._drawWrapperBase.effect._refCount++;
         this._drawWrapperDepth.materialContext = this._drawWrapperBase.materialContext;
     }
 
@@ -307,13 +338,13 @@ export class SpriteRenderer {
 
         const engine = this._engine;
         const useRightHandedSystem = !!(this._scene && this._scene.useRightHandedSystem);
-        const baseSize = this.texture.getBaseSize();
 
         // Sprites
         const max = Math.min(this._capacity, sprites.length);
 
         let offset = 0;
         let noSprite = true;
+        const floatingOriginOffset = this._scene?.floatingOriginOffset || Vector3.ZeroReadOnly;
         for (let index = 0; index < max; index++) {
             const sprite = sprites[index];
             if (!sprite || !sprite.isVisible) {
@@ -322,12 +353,13 @@ export class SpriteRenderer {
 
             noSprite = false;
             sprite._animate(deltaTime);
+            const baseSize = this.texture.getBaseSize(); // This could be change by the user inside the animate callback (like onAnimationEnd)
 
-            this._appendSpriteVertex(offset++, sprite, 0, 0, baseSize, useRightHandedSystem, customSpriteUpdate);
+            this._appendSpriteVertex(offset++, sprite, 0, 0, baseSize, useRightHandedSystem, customSpriteUpdate, floatingOriginOffset);
             if (!this._useInstancing) {
-                this._appendSpriteVertex(offset++, sprite, 1, 0, baseSize, useRightHandedSystem, customSpriteUpdate);
-                this._appendSpriteVertex(offset++, sprite, 1, 1, baseSize, useRightHandedSystem, customSpriteUpdate);
-                this._appendSpriteVertex(offset++, sprite, 0, 1, baseSize, useRightHandedSystem, customSpriteUpdate);
+                this._appendSpriteVertex(offset++, sprite, 1, 0, baseSize, useRightHandedSystem, customSpriteUpdate, floatingOriginOffset);
+                this._appendSpriteVertex(offset++, sprite, 1, 1, baseSize, useRightHandedSystem, customSpriteUpdate, floatingOriginOffset);
+                this._appendSpriteVertex(offset++, sprite, 0, 1, baseSize, useRightHandedSystem, customSpriteUpdate, floatingOriginOffset);
             }
         }
 
@@ -352,7 +384,7 @@ export class SpriteRenderer {
 
         // Scene Info
         if (shouldRenderFog) {
-            const scene = this._scene!;
+            const scene = this._scene;
 
             // Fog
             effect.setFloat4("vFogInfos", scene.fogMode, scene.fogStart, scene.fogEnd, scene.fogDensity);
@@ -403,7 +435,7 @@ export class SpriteRenderer {
 
         // Restore Right Handed
         if (useRightHandedSystem) {
-            this._scene!.getEngine().setState(culling, zOffset, false, true, undefined, undefined, zOffsetUnits);
+            this._scene.getEngine().setState(culling, zOffset, false, true, undefined, undefined, zOffsetUnits);
         }
 
         engine.unbindInstanceAttributes();
@@ -416,7 +448,8 @@ export class SpriteRenderer {
         offsetY: number,
         baseSize: ISize,
         useRightHandedSystem: boolean,
-        customSpriteUpdate: Nullable<(sprite: ThinSprite, baseSize: ISize) => void>
+        customSpriteUpdate: Nullable<(sprite: ThinSprite, baseSize: ISize) => void>,
+        floatingOriginOffset: Vector3
     ): void {
         let arrayOffset = index * this._vertexBufferSize;
 
@@ -448,9 +481,9 @@ export class SpriteRenderer {
         }
 
         // Positions
-        this._vertexData[arrayOffset] = sprite.position.x;
-        this._vertexData[arrayOffset + 1] = sprite.position.y;
-        this._vertexData[arrayOffset + 2] = sprite.position.z;
+        this._vertexData[arrayOffset] = sprite.position.x - floatingOriginOffset.x;
+        this._vertexData[arrayOffset + 1] = sprite.position.y - floatingOriginOffset.y;
+        this._vertexData[arrayOffset + 2] = sprite.position.z - floatingOriginOffset.z;
         this._vertexData[arrayOffset + 3] = sprite.angle;
         // Options
         this._vertexData[arrayOffset + 4] = sprite.width;
@@ -515,7 +548,7 @@ export class SpriteRenderer {
         this._buffer._rebuild();
 
         for (const key in this._vertexBuffers) {
-            const vertexBuffer = <VertexBuffer>this._vertexBuffers[key];
+            const vertexBuffer = this._vertexBuffers[key];
             vertexBuffer._rebuild();
         }
 
@@ -552,5 +585,6 @@ export class SpriteRenderer {
         }
         this._drawWrapperBase?.dispose();
         this._drawWrapperDepth?.dispose();
+        this._isDisposed = true;
     }
 }

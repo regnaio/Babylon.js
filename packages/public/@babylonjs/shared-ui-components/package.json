@@ -1,6 +1,6 @@
 {
     "name": "@babylonjs/shared-ui-components",
-    "version": "7.23.0",
+    "version": "9.0.0",
     "main": "index.js",
     "module": "index.js",
     "types": "index.d.ts",
@@ -15,23 +15,22 @@
     ],
     "scripts": {
         "build": "npm run clean && npm run compile",
-        "clean": "rimraf dist && rimraf *.tsbuildinfo && rimraf \"./**/*.!(md|json|build.json)\"",
-        "compile": "tsc -b tsconfig.build.json --verbose",
+        "clean": "rimraf dist && rimraf *.tsbuildinfo -g && rimraf \"./**/*.!(md|json|build.json)\" -g",
+        "compile": "tsc -b tsconfig.build.json --verbose && build-tools -c tp --outDir . --buildType es6 --basePackage @babylonjs/shared-ui-components --appendJS",
         "precompile": "build-tools -c process-assets --path-prefix ../../../dev/sharedUiComponents/ --output-dir ./",
         "postcompile": "build-tools -c add-js-to-es6"
     },
     "devDependencies": {
         "@dev/build-tools": "^1.0.0",
-        "@lts/core": "1.0.0",
-        "@lts/gui": "1.0.0"
+        "@dev/shared-ui-components": "^1.0.0"
     },
     "peerDependencies": {
         "@types/dagre": "^0.7.47",
         "dagre": "^0.8.5",
-        "react": "^17.0.2",
+        "react": "^18.2.0",
         "react-dnd": "15.0.1",
         "react-dnd-touch-backend": "15.0.1",
-        "react-dom": "^17.0.2"
+        "react-dom": "^18.2.0"
     },
     "keywords": [
         "3D",

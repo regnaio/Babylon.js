@@ -1,4 +1,4 @@
-import type { Camera } from "../camera";
+import { type Camera } from "../camera";
 import { Matrix } from "../../Maths/math.vector";
 import { VRDistortionCorrectionPostProcess } from "../../PostProcesses/vrDistortionCorrectionPostProcess";
 import { VRMultiviewToSingleviewPostProcess } from "../../PostProcesses/vrMultiviewToSingleviewPostProcess";
@@ -9,7 +9,7 @@ import { Viewport } from "../../Maths/math.viewport";
 /**
  * @internal
  */
-export function setVRRigMode(camera: Camera, rigParams: any) {
+export function _SetVrRigMode(camera: Camera, rigParams: any) {
     const metrics = <VRCameraMetrics>rigParams.vrCameraMetrics || VRCameraMetrics.GetDefault();
 
     camera._rigCameras[0]._cameraRigParams.vrMetrics = metrics;

@@ -1,15 +1,12 @@
 import { KhronosTextureContainer } from "../../../Misc/khronosTextureContainer";
 import { KhronosTextureContainer2 } from "../../../Misc/khronosTextureContainer2";
-import type { Nullable } from "../../../types";
-import type { InternalTexture } from "../../../Materials/Textures/internalTexture";
-import type { IInternalTextureLoader } from "./internalTextureLoader";
+import { type Nullable } from "../../../types";
+import { type InternalTexture } from "../../../Materials/Textures/internalTexture";
+import { type IInternalTextureLoader } from "./internalTextureLoader";
 import { Logger } from "../../../Misc/logger";
 import { Constants } from "../../../Engines/constants";
 
-import "../../../Engines/Extensions/engine.cubeTexture";
-import type { Engine } from "core/Engines/engine";
-
-function mapSRGBToLinear(format: number): Nullable<number> {
+function MapSRGBToLinear(format: number): Nullable<number> {
     switch (format) {
         case Constants.TEXTUREFORMAT_COMPRESSED_SRGB_S3TC_DXT1_EXT:
             return Constants.TEXTUREFORMAT_COMPRESSED_RGB_S3TC_DXT1;
@@ -57,7 +54,7 @@ export class _KTXTextureLoader implements IInternalTextureLoader {
 
         // Need to invert vScale as invertY via UNPACK_FLIP_Y_WEBGL is not supported by compressed texture
         texture._invertVScale = !texture.invertY;
-        const engine = texture.getEngine() as Engine;
+        const engine = texture.getEngine();
         const ktx = new KhronosTextureContainer(data, 6);
 
         const loadMipmap = ktx.numberOfMipmapLevels > 1 && texture.generateMipMaps;
@@ -97,7 +94,7 @@ export class _KTXTextureLoader implements IInternalTextureLoader {
             texture._invertVScale = !texture.invertY;
             const ktx = new KhronosTextureContainer(data, 1);
 
-            const mappedFormat = mapSRGBToLinear(ktx.glInternalFormat);
+            const mappedFormat = MapSRGBToLinear(ktx.glInternalFormat);
             if (mappedFormat) {
                 texture.format = mappedFormat;
                 texture._useSRGBBuffer = texture.getEngine()._getUseSRGBBuffer(true, texture.generateMipMaps);
@@ -118,6 +115,7 @@ export class _KTXTextureLoader implements IInternalTextureLoader {
             );
         } else if (KhronosTextureContainer2.IsValid(data)) {
             const ktx2 = new KhronosTextureContainer2(texture.getEngine());
+            // eslint-disable-next-line github/no-then
             ktx2._uploadAsync(data, texture, options).then(
                 () => {
                     callback(texture.width, texture.height, texture.generateMipMaps, true, () => {}, false);

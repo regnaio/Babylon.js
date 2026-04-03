@@ -1,15 +1,16 @@
-import type { Skeleton } from "../../Bones/skeleton";
+import { type Skeleton } from "../../Bones/skeleton";
 import { Vector3, Matrix, TmpVectors, Quaternion } from "../../Maths/math.vector";
-import type { Scene } from "../../scene";
+import { type Scene } from "../../scene";
 import { PhysicsAggregate } from "./physicsAggregate";
 import { PhysicsConstraint } from "./physicsConstraint";
-import type { Mesh } from "../../Meshes/mesh";
-import { Axis, Space } from "core/Maths/math.axis";
+import { type Mesh } from "../../Meshes/mesh";
+import { Axis, Space } from "../../Maths/math.axis";
 import { PhysicsShapeType, PhysicsConstraintType, PhysicsMotionType } from "./IPhysicsEnginePlugin";
-import type { Nullable } from "../../types";
-import type { Bone } from "../../Bones/bone";
+import { type Nullable } from "../../types";
+import { type Bone } from "../../Bones/bone";
 import { Logger } from "../../Misc/logger";
 import { TransformNode } from "../../Meshes/transformNode";
+import { type Observer } from "../../Misc/observable";
 
 /**
  * Ragdoll bone properties
@@ -35,7 +36,7 @@ export class RagdollBoneProperties {
     /**
      * Type of Physics Constraint used between bones
      */
-    joint?: number | undefined;
+    joint?: number | undefined | PhysicsConstraintType;
     /**
      * Main rotation axis used by the constraint, in local space
      */
@@ -68,7 +69,7 @@ export class Ragdoll {
     private _rootTransformNode: Mesh | TransformNode;
     private _config: any;
     private _boxConfigs: Array<RagdollBoneProperties> = new Array<RagdollBoneProperties>();
-    private _joints: Array<PhysicsConstraint> = new Array<PhysicsConstraint>();
+    private _constraints: Array<PhysicsConstraint> = new Array<PhysicsConstraint>();
     private _bones: Array<Bone> = new Array<Bone>();
     private _initialRotation: Array<Quaternion> = new Array<Quaternion>();
     // without mesh transform, to figure out later
@@ -81,6 +82,7 @@ export class Ragdoll {
     private _rootBoneIndex: number = -1;
     private _mass: number = 10;
     private _restitution: number = 0;
+    private _beforeRenderObserver: Nullable<Observer<Scene>> = null;
 
     /**
      * Pause synchronization between physics and bone position/orientation
@@ -108,6 +110,14 @@ export class Ragdoll {
         this._defaultJoint = PhysicsConstraintType.HINGE;
 
         this._init();
+    }
+
+    /**
+     * returns an array of created constraints
+     * @returns array of created constraints
+     */
+    public getConstraints(): Array<PhysicsConstraint> {
+        return this._constraints;
     }
 
     /**
@@ -206,7 +216,9 @@ export class Ragdoll {
         this._rootTransformNode.computeWorldMatrix();
         for (let i = 0; i < this._bones.length; i++) {
             // The root bone has no joints.
-            if (i == this._rootBoneIndex) continue;
+            if (i == this._rootBoneIndex) {
+                continue;
+            }
 
             const nearestParent = this._findNearestParent(i);
 
@@ -217,18 +229,16 @@ export class Ragdoll {
 
             const boneParentIndex = this._boneNames.indexOf(nearestParent.name);
 
-            let distanceFromParentBoxToBone = this._bones[i].getAbsolutePosition(this._rootTransformNode).subtract(this._transforms[boneParentIndex].position);
-
             const wmat = this._transforms[boneParentIndex].computeWorldMatrix();
             const invertedWorldMat = Matrix.Invert(wmat);
-            distanceFromParentBoxToBone = Vector3.TransformCoordinates(this._bones[i].getAbsolutePosition(this._rootTransformNode), invertedWorldMat);
-
             const boneAbsPos = this._bones[i].getAbsolutePosition(this._rootTransformNode);
+            const distanceFromParentBoxToBone = Vector3.TransformCoordinates(boneAbsPos, invertedWorldMat);
             const boxAbsPos = this._transforms[i].position.clone();
             const myConnectedPivot = boneAbsPos.subtract(boxAbsPos);
 
-            const joint = new PhysicsConstraint(
-                PhysicsConstraintType.BALL_AND_SOCKET,
+            const constraintType = this._boxConfigs[i].joint ?? this._defaultJoint;
+            const constraint = new PhysicsConstraint(
+                constraintType,
                 {
                     pivotA: distanceFromParentBoxToBone,
                     pivotB: myConnectedPivot,
@@ -239,9 +249,9 @@ export class Ragdoll {
                 this._scene
             );
 
-            this._aggregates[boneParentIndex].body.addConstraint(this._aggregates[i].body, joint);
-            joint.isEnabled = false;
-            this._joints.push(joint);
+            this._aggregates[boneParentIndex].body.addConstraint(this._aggregates[i].body, constraint);
+            constraint.isEnabled = false;
+            this._constraints.push(constraint);
         }
     }
 
@@ -287,7 +297,9 @@ export class Ragdoll {
             this._bones[this._rootBoneIndex].setAbsolutePosition(TmpVectors.Vector3[0]);
 
             for (let i = 0; i < this._bones.length; i++) {
-                if (i == this._rootBoneIndex) continue;
+                if (i == this._rootBoneIndex) {
+                    continue;
+                }
                 this._setBodyOrientationToBone(i);
             }
         } else {
@@ -300,10 +312,10 @@ export class Ragdoll {
             this._rootTransformNode.rotationQuaternion ??
             Quaternion.FromEulerAngles(this._rootTransformNode.rotation.x, this._rootTransformNode.rotation.y, this._rootTransformNode.rotation.z);
         const qbind = this._initialRotation2[boneIndex];
-        const qphys = this._aggregates[boneIndex].body?.transformNode?.rotationQuaternion!;
+        const qphys = this._aggregates[boneIndex].body?.transformNode?.rotationQuaternion;
 
         qmesh.multiplyToRef(qbind, TmpVectors.Quaternion[1]);
-        qphys.multiplyToRef(TmpVectors.Quaternion[1], TmpVectors.Quaternion[0]);
+        qphys?.multiplyToRef(TmpVectors.Quaternion[1], TmpVectors.Quaternion[0]);
 
         this._bones[boneIndex].setRotationQuaternion(TmpVectors.Quaternion[0], Space.WORLD, this._rootTransformNode);
     }
@@ -319,6 +331,7 @@ export class Ragdoll {
         this._rootBoneName = skeletonRoots[0].name;
         this._rootBoneIndex = this._boneNames.indexOf(this._rootBoneName);
         if (this._rootBoneIndex == -1) {
+            // eslint-disable-next-line @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-base-to-string
             Logger.Log("Ragdoll creation failed: the array boneNames doesn't have the root bone. The root bone is " + this._skeleton.getChildren());
             return false;
         }
@@ -348,7 +361,7 @@ export class Ragdoll {
         }
 
         this._initJoints();
-        this._scene.registerBeforeRender(() => {
+        this._beforeRenderObserver = this._scene.onBeforeRenderObservable.add(() => {
             this._syncBonesAndBoxes();
         });
         this._syncBonesToPhysics();
@@ -360,11 +373,11 @@ export class Ragdoll {
     public ragdoll(): void {
         this._ragdollMode = true;
         // detach bones with link transform to let physics have control
-        this._skeleton.bones.forEach((bone) => {
+        for (const bone of this._skeleton.bones) {
             bone.linkTransformNode(null);
-        });
-        for (let i = 0; i < this._joints.length; i++) {
-            this._joints[i].isEnabled = true;
+        }
+        for (let i = 0; i < this._constraints.length; i++) {
+            this._constraints[i].isEnabled = true;
         }
         for (let i = 0; i < this._aggregates.length; i++) {
             this._aggregates[i].body.setMotionType(PhysicsMotionType.DYNAMIC);
@@ -375,8 +388,22 @@ export class Ragdoll {
      * Dispose resources and remove physics objects
      */
     dispose(): void {
-        this._aggregates.forEach((aggregate: PhysicsAggregate) => {
+        for (const aggregate of this._aggregates) {
             aggregate.dispose();
-        });
+        }
+        this._aggregates.length = 0;
+        for (const transform of this._transforms) {
+            transform.dispose();
+        }
+        this._transforms.length = 0;
+        for (const constraint of this._constraints) {
+            constraint.dispose();
+        }
+        this._constraints.length = 0;
+
+        if (this._beforeRenderObserver) {
+            this._scene.onBeforeRenderObservable.remove(this._beforeRenderObserver);
+            this._beforeRenderObserver = null;
+        }
     }
 }

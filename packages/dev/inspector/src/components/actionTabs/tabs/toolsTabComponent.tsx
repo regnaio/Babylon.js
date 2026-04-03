@@ -1,31 +1,29 @@
-/* eslint-disable import/no-internal-modules */
-import type { IPaneComponentProps } from "../paneComponent";
-import { PaneComponent } from "../paneComponent";
+/* eslint-disable @typescript-eslint/no-restricted-imports */
+import { type IPaneComponentProps, PaneComponent } from "../paneComponent";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
-import type { Node } from "core/node";
-import type { Nullable } from "core/types";
+import { type Node } from "core/node";
+import { type Nullable } from "core/types";
 import { VideoRecorder } from "core/Misc/videoRecorder";
 import { Tools } from "core/Misc/tools";
 import { EnvironmentTextureTools } from "core/Misc/environmentTextureTools";
-import type { BackgroundMaterial } from "core/Materials/Background/backgroundMaterial";
-import type { StandardMaterial } from "core/Materials/standardMaterial";
-import type { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { CubeTexture } from "core/Materials/Textures/cubeTexture";
+import { type BackgroundMaterial } from "core/Materials/Background/backgroundMaterial";
+import { type StandardMaterial } from "core/Materials/standardMaterial";
+import { type PBRMaterial } from "core/Materials/PBR/pbrMaterial";
+import { type CubeTexture } from "core/Materials/Textures/cubeTexture";
 import { Texture } from "core/Materials/Textures/texture";
 import { SceneSerializer } from "core/Misc/sceneSerializer";
 import { Mesh } from "core/Meshes/mesh";
 import { FilesInput } from "core/Misc/filesInput";
-import type { Scene } from "core/scene";
+import { type Scene } from "core/scene";
 import { captureEquirectangularFromScene } from "core/Misc/equirectangularCapture";
 import { SceneLoader, SceneLoaderAnimationGroupLoadingMode } from "core/Loading/sceneLoader";
 import { Reflector } from "core/Misc/reflector";
 import { GLTFComponent } from "./tools/gltfComponent";
 // TODO - does it still work if loading the modules from the correct files?
-import type { GLTFData } from "serializers/glTF/2.0/index";
-import { GLTF2Export } from "serializers/glTF/2.0/index";
+import { type GLTFData, GLTF2Export } from "serializers/glTF/2.0/index";
 import { FloatLineComponent } from "shared-ui-components/lines/floatLineComponent";
-import type { IScreenshotSize } from "core/Misc/interfaces/screenshotSize";
+import { type IScreenshotSize } from "core/Misc/interfaces/screenshotSize";
 import { NumericInput } from "shared-ui-components/lines/numericInputComponent";
 import { CheckBoxLineComponent } from "shared-ui-components/lines/checkBoxLineComponent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
@@ -42,8 +40,9 @@ import { Camera } from "core/Cameras/camera";
 import { Light } from "core/Lights/light";
 import { GLTFFileLoader } from "loaders/glTF/glTFFileLoader";
 import { Logger } from "core/Misc/logger";
+import { FrameGraphUtils } from "core/FrameGraph/frameGraphUtils";
 
-const envExportImageTypes = [
+const EnvExportImageTypes = [
     { label: "PNG", value: 0, imageType: "image/png" },
     { label: "WebP", value: 1, imageType: "image/webp" },
 ];
@@ -53,6 +52,7 @@ interface IGlbExportOptions {
     exportSkyboxes: boolean;
     exportCameras: boolean;
     exportLights: boolean;
+    dracoCompression: boolean;
 }
 
 export class ToolsTabComponent extends PaneComponent {
@@ -62,7 +62,7 @@ export class ToolsTabComponent extends PaneComponent {
     private _gifOptions = { width: 512, frequency: 200 };
     private _useWidthHeight = false;
     private _isExportingGltf = false;
-    private _gltfExportOptions: IGlbExportOptions = { exportDisabledNodes: false, exportSkyboxes: false, exportCameras: false, exportLights: false };
+    private _gltfExportOptions: IGlbExportOptions = { exportDisabledNodes: false, exportSkyboxes: false, exportCameras: false, exportLights: false, dracoCompression: false };
     private _gifWorkerBlob: Blob;
     private _gifRecorder: any;
     private _previousRenderingScale: number;
@@ -70,7 +70,11 @@ export class ToolsTabComponent extends PaneComponent {
     private _reflectorHostname: string = "localhost";
     private _reflectorPort: number = 1234;
     private _reflector: Reflector;
-    private _envOptions = { imageTypeIndex: 0, imageQuality: 0.8 };
+    private _envOptions = {
+        imageTypeIndex: 0,
+        imageQuality: 0.8,
+        iblDiffuse: false,
+    };
 
     constructor(props: IPaneComponentProps) {
         super(props);
@@ -109,20 +113,31 @@ export class ToolsTabComponent extends PaneComponent {
 
     captureScreenshot() {
         const scene = this.props.scene;
-        if (scene.activeCamera) {
-            Tools.CreateScreenshot(scene.getEngine(), scene.activeCamera, this._screenShotSize);
+        const camera = scene.frameGraph ? FrameGraphUtils.FindMainCamera(scene.frameGraph) : scene.activeCamera;
+        if (camera) {
+            Tools.CreateScreenshot(scene.getEngine(), camera, this._screenShotSize);
         }
     }
 
     captureEquirectangular() {
         const scene = this.props.scene;
+        const currentActiveCamera = scene.activeCamera;
+        if (!currentActiveCamera && scene.frameGraph) {
+            scene.activeCamera = FrameGraphUtils.FindMainCamera(scene.frameGraph);
+        }
         if (scene.activeCamera) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             captureEquirectangularFromScene(scene, { size: 1024, filename: "equirectangular_capture.png" });
         }
+        scene.activeCamera = currentActiveCamera;
     }
 
     captureRender() {
         const scene = this.props.scene;
+        const currentActiveCamera = scene.activeCamera;
+        if (!currentActiveCamera && scene.frameGraph) {
+            scene.activeCamera = FrameGraphUtils.FindMainCamera(scene.frameGraph);
+        }
         const oldScreenshotSize: IScreenshotSize = {
             height: this._screenShotSize.height,
             width: this._screenShotSize.width,
@@ -135,6 +150,7 @@ export class ToolsTabComponent extends PaneComponent {
         if (scene.activeCamera) {
             Tools.CreateScreenshotUsingRenderTarget(scene.getEngine(), scene.activeCamera, this._screenShotSize, undefined, undefined, 4);
         }
+        scene.activeCamera = currentActiveCamera;
         this._screenShotSize = oldScreenshotSize;
     }
 
@@ -149,6 +165,7 @@ export class ToolsTabComponent extends PaneComponent {
             this._videoRecorder = new VideoRecorder(scene.getEngine());
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
         this._videoRecorder.startRecording().then(() => {
             this.setState({ tag: "Record video" });
         });
@@ -166,7 +183,7 @@ export class ToolsTabComponent extends PaneComponent {
         const engine = scene.getEngine();
 
         this._previousRenderingScale = engine.getHardwareScalingLevel();
-        engine.setHardwareScalingLevel(engine.getRenderWidth() / this._gifOptions.width ?? 1);
+        engine.setHardwareScalingLevel(engine.getRenderWidth() / this._gifOptions.width || 1);
 
         const intervalId = setInterval(() => {
             if (!this._gifRecorder) {
@@ -203,6 +220,7 @@ export class ToolsTabComponent extends PaneComponent {
             return;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
         Tools.LoadFileAsync("https://cdn.jsdelivr.net/gh//terikon/gif.js.optimized@0.1.6/dist/gif.worker.js").then((value) => {
             this._gifWorkerBlob = new Blob([value], {
                 type: "application/javascript",
@@ -226,6 +244,7 @@ export class ToolsTabComponent extends PaneComponent {
                         currentGroup.play(true);
                     }
                 };
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
                 SceneLoader.ImportAnimationsAsync("file:", sceneFile, scene, overwriteAnimations, animationGroupLoadingMode, null, onSuccess);
             }
         };
@@ -283,17 +302,22 @@ export class ToolsTabComponent extends PaneComponent {
             return true;
         };
 
-        GLTF2Export.GLBAsync(scene, "scene", { shouldExportNode: (node) => shouldExport(node) }).then(
-            (glb: GLTFData) => {
+        GLTF2Export.GLBAsync(scene, "scene", {
+            meshCompressionMethod: this._gltfExportOptions.dracoCompression ? "Draco" : undefined,
+            shouldExportNode: (node) => shouldExport(node),
+        })
+            // eslint-disable-next-line github/no-then
+            .then((glb: GLTFData) => {
                 this._isExportingGltf = false;
                 this.forceUpdate();
                 glb.downloadFiles();
-            },
-            () => {
+            })
+            // eslint-disable-next-line github/no-then
+            .catch((reason) => {
+                Logger.Error(`Failed to export GLB: ${reason}`);
                 this._isExportingGltf = false;
                 this.forceUpdate();
-            }
-        );
+            });
     }
 
     exportBabylon() {
@@ -306,15 +330,22 @@ export class ToolsTabComponent extends PaneComponent {
     }
 
     createEnvTexture() {
+        if (!this.props.scene.environmentTexture) {
+            return;
+        }
+
         const scene = this.props.scene;
         EnvironmentTextureTools.CreateEnvTextureAsync(scene.environmentTexture as CubeTexture, {
-            imageType: envExportImageTypes[this._envOptions.imageTypeIndex].imageType,
+            imageType: EnvExportImageTypes[this._envOptions.imageTypeIndex].imageType,
             imageQuality: this._envOptions.imageQuality,
+            disableIrradianceTexture: !this._envOptions.iblDiffuse,
         })
+            // eslint-disable-next-line github/no-then
             .then((buffer: ArrayBuffer) => {
                 const blob = new Blob([buffer], { type: "octet/stream" });
                 Tools.Download(blob, "environment.env");
             })
+            // eslint-disable-next-line github/no-then
             .catch((error: any) => {
                 Logger.Error(error);
                 alert(error);
@@ -446,9 +477,20 @@ export class ToolsTabComponent extends PaneComponent {
                     {!scene.getEngine().premultipliedAlpha && scene.environmentTexture && scene.environmentTexture._prefiltered && scene.activeCamera && (
                         <>
                             <ButtonLineComponent label="Generate .env texture" onClick={() => this.createEnvTexture()} />
+                            {scene.environmentTexture.irradianceTexture && (
+                                <CheckBoxLineComponent
+                                    label="Diffuse Texture"
+                                    target={this._envOptions}
+                                    propertyName="iblDiffuse"
+                                    onSelect={(value) => {
+                                        this._envOptions.iblDiffuse = value;
+                                        this.forceUpdate();
+                                    }}
+                                />
+                            )}
                             <OptionsLine
                                 label="Image type"
-                                options={envExportImageTypes}
+                                options={EnvExportImageTypes}
                                 target={this._envOptions}
                                 propertyName="imageTypeIndex"
                                 onSelect={() => {
@@ -493,11 +535,16 @@ export class ToolsTabComponent extends PaneComponent {
                                 isSelected={() => this._gltfExportOptions.exportLights}
                                 onSelect={(value) => (this._gltfExportOptions.exportLights = value)}
                             />
+                            <CheckBoxLineComponent
+                                label="Draco Compression"
+                                isSelected={() => this._gltfExportOptions.dracoCompression}
+                                onSelect={(value) => (this._gltfExportOptions.dracoCompression = value)}
+                            />
                             <ButtonLineComponent label="Export to GLB" onClick={() => this.exportGLTF()} />
                         </>
                     )}
                 </LineContainerComponent>
-                {GLTFFileLoader && <GLTFComponent lockObject={this._lockObject} scene={scene} globalState={this.props.globalState!} />}
+                {GLTFFileLoader && <GLTFComponent lockObject={this._lockObject} scene={scene} globalState={this.props.globalState} />}
                 <LineContainerComponent title="REFLECTOR" selection={this.props.globalState}>
                     <TextInputLineComponent lockObject={this._lockObject} label="Hostname" target={this} propertyName="_reflectorHostname" />
                     <FloatLineComponent lockObject={this._lockObject} label="Port" target={this} propertyName="_reflectorPort" isInteger={true} />

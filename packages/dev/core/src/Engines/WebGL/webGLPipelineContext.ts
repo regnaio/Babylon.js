@@ -1,9 +1,9 @@
-import type { IPipelineContext } from "../IPipelineContext";
-import type { Nullable } from "../../types";
-import type { Effect } from "../../Materials/effect";
-import type { IMatrixLike, IVector2Like, IVector3Like, IVector4Like, IColor3Like, IColor4Like, IQuaternionLike } from "../../Maths/math.like";
-import type { ThinEngine } from "../thinEngine";
-import type { AbstractEngine } from "../abstractEngine";
+import { type IPipelineContext } from "../IPipelineContext";
+import { type Nullable } from "../../types";
+import { type Effect } from "../../Materials/effect";
+import { type IMatrixLike, type IVector2Like, type IVector3Like, type IVector4Like, type IColor3Like, type IColor4Like, type IQuaternionLike } from "../../Maths/math.like";
+import { type ThinEngine } from "../thinEngine";
+import { type AbstractEngine } from "../abstractEngine";
 
 /** @internal */
 export class WebGLPipelineContext implements IPipelineContext {
@@ -27,6 +27,7 @@ export class WebGLPipelineContext implements IPipelineContext {
     /** @internal */
     public _isDisposed = false;
 
+    // eslint-disable-next-line no-restricted-syntax
     public get isAsync() {
         return this.isParallelCompiled;
     }

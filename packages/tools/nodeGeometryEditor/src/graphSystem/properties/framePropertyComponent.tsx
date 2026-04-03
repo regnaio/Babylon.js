@@ -1,15 +1,15 @@
 import * as React from "react";
-import { LineContainerComponent } from "../../sharedComponents/lineContainerComponent";
-import type { GlobalState } from "../../globalState";
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
+import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
+import { type GlobalState } from "../../globalState";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
 import { InputsPropertyTabComponent } from "../../components/propertyTab/inputsPropertyTabComponent";
 import { TextInputLineComponent } from "shared-ui-components/lines/textInputLineComponent";
-import type { GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
+import { type GraphFrame } from "shared-ui-components/nodeGraphSystem/graphFrame";
 import { Color3LineComponent } from "shared-ui-components/lines/color3LineComponent";
 import { ButtonLineComponent } from "shared-ui-components/lines/buttonLineComponent";
-import type { GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
-import type { NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
+import { type GeometryInputBlock } from "core/Meshes/Node/Blocks/geometryInputBlock";
+import { type NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
 
 export interface IFramePropertyTabComponentProps {
     globalState: GlobalState;
@@ -36,12 +36,12 @@ export class FramePropertyTabComponent extends React.Component<IFramePropertyTab
 
     override render() {
         let configurableInputBlocks: GeometryInputBlock[] = [];
-        this.props.frame.nodes.forEach((node) => {
+        for (const node of this.props.frame.nodes) {
             const block = node.content.data as NodeGeometryBlock;
             if (block.isInput && block.visibleOnFrame) {
                 configurableInputBlocks.push(block as GeometryInputBlock);
             }
-        });
+        }
 
         configurableInputBlocks = configurableInputBlocks.sort((a, b) => {
             return a.name.localeCompare(b.name);
@@ -62,7 +62,7 @@ export class FramePropertyTabComponent extends React.Component<IFramePropertyTab
                             <ButtonLineComponent
                                 label="Collapse"
                                 onClick={() => {
-                                    this.props.frame!.isCollapsed = true;
+                                    this.props.frame.isCollapsed = true;
                                 }}
                             />
                         )}
@@ -70,14 +70,14 @@ export class FramePropertyTabComponent extends React.Component<IFramePropertyTab
                             <ButtonLineComponent
                                 label="Expand"
                                 onClick={() => {
-                                    this.props.frame!.isCollapsed = false;
+                                    this.props.frame.isCollapsed = false;
                                 }}
                             />
                         )}
                         <ButtonLineComponent
                             label="Export"
                             onClick={() => {
-                                this.props.frame!.export();
+                                this.props.frame.export();
                             }}
                         />
                     </LineContainerComponent>

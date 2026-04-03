@@ -1,9 +1,9 @@
-import type { ISceneComponent } from "../../sceneComponent";
-import { SceneComponentConstants } from "../../sceneComponent";
+import { type ISceneComponent, SceneComponentConstants } from "../../sceneComponent";
 import { PostProcessRenderPipelineManager } from "./postProcessRenderPipelineManager";
 import { Scene } from "../../scene";
 
 declare module "../../scene" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface Scene {
         /** @internal (Backing field) */
         _postProcessRenderPipelineManager: PostProcessRenderPipelineManager;

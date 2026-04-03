@@ -1,31 +1,29 @@
 import { serialize } from "../../../Misc/decorators";
 import { Observable } from "../../../Misc/observable";
-import type { Nullable } from "../../../types";
-import type { Scene } from "../../../scene";
-import type { Matrix, Vector4, Vector3, Vector2 } from "../../../Maths/math.vector";
-import type { Color4, Color3 } from "../../../Maths/math.color";
-import type { AbstractEngine } from "../../../Engines/abstractEngine";
+import { type Nullable } from "../../../types";
+import { type Scene } from "../../../scene";
+import { type Matrix, type Vector4, type Vector3, type Vector2 } from "../../../Maths/math.vector";
+import { type Color4, type Color3 } from "../../../Maths/math.color";
+import { type AbstractEngine } from "../../../Engines/abstractEngine";
 import { VertexBuffer } from "../../../Buffers/buffer";
 import { SceneComponentConstants } from "../../../sceneComponent";
 
 import { Material } from "../../../Materials/material";
-import type { Effect } from "../../../Materials/effect";
+import { type Effect } from "../../../Materials/effect";
 import { Texture } from "../../../Materials/Textures/texture";
-import type { RenderTargetTextureOptions } from "../../../Materials/Textures/renderTargetTexture";
-import { RenderTargetTexture } from "../../../Materials/Textures/renderTargetTexture";
+import { type RenderTargetTextureOptions, RenderTargetTexture } from "../../../Materials/Textures/renderTargetTexture";
 import { ProceduralTextureSceneComponent } from "./proceduralTextureSceneComponent";
 
-import "../../../Engines/Extensions/engine.renderTarget";
-import "../../../Engines/Extensions/engine.renderTargetCube";
-import "../../../Shaders/procedural.vertex";
-import type { DataBuffer } from "../../../Buffers/dataBuffer";
+import { type DataBuffer } from "../../../Buffers/dataBuffer";
 import { RegisterClass } from "../../../Misc/typeStore";
-import type { NodeMaterial } from "../../Node/nodeMaterial";
-import type { TextureSize } from "../../../Materials/Textures/textureCreationOptions";
+import { type NodeMaterial } from "../../Node/nodeMaterial";
+import { type TextureSize } from "../../../Materials/Textures/textureCreationOptions";
 import { EngineStore } from "../../../Engines/engineStore";
 import { Constants } from "../../../Engines/constants";
 import { DrawWrapper } from "../../drawWrapper";
-import type { RenderTargetWrapper } from "../../../Engines/renderTargetWrapper";
+import { type RenderTargetWrapper } from "../../../Engines/renderTargetWrapper";
+import { ShaderLanguage } from "core/Materials/shaderLanguage";
+import { type ThinTexture } from "core/Materials/Textures/thinTexture";
 
 /**
  * Options to create a procedural texture
@@ -35,6 +33,14 @@ export interface IProceduralTextureCreationOptions extends RenderTargetTextureOp
      * Defines a fallback texture in case there were issues to create the custom texture
      */
     fallbackTexture?: Nullable<Texture>;
+    /**
+     * The shader language of the shader. (default: GLSL)
+     */
+    shaderLanguage?: ShaderLanguage;
+    /**
+     * Additional async code to run before preparing the effect
+     */
+    extraInitializationsAsync?: () => Promise<void>;
 }
 
 /**
@@ -87,10 +93,20 @@ export class ProceduralTexture extends Texture {
     private _drawWrapper: DrawWrapper;
 
     /** @internal */
-    public _textures: { [key: string]: Texture } = {};
+    public _textures: { [key: string]: ThinTexture } = {};
 
     /** @internal */
     protected _fallbackTexture: Nullable<Texture>;
+
+    /** @internal */
+    private _shaderLanguage: ShaderLanguage;
+
+    /**
+     * Gets the shader language type used to generate vertex and fragment source code.
+     */
+    public get shaderLanguage(): ShaderLanguage {
+        return this._shaderLanguage;
+    }
 
     @serialize()
     private _size: TextureSize;
@@ -150,7 +166,7 @@ export class ProceduralTexture extends Texture {
         fallbackTexture: Nullable<Texture> | IProceduralTextureCreationOptions = null,
         generateMipMaps = true,
         isCube = false,
-        textureType = Constants.TEXTURETYPE_UNSIGNED_INT
+        textureType = Constants.TEXTURETYPE_UNSIGNED_BYTE
     ) {
         super(null, scene, !generateMipMaps);
 
@@ -161,6 +177,8 @@ export class ProceduralTexture extends Texture {
             this._options = {};
             this._fallbackTexture = fallbackTexture;
         }
+
+        this._shaderLanguage = this._options.shaderLanguage ?? ShaderLanguage.GLSL;
 
         scene = this.getScene() || EngineStore.LastCreatedScene!;
         let component = scene._getComponent(SceneComponentConstants.NAME_PROCEDURALTEXTURE);
@@ -247,6 +265,7 @@ export class ProceduralTexture extends Texture {
         }
 
         if (this._contentData) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
             this._contentData.then((buffer) => {
                 this._contentData = this.readPixels(0, 0, buffer);
                 this._contentUpdateId = this._frameId;
@@ -360,20 +379,46 @@ export class ProceduralTexture extends Texture {
         if (this._cachedDefines !== defines) {
             this._cachedDefines = defines;
 
-            this._drawWrapper.effect = engine.createEffect(shaders, [VertexBuffer.PositionKind], this._uniforms, this._samplers, defines, undefined, undefined, () => {
-                this._rtWrapper?.dispose();
-                this._rtWrapper = this._texture = null;
+            this._drawWrapper.effect = engine.createEffect(
+                shaders,
+                [VertexBuffer.PositionKind],
+                this._uniforms,
+                this._samplers,
+                defines,
+                undefined,
+                undefined,
+                () => {
+                    this._rtWrapper?.dispose();
+                    this._rtWrapper = this._texture = null;
 
-                if (this._fallbackTexture) {
-                    this._texture = this._fallbackTexture._texture;
+                    if (this._fallbackTexture) {
+                        this._texture = this._fallbackTexture._texture;
 
-                    if (this._texture) {
-                        this._texture.incrementReferences();
+                        if (this._texture) {
+                            this._texture.incrementReferences();
+                        }
+                    }
+
+                    this._fallbackTextureUsed = true;
+                },
+                undefined,
+                this._shaderLanguage,
+                async () => {
+                    if (this._options.extraInitializationsAsync) {
+                        if (this.shaderLanguage === ShaderLanguage.WGSL) {
+                            await Promise.all([import("../../../ShadersWGSL/procedural.vertex"), this._options.extraInitializationsAsync()]);
+                        } else {
+                            await Promise.all([import("../../../Shaders/procedural.vertex"), this._options.extraInitializationsAsync()]);
+                        }
+                    } else {
+                        if (this.shaderLanguage === ShaderLanguage.WGSL) {
+                            await import("../../../ShadersWGSL/procedural.vertex");
+                        } else {
+                            await import("../../../Shaders/procedural.vertex");
+                        }
                     }
                 }
-
-                this._fallbackTextureUsed = true;
-            });
+            );
         }
 
         return this._drawWrapper.effect!.isReady();
@@ -480,7 +525,7 @@ export class ProceduralTexture extends Texture {
      * @param texture Define the texture to bind to this sampler
      * @returns the texture itself allowing "fluent" like uniform updates
      */
-    public setTexture(name: string, texture: Texture): ProceduralTexture {
+    public setTexture(name: string, texture: ThinTexture): ProceduralTexture {
         if (this._samplers.indexOf(name) === -1) {
             this._samplers.push(name);
         }
@@ -682,7 +727,9 @@ export class ProceduralTexture extends Texture {
             return;
         }
 
-        engine._debugPushGroup?.(`procedural texture generation for ${this.name}`, 1);
+        if (engine._enableGPUDebugMarkers) {
+            engine._debugPushGroup?.(`procedural texture generation for ${this.name}`);
+        }
 
         const viewPort = engine.currentViewport;
         if (this.isCube) {
@@ -746,7 +793,9 @@ export class ProceduralTexture extends Texture {
             engine.generateMipMapsForCubemap(this._texture, true);
         }
 
-        engine._debugPopGroup?.(1);
+        if (engine._enableGPUDebugMarkers) {
+            engine._debugPopGroup?.();
+        }
 
         if (this.onGenerated) {
             this.onGenerated();

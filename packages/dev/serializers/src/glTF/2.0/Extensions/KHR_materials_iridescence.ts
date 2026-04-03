@@ -1,9 +1,10 @@
-import type { IMaterial, IKHRMaterialsIridescence } from "babylonjs-gltf2interface";
-import type { IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
-import { _Exporter } from "../glTFExporter";
-import type { Material } from "core/Materials/material";
+import { type IMaterial, type IKHRMaterialsIridescence } from "babylonjs-gltf2interface";
+import { type IGLTFExporterExtensionV2 } from "../glTFExporterExtension";
+import { GLTFExporter } from "../glTFExporter";
+import { type Material } from "core/Materials/material";
 import { PBRBaseMaterial } from "core/Materials/PBR/pbrBaseMaterial";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
+import { OpenPBRMaterial } from "core/Materials/PBR/openpbrMaterial";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
 
 const NAME = "KHR_materials_iridescence";
 
@@ -21,11 +22,11 @@ export class KHR_materials_iridescence implements IGLTFExporterExtensionV2 {
     /** Defines whether this extension is required */
     public required = false;
 
-    private _exporter: _Exporter;
+    private _exporter: GLTFExporter;
 
     private _wasUsed = false;
 
-    constructor(exporter: _Exporter) {
+    constructor(exporter: GLTFExporter) {
         this._exporter = exporter;
     }
 
@@ -36,7 +37,7 @@ export class KHR_materials_iridescence implements IGLTFExporterExtensionV2 {
         return this._wasUsed;
     }
 
-    public postExportMaterialAdditionalTextures?(context: string, node: IMaterial, babylonMaterial: Material): BaseTexture[] {
+    public async postExportMaterialAdditionalTexturesAsync?(context: string, node: IMaterial, babylonMaterial: Material): Promise<BaseTexture[]> {
         const additionalTextures: BaseTexture[] = [];
         if (babylonMaterial instanceof PBRBaseMaterial) {
             if (babylonMaterial.iridescence.isEnabled) {
@@ -48,11 +49,21 @@ export class KHR_materials_iridescence implements IGLTFExporterExtensionV2 {
                 }
                 return additionalTextures;
             }
+        } else if (babylonMaterial instanceof OpenPBRMaterial) {
+            if (babylonMaterial.thinFilmWeight > 0) {
+                if (babylonMaterial.thinFilmWeightTexture) {
+                    additionalTextures.push(babylonMaterial.thinFilmWeightTexture);
+                }
+                if (babylonMaterial.thinFilmThicknessTexture && babylonMaterial.thinFilmThicknessTexture !== babylonMaterial.thinFilmWeightTexture) {
+                    additionalTextures.push(babylonMaterial.thinFilmThicknessTexture);
+                }
+                return additionalTextures;
+            }
         }
-
         return [];
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     public postExportMaterialAsync?(context: string, node: IMaterial, babylonMaterial: Material): Promise<IMaterial> {
         return new Promise((resolve) => {
             if (babylonMaterial instanceof PBRBaseMaterial) {
@@ -65,8 +76,8 @@ export class KHR_materials_iridescence implements IGLTFExporterExtensionV2 {
 
                 node.extensions = node.extensions || {};
 
-                const iridescenceTextureInfo = this._exporter._glTFMaterialExporter._getTextureInfo(babylonMaterial.iridescence.texture);
-                const iridescenceThicknessTextureInfo = this._exporter._glTFMaterialExporter._getTextureInfo(babylonMaterial.iridescence.thicknessTexture);
+                const iridescenceTextureInfo = this._exporter._materialExporter.getTextureInfo(babylonMaterial.iridescence.texture);
+                const iridescenceThicknessTextureInfo = this._exporter._materialExporter.getTextureInfo(babylonMaterial.iridescence.thicknessTexture);
 
                 const iridescenceInfo: IKHRMaterialsIridescence = {
                     iridescenceFactor: babylonMaterial.iridescence.intensity,
@@ -76,10 +87,39 @@ export class KHR_materials_iridescence implements IGLTFExporterExtensionV2 {
 
                     iridescenceTexture: iridescenceTextureInfo ?? undefined,
                     iridescenceThicknessTexture: iridescenceThicknessTextureInfo ?? undefined,
-                    hasTextures: () => {
-                        return iridescenceInfo.iridescenceTexture !== null || iridescenceInfo.iridescenceThicknessTexture !== null;
-                    },
                 };
+
+                if (iridescenceInfo.iridescenceTexture !== null || iridescenceInfo.iridescenceThicknessTexture !== null) {
+                    this._exporter._materialNeedsUVsSet.add(babylonMaterial);
+                }
+
+                node.extensions[NAME] = iridescenceInfo;
+            } else if (babylonMaterial instanceof OpenPBRMaterial) {
+                if (babylonMaterial.thinFilmWeight <= 0) {
+                    resolve(node);
+                    return;
+                }
+
+                this._wasUsed = true;
+
+                node.extensions = node.extensions || {};
+
+                const thinFilmWeightTextureInfo = this._exporter._materialExporter.getTextureInfo(babylonMaterial.thinFilmWeightTexture);
+                const thinFilmThicknessTextureInfo = this._exporter._materialExporter.getTextureInfo(babylonMaterial.thinFilmThicknessTexture);
+
+                const iridescenceInfo: IKHRMaterialsIridescence = {
+                    iridescenceFactor: babylonMaterial.thinFilmWeight,
+                    iridescenceIor: babylonMaterial.thinFilmIor,
+                    iridescenceThicknessMinimum: babylonMaterial.thinFilmThicknessMin * 1000, // Convert to nanometers for glTF
+                    iridescenceThicknessMaximum: babylonMaterial.thinFilmThickness * 1000, // Convert to nanometers for glTF
+
+                    iridescenceTexture: thinFilmWeightTextureInfo ?? undefined,
+                    iridescenceThicknessTexture: thinFilmThicknessTextureInfo ?? undefined,
+                };
+
+                if (iridescenceInfo.iridescenceTexture !== null || iridescenceInfo.iridescenceThicknessTexture !== null) {
+                    this._exporter._materialNeedsUVsSet.add(babylonMaterial);
+                }
 
                 node.extensions[NAME] = iridescenceInfo;
             }
@@ -88,4 +128,4 @@ export class KHR_materials_iridescence implements IGLTFExporterExtensionV2 {
     }
 }
 
-_Exporter.RegisterExtension(NAME, (exporter) => new KHR_materials_iridescence(exporter));
+GLTFExporter.RegisterExtension(NAME, (exporter) => new KHR_materials_iridescence(exporter));

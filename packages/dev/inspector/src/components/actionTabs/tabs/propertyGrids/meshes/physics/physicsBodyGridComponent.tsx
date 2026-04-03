@@ -1,11 +1,11 @@
-import type { Observable } from "core/Misc/observable";
+import { type Observable } from "core/Misc/observable";
 import { PhysicsMotionType, PhysicsShapeType } from "core/Physics/v2/IPhysicsEnginePlugin";
-import type { PhysicsBody } from "core/Physics/v2/physicsBody";
-import type { GlobalState } from "inspector/components/globalState";
+import { type PhysicsBody } from "core/Physics/v2/physicsBody";
+import { type GlobalState } from "inspector/components/globalState";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { TextLineComponent } from "shared-ui-components/lines/textLineComponent";
-import type { PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
-import type { LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
+import { type PropertyChangedEvent } from "shared-ui-components/propertyChangedEvent";
+import { type LockObject } from "shared-ui-components/tabs/propertyGrids/lockObject";
 import { PhysicsMassPropertiesGridComponent } from "./physicsMassPropertiesGridComponent";
 import { PhysicsMaterialGridComponent } from "./physicsMaterialGridComponent";
 import { useState } from "react";
@@ -73,13 +73,13 @@ export function PhysicsBodyGridComponent(props: IPhysicsBodyGridComponentProps) 
                 body={props.body}
                 globalState={props.globalState}
             />
-            <TextLineComponent label="Motion Type" value={_convertPhysicsMotionTypeToString(props.body.motionType)} />
-            <TextLineComponent label="Shape Type" value={_convertPhysicsShapeTypeToString(props.body.shape?.type)} />
+            <TextLineComponent label="Motion Type" value={ConvertPhysicsMotionTypeToString(props.body.motionType)} />
+            <TextLineComponent label="Shape Type" value={ConvertPhysicsShapeTypeToString(props.body.shape?.type)} />
         </LineContainerComponent>
     );
 }
 
-function _convertPhysicsMotionTypeToString(type?: PhysicsMotionType) {
+function ConvertPhysicsMotionTypeToString(type?: PhysicsMotionType) {
     switch (type) {
         case PhysicsMotionType.DYNAMIC:
             return "Dynamic";
@@ -92,7 +92,7 @@ function _convertPhysicsMotionTypeToString(type?: PhysicsMotionType) {
     }
 }
 
-function _convertPhysicsShapeTypeToString(type?: PhysicsShapeType) {
+function ConvertPhysicsShapeTypeToString(type?: PhysicsShapeType) {
     switch (type) {
         case PhysicsShapeType.BOX:
             return "Box";

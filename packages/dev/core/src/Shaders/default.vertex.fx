@@ -1,4 +1,6 @@
-﻿#include<__decl__defaultVertex>
+﻿#define CUSTOM_VERTEX_EXTENSION
+
+#include<__decl__defaultVertex>
 // Attributes
 
 #define CUSTOM_VERTEX_BEGIN
@@ -69,6 +71,10 @@ varying vec3 vPositionUVW;
 varying vec3 vDirectionW;
 #endif
 
+#if defined(CLUSTLIGHT_BATCH) && CLUSTLIGHT_BATCH > 0
+varying float vViewDepth;
+#endif
+
 #include<logDepthDeclaration>
 #define CUSTOM_VERTEX_DEFINITIONS
 
@@ -86,6 +92,12 @@ void main(void) {
 #ifdef UV1
 	vec2 uvUpdated = uv;
 #endif
+#ifdef UV2
+    vec2 uv2Updated = uv2;
+#endif
+#ifdef VERTEXCOLOR
+    vec4 colorUpdated = color;
+#endif
 
 #include<morphTargetsVertexGlobal>
 #include<morphTargetsVertex>[0..maxSimultaneousMorphTargets]
@@ -100,14 +112,10 @@ void main(void) {
 
 #include<instancesVertex>
 
-#if defined(PREPASS) &&                                                        \
-    (defined(PREPASS_VELOCITY) && !defined(BONES_VELOCITY_ENABLED) ||          \
-     defined(PREPASS_VELOCITY_LINEAR))
-        // Compute velocity before bones computation
-        vCurrentPosition =
-            viewProjection * finalWorld * vec4(positionUpdated, 1.0);
-        vPreviousPosition = previousViewProjection * finalPreviousWorld *
-                            vec4(positionUpdated, 1.0);
+#if defined(PREPASS) && ((defined(PREPASS_VELOCITY) || defined(PREPASS_VELOCITY_LINEAR)) && !defined(BONES_VELOCITY_ENABLED)
+    // Compute velocity before bones computation
+    vCurrentPosition = viewProjection * finalWorld * vec4(positionUpdated, 1.0);
+    vPreviousPosition = previousViewProjection * finalPreviousWorld * vec4(positionUpdated, 1.0);
 #endif
 
 #include<bonesVertex>
@@ -144,20 +152,36 @@ void main(void) {
 
 	vPositionW = vec3(worldPos);
 
-#include<prePassVertex>
+#ifdef PREPASS
+    #include<prePassVertex>
+#endif
 
 #if defined(REFLECTIONMAP_EQUIRECTANGULAR_FIXED) || defined(REFLECTIONMAP_MIRROREDEQUIRECTANGULAR_FIXED)
 	vDirectionW = normalize(vec3(finalWorld * vec4(positionUpdated, 0.0)));
+#endif
+
+#if defined(CLUSTLIGHT_BATCH) && CLUSTLIGHT_BATCH > 0
+    #ifdef RIGHT_HANDED
+        vViewDepth = -(view * worldPos).z;
+    #else
+        vViewDepth = (view * worldPos).z;
+    #endif
 #endif
 
 	// Texture coordinates
 #ifndef UV1
 	vec2 uvUpdated = vec2(0., 0.);
 #endif
+#ifndef UV2
+    vec2 uv2Updated = vec2(0., 0.);
+#endif
 #ifdef MAINUV1
 	vMainUV1 = uvUpdated;
 #endif
-    #include<uvVariableDeclaration>[2..7]
+#ifdef MAINUV2
+    vMainUV2 = uv2Updated;
+#endif
+    #include<uvVariableDeclaration>[3..7]
 
     #include<samplerVertexImplementation>(_DEFINENAME_,DIFFUSE,_VARYINGNAME_,Diffuse,_MATRIXNAME_,diffuse,_INFONAME_,DiffuseInfos.x)
     #include<samplerVertexImplementation>(_DEFINENAME_,DETAIL,_VARYINGNAME_,Detail,_MATRIXNAME_,detail,_INFONAME_,DetailInfos.x)

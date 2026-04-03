@@ -1,21 +1,22 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Camera } from "../../../Cameras/camera";
-import type { Effect } from "../../../Materials/effect";
+import { type Camera } from "../../../Cameras/camera";
+import { type Effect } from "../../../Materials/effect";
 import { Texture } from "../../../Materials/Textures/texture";
-import type { RenderTargetTexture } from "../../../Materials/Textures/renderTargetTexture";
+import { type RenderTargetTexture } from "../../../Materials/Textures/renderTargetTexture";
 import { PostProcess } from "../../../PostProcesses/postProcess";
 import { PostProcessRenderPipeline } from "../../../PostProcesses/RenderPipeline/postProcessRenderPipeline";
 import { PostProcessRenderEffect } from "../../../PostProcesses/RenderPipeline/postProcessRenderEffect";
-import type { Scene } from "../../../scene";
+import { type Scene } from "../../../scene";
 import { RawTexture } from "../../../Materials/Textures/rawTexture";
 import { Constants } from "../../../Engines/constants";
 
 import "../../../PostProcesses/RenderPipeline/postProcessRenderPipelineManagerSceneComponent";
+import "../../../Rendering/depthRendererSceneComponent";
 
 import "../../../Shaders/chromaticAberration.fragment";
 import "../../../Shaders/lensHighlights.fragment";
 import "../../../Shaders/depthOfField.fragment";
-import { Scalar } from "../../../Maths/math.scalar";
+import { RandomRange } from "../../../Maths/math.scalar.functions";
 
 /**
  * BABYLON.JS Chromatic Aberration GLSL Shader
@@ -453,6 +454,8 @@ export class LensRenderingPipeline extends PostProcessRenderPipeline {
     public override dispose(disableDepthRender: boolean = false): void {
         this._scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline(this._name, this._scene.cameras);
 
+        this._scene.postProcessRenderPipelineManager.removePipeline(this._name);
+
         (<any>this._chromaticAberrationPostProcess) = null;
         (<any>this._highlightsPostProcess) = null;
         (<any>this._depthOfFieldPostProcess) = null;
@@ -578,7 +581,7 @@ export class LensRenderingPipeline extends PostProcessRenderPipeline {
 
         const data = new Uint8Array(size * size * 4);
         for (let index = 0; index < data.length; ) {
-            const value = Math.floor(Scalar.RandomRange(0.42, 0.58) * 255);
+            const value = Math.floor(RandomRange(0.42, 0.58) * 255);
             data[index++] = value;
             data[index++] = value;
             data[index++] = value;

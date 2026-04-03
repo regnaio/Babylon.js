@@ -1,21 +1,17 @@
 import { Constants } from "../Engines/constants";
 import { PostProcess } from "../PostProcesses/postProcess";
-import type { Engine } from "../Engines/engine";
 
-import "../Engines/Extensions/engine.renderTarget";
 import { ApplyPostProcess } from "./textureTools";
 
-import type { Texture } from "../Materials/Textures/texture";
-import type { InternalTexture } from "../Materials/Textures/internalTexture";
-import type { Scene } from "../scene";
-import { ShaderLanguage } from "core/Materials";
+import { type Texture } from "../Materials/Textures/texture";
+import { type InternalTexture } from "../Materials/Textures/internalTexture";
+import { type Scene } from "../scene";
+import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
 /**
  * Class used to host RGBD texture specific utilities
  */
 export class RGBDTextureTools {
-    private static _ShaderImported = false;
-
     /**
      * Expand the RGBD Texture from RGBD to Half Float if possible.
      * @param texture the texture to expand.
@@ -27,7 +23,7 @@ export class RGBDTextureTools {
         }
 
         // Gets everything ready.
-        const engine = internalTexture.getEngine() as Engine;
+        const engine = internalTexture.getEngine();
         const caps = engine.getCaps();
         const isReady = internalTexture.isReady;
         let expandTexture = false;
@@ -50,18 +46,15 @@ export class RGBDTextureTools {
             internalTexture.invertY = false;
         }
 
-        const expandRGBDTexture = async () => {
-            const isWebGPU = engine.isWebGPU;
-            const shaderLanguage = isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL;
+        const expandRgbdTextureAsync = async () => {
+            const isWebGpu = engine.isWebGPU;
+            const shaderLanguage = isWebGpu ? ShaderLanguage.WGSL : ShaderLanguage.GLSL;
             internalTexture.isReady = false;
 
-            if (!this._ShaderImported) {
-                this._ShaderImported = true;
-                if (isWebGPU) {
-                    await Promise.all([import("../ShadersWGSL/rgbdDecode.fragment"), import("../ShadersWGSL/rgbdEncode.fragment")]);
-                } else {
-                    await Promise.all([import("../Shaders/rgbdDecode.fragment"), import("../Shaders/rgbdEncode.fragment")]);
-                }
+            if (isWebGpu) {
+                await import("../ShadersWGSL/rgbdDecode.fragment");
+            } else {
+                await import("../Shaders/rgbdDecode.fragment");
             }
 
             // Expand the texture if possible
@@ -103,7 +96,7 @@ export class RGBDTextureTools {
                         effect._bindTexture("textureSampler", internalTexture);
                         effect.setFloat2("scale", 1, 1);
                     };
-                    texture.getScene()!.postProcessManager.directRender([rgbdPostProcess!], expandedTexture, true);
+                    texture.getScene()!.postProcessManager.directRender([rgbdPostProcess], expandedTexture, true);
 
                     // Cleanup
                     engine.restoreDefaultFramebuffer();
@@ -123,9 +116,11 @@ export class RGBDTextureTools {
 
         if (expandTexture) {
             if (isReady) {
-                expandRGBDTexture();
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                expandRgbdTextureAsync();
             } else {
-                texture.onLoadObservable.addOnce(expandRGBDTexture);
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                texture.onLoadObservable.addOnce(expandRgbdTextureAsync);
             }
         }
     }
@@ -137,7 +132,14 @@ export class RGBDTextureTools {
      * @param outputTextureType type of the texture in which the encoding is performed
      * @returns a promise with the internalTexture having its texture replaced by the result of the processing
      */
-    public static EncodeTextureToRGBD(internalTexture: InternalTexture, scene: Scene, outputTextureType = Constants.TEXTURETYPE_UNSIGNED_BYTE): Promise<InternalTexture> {
-        return ApplyPostProcess("rgbdEncode", internalTexture, scene, outputTextureType, Constants.TEXTURE_NEAREST_SAMPLINGMODE, Constants.TEXTUREFORMAT_RGBA);
+    // Should have "Async" in the name but this is a breaking change.
+    // eslint-disable-next-line no-restricted-syntax
+    public static async EncodeTextureToRGBD(internalTexture: InternalTexture, scene: Scene, outputTextureType = Constants.TEXTURETYPE_UNSIGNED_BYTE): Promise<InternalTexture> {
+        if (!scene.getEngine().isWebGPU) {
+            await import("../Shaders/rgbdEncode.fragment");
+        } else {
+            await import("../ShadersWGSL/rgbdEncode.fragment");
+        }
+        return await ApplyPostProcess("rgbdEncode", internalTexture, scene, outputTextureType, Constants.TEXTURE_NEAREST_SAMPLINGMODE, Constants.TEXTUREFORMAT_RGBA);
     }
 }

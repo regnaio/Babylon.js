@@ -1,11 +1,12 @@
-import type { Nullable, FloatArray } from "../types";
+import { type Nullable, type FloatArray } from "../types";
 import { Vector3, Vector2, TmpVectors } from "../Maths/math.vector";
-import type { AbstractMesh } from "../Meshes/abstractMesh";
-import type { TransformNode } from "../Meshes/transformNode";
+import { type AbstractMesh } from "../Meshes/abstractMesh";
+import { type TransformNode } from "../Meshes/transformNode";
 import { VertexBuffer } from "../Buffers/buffer";
-import type { Sprite } from "../Sprites/sprite";
+import { type Sprite } from "../Sprites/sprite";
+import { type Mesh } from "../Meshes/mesh";
 
-import type { Ray } from "../Culling/ray";
+import { type Ray } from "../Culling/ray";
 
 /**
  * Information about the result of picking within a scene
@@ -122,6 +123,14 @@ export class PickingInfo {
         }
 
         const transformNormalToWorld = (pickedMesh: AbstractMesh, n: Vector3) => {
+            if (this.thinInstanceIndex !== -1) {
+                const tm = (pickedMesh as Mesh).thinInstanceGetWorldMatrices()[this.thinInstanceIndex];
+
+                if (tm) {
+                    Vector3.TransformNormalToRef(n, tm, n);
+                }
+            }
+
             let wm = pickedMesh.getWorldMatrix();
 
             if (pickedMesh.nonUniformScaling) {

@@ -1,11 +1,11 @@
 import { NodeGeometryBlock } from "../nodeGeometryBlock";
-import type { NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
+import { type NodeGeometryConnectionPoint } from "../nodeGeometryBlockConnectionPoint";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeGeometryBlockConnectionPointTypes } from "../Enums/nodeGeometryConnectionPointTypes";
-import type { NodeGeometryBuildState } from "../nodeGeometryBuildState";
+import { type NodeGeometryBuildState } from "../nodeGeometryBuildState";
 import { GeometryInputBlock } from "./geometryInputBlock";
 import { Vector2, Vector3, Vector4 } from "../../../Maths/math.vector";
-import type { Nullable } from "../../../types";
+import { type Nullable } from "../../../types";
 import { PropertyTypeForEdition, editableInPropertyPage } from "core/Decorators/nodeDecorator";
 import { NodeGeometryContextualSources } from "../Enums/nodeGeometryContextualSources";
 
@@ -16,8 +16,10 @@ export enum RandomBlockLocks {
     /** None */
     None,
     /** LoopID */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     LoopID,
     /** InstanceID */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     InstanceID,
     /** Once */
     Once,
@@ -33,6 +35,7 @@ export class RandomBlock extends NodeGeometryBlock {
      */
     @editableInPropertyPage("LockMode", PropertyTypeForEdition.List, "ADVANCED", {
         notifiers: { rebuild: true },
+        embedded: true,
         options: [
             { label: "None", value: RandomBlockLocks.None },
             { label: "LoopID", value: RandomBlockLocks.LoopID },
@@ -94,6 +97,7 @@ export class RandomBlock extends NodeGeometryBlock {
         return this._outputs[0];
     }
 
+    /** @internal */
     public override autoConfigure() {
         if (!this.min.isConnected) {
             const minInput = new GeometryInputBlock("Min");
@@ -116,32 +120,32 @@ export class RandomBlock extends NodeGeometryBlock {
             case NodeGeometryBlockConnectionPointTypes.Int:
             case NodeGeometryBlockConnectionPointTypes.Float: {
                 func = (state) => {
-                    const min = this.min.getConnectedValue(state) || 0;
-                    const max = this.max.getConnectedValue(state) || 0;
+                    const min = this.min.getConnectedValue(state) ?? 0;
+                    const max = this.max.getConnectedValue(state) ?? 0;
                     return min + Math.random() * (max - min);
                 };
                 break;
             }
             case NodeGeometryBlockConnectionPointTypes.Vector2: {
                 func = (state) => {
-                    const min = this.min.getConnectedValue(state) || Vector2.Zero();
-                    const max = this.max.getConnectedValue(state) || Vector2.Zero();
+                    const min = this.min.getConnectedValue(state) ?? Vector2.Zero();
+                    const max = this.max.getConnectedValue(state) ?? Vector2.Zero();
                     return new Vector2(min.x + Math.random() * (max.x - min.x), min.y + Math.random() * (max.y - min.y));
                 };
                 break;
             }
             case NodeGeometryBlockConnectionPointTypes.Vector3: {
                 func = (state) => {
-                    const min = this.min.getConnectedValue(state) || Vector3.Zero();
-                    const max = this.max.getConnectedValue(state) || Vector3.Zero();
+                    const min = this.min.getConnectedValue(state) ?? Vector3.Zero();
+                    const max = this.max.getConnectedValue(state) ?? Vector3.Zero();
                     return new Vector3(min.x + Math.random() * (max.x - min.x), min.y + Math.random() * (max.y - min.y), min.z + Math.random() * (max.z - min.z));
                 };
                 break;
             }
             case NodeGeometryBlockConnectionPointTypes.Vector4: {
                 func = (state) => {
-                    const min = this.min.getConnectedValue(state) || Vector4.Zero();
-                    const max = this.max.getConnectedValue(state) || Vector4.Zero();
+                    const min = this.min.getConnectedValue(state) ?? Vector4.Zero();
+                    const max = this.max.getConnectedValue(state) ?? Vector4.Zero();
                     return new Vector4(
                         min.x + Math.random() * (max.x - min.x),
                         min.y + Math.random() * (max.y - min.y),
@@ -161,19 +165,19 @@ export class RandomBlock extends NodeGeometryBlock {
 
                 switch (this.lockMode) {
                     case RandomBlockLocks.InstanceID:
-                        lockId = state.getContextualValue(NodeGeometryContextualSources.InstanceID, true) || 0;
+                        lockId = state.getContextualValue(NodeGeometryContextualSources.InstanceID, true) ?? 0;
                         break;
                     case RandomBlockLocks.LoopID:
-                        lockId = state.getContextualValue(NodeGeometryContextualSources.LoopID, true) || 0;
+                        lockId = state.getContextualValue(NodeGeometryContextualSources.LoopID, true) ?? 0;
                         break;
                     case RandomBlockLocks.Once:
-                        lockId = state.buildId || 0;
+                        lockId = state.buildId ?? 0;
                         break;
                 }
 
                 if (this._currentLockId !== lockId || this.lockMode === RandomBlockLocks.None) {
                     this._currentLockId = lockId;
-                    this.output._storedValue = func!(state);
+                    this.output._storedValue = func(state);
                 }
                 return this.output._storedValue;
             };
@@ -197,6 +201,7 @@ export class RandomBlock extends NodeGeometryBlock {
         return serializationObject;
     }
 
+    /** @internal */
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 

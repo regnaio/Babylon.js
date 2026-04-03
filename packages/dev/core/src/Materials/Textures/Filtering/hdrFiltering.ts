@@ -1,17 +1,14 @@
 import { Vector3 } from "../../../Maths/math";
-import { Scalar } from "../../../Maths/math.scalar";
-import type { BaseTexture } from "../baseTexture";
-import type { AbstractEngine } from "../../../Engines/abstractEngine";
-import type { Effect } from "../../../Materials/effect";
+import { ILog2 } from "../../../Maths/math.scalar.functions";
+import { type BaseTexture } from "../baseTexture";
+import { type AbstractEngine } from "../../../Engines/abstractEngine";
+import { type Effect } from "../../../Materials/effect";
 import { Constants } from "../../../Engines/constants";
 import { EffectWrapper, EffectRenderer } from "../../../Materials/effectRenderer";
-import type { Nullable } from "../../../types";
-import type { RenderTargetWrapper } from "../../../Engines/renderTargetWrapper";
-import { Logger } from "../../../Misc/logger";
+import { type Nullable } from "../../../types";
+import { type RenderTargetWrapper } from "../../../Engines/renderTargetWrapper";
 
-import "../../../Engines/Extensions/engine.renderTargetCube";
-import "../../../Shaders/hdrFiltering.vertex";
-import "../../../Shaders/hdrFiltering.fragment";
+import { ShaderLanguage } from "core/Materials/shaderLanguage";
 
 /**
  * Options for texture filtering
@@ -79,6 +76,7 @@ export class HDRFiltering {
             generateDepthBuffer: false,
             generateStencilBuffer: false,
             samplingMode: Constants.TEXTURE_NEAREST_SAMPLINGMODE,
+            label: "HDR_Radiance_Filtering_Target",
         });
         this._engine.updateTextureWrappingMode(rtWrapper.texture!, Constants.TEXTURE_CLAMP_ADDRESSMODE, Constants.TEXTURE_CLAMP_ADDRESSMODE, Constants.TEXTURE_CLAMP_ADDRESSMODE);
 
@@ -89,7 +87,7 @@ export class HDRFiltering {
 
     private _prefilterInternal(texture: BaseTexture): BaseTexture {
         const width = texture.getSize().width;
-        const mipmapsCount = Scalar.ILog2(width) + 1;
+        const mipmapsCount = ILog2(width) + 1;
 
         const effect = this._effectWrapper.effect;
         const outputTexture = this._createRenderTarget(width);
@@ -168,6 +166,8 @@ export class HDRFiltering {
 
         defines.push("#define NUM_SAMPLES " + this.quality + "u"); // unsigned int
 
+        const isWebGPU = this._engine.isWebGPU;
+
         const effectWrapper = new EffectWrapper({
             engine: this._engine,
             name: "hdrFiltering",
@@ -178,6 +178,14 @@ export class HDRFiltering {
             useShaderStore: true,
             defines,
             onCompiled: onCompiled,
+            shaderLanguage: isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
+            extraInitializationsAsync: async () => {
+                if (isWebGPU) {
+                    await Promise.all([import("../../../ShadersWGSL/hdrFiltering.vertex"), import("../../../ShadersWGSL/hdrFiltering.fragment")]);
+                } else {
+                    await Promise.all([import("../../../Shaders/hdrFiltering.vertex"), import("../../../Shaders/hdrFiltering.fragment")]);
+                }
+            },
         });
 
         return effectWrapper;
@@ -198,27 +206,21 @@ export class HDRFiltering {
      * This has to be done once the map is loaded, and has not been prefiltered by a third party software.
      * See http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf for more information
      * @param texture Texture to filter
-     * @param onFinished Callback when filtering is done
      * @returns Promise called when prefiltering is done
      */
-    public prefilter(texture: BaseTexture, onFinished: Nullable<() => void> = null): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    public async prefilter(texture: BaseTexture): Promise<void> {
         if (!this._engine._features.allowTexturePrefiltering) {
-            Logger.Warn("HDR prefiltering is not available in WebGL 1., you can use real time filtering instead.");
-            return Promise.reject("HDR prefiltering is not available in WebGL 1., you can use real time filtering instead.");
+            throw new Error("HDR prefiltering is not available in WebGL 1., you can use real time filtering instead.");
         }
 
-        return new Promise((resolve) => {
-            this._effectRenderer = new EffectRenderer(this._engine);
-            this._effectWrapper = this._createEffect(texture);
-            this._effectWrapper.effect.executeWhenCompiled(() => {
-                this._prefilterInternal(texture);
-                this._effectRenderer.dispose();
-                this._effectWrapper.dispose();
-                resolve();
-                if (onFinished) {
-                    onFinished();
-                }
-            });
-        });
+        this._effectRenderer = new EffectRenderer(this._engine);
+        this._effectWrapper = this._createEffect(texture);
+
+        await this._effectWrapper.effect.whenCompiledAsync();
+
+        this._prefilterInternal(texture);
+        this._effectRenderer.dispose();
+        this._effectWrapper.dispose();
     }
 }

@@ -1,13 +1,14 @@
 import { ThinEngine } from "../../Engines/thinEngine";
 import { InternalTexture, InternalTextureSource } from "../../Materials/Textures/internalTexture";
 import { Logger } from "../../Misc/logger";
-import type { Nullable } from "../../types";
-import type { Scene } from "../../scene";
+import { type Nullable } from "../../types";
+import { type Scene } from "../../scene";
 import { Constants } from "../constants";
-import type { DepthTextureCreationOptions } from "../../Materials/Textures/textureCreationOptions";
+import { type DepthTextureCreationOptions } from "../../Materials/Textures/textureCreationOptions";
 import { GetExponentOfTwo } from "../../Misc/tools.functions";
 
 declare module "../../Engines/abstractEngine" {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     export interface AbstractEngine {
         /**
          * @internal
@@ -159,7 +160,7 @@ ThinEngine.prototype._createDepthStencilCubeTexture = function (size: number, op
     const gl = this._gl;
     this._bindTextureDirectly(gl.TEXTURE_CUBE_MAP, internalTexture, true);
 
-    this._setupDepthStencilTexture(internalTexture, size, internalOptions.generateStencil, internalOptions.bilinearFiltering, internalOptions.comparisonFunction);
+    this._setupDepthStencilTexture(internalTexture, size, internalOptions.bilinearFiltering, internalOptions.comparisonFunction);
 
     // Create the depth/stencil buffer
     for (let face = 0; face < 6; face++) {

@@ -1,14 +1,13 @@
 import { WebXRFeaturesManager, WebXRFeatureName } from "../webXRFeaturesManager";
-import type { Observer } from "../../Misc/observable";
-import type { WebXRSessionManager } from "../webXRSessionManager";
-import type { Nullable } from "../../types";
-import type { WebXRInput } from "../webXRInput";
-import type { WebXRInputSource } from "../webXRInputSource";
-import type { IWebXRMotionControllerAxesValue, IWebXRMotionControllerComponentChangesValues } from "../motionController/webXRControllerComponent";
-import { WebXRControllerComponent } from "../motionController/webXRControllerComponent";
+import { type Observer } from "../../Misc/observable";
+import { type WebXRSessionManager } from "../webXRSessionManager";
+import { type Nullable } from "../../types";
+import { type WebXRInput } from "../webXRInput";
+import { type WebXRInputSource } from "../webXRInputSource";
+import { type IWebXRMotionControllerAxesValue, type IWebXRMotionControllerComponentChangesValues, WebXRControllerComponent } from "../motionController/webXRControllerComponent";
 import { Matrix, Quaternion, Vector3 } from "../../Maths/math.vector";
 import { WebXRAbstractFeature } from "./WebXRAbstractFeature";
-import type { MotionControllerComponentType } from "../motionController/webXRAbstractMotionController";
+import { type MotionControllerComponentType } from "../motionController/webXRAbstractMotionController";
 import { Tools } from "../../Misc/tools";
 
 /**
@@ -338,7 +337,7 @@ export class WebXRControllerMovement extends WebXRAbstractFeature {
 
         // synchronized from feature setter properties
         this._featureContext = {
-            movementEnabled: options.movementEnabled || true,
+            movementEnabled: options.movementEnabled ?? true,
             movementOrientationFollowsViewerPose: options.movementOrientationFollowsViewerPose ?? true,
             movementOrientationFollowsController: options.movementOrientationFollowsController ?? false,
             orientationPreferredHandedness: options.orientationPreferredHandedness,
@@ -364,7 +363,9 @@ export class WebXRControllerMovement extends WebXRAbstractFeature {
             return false;
         }
 
-        this._xrInput.controllers.forEach(this._attachController);
+        for (const controller of this._xrInput.controllers) {
+            this._attachController(controller);
+        }
         this._addNewAttachObserver(this._xrInput.onControllerAddedObservable, this._attachController);
         this._addNewAttachObserver(this._xrInput.onControllerRemovedObservable, (controller: WebXRInputSource) => {
             // REMOVE the controller
@@ -378,10 +379,11 @@ export class WebXRControllerMovement extends WebXRAbstractFeature {
         if (!super.detach()) {
             return false;
         }
+        const keys = Object.keys(this._controllers);
 
-        Object.keys(this._controllers).forEach((controllerId) => {
+        for (const controllerId of keys) {
             this._detachController(controllerId);
-        });
+        }
 
         this._controllers = {};
 

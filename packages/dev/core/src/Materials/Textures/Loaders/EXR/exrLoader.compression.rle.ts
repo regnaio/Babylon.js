@@ -70,9 +70,9 @@
 // // End of OpenEXR license -------------------------------------------------
 
 /** @internal */
-export function DecodeRunLength(source: ArrayBuffer) {
+export function DecodeRunLength(source: ArrayBufferLike) {
     let size = source.byteLength;
-    const out = new Array();
+    const out = [];
     let p = 0;
 
     const reader = new DataView(source);

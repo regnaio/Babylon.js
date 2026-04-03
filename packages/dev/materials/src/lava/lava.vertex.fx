@@ -164,12 +164,19 @@ float turbulence( vec3 p ) {
     return t;
 }
 
+#if defined(CLUSTLIGHT_BATCH) && CLUSTLIGHT_BATCH > 0
+varying float vViewDepth;
+#endif
 
 #define CUSTOM_VERTEX_DEFINITIONS
 
 void main(void) {
 
 #define CUSTOM_VERTEX_MAIN_BEGIN
+
+#ifdef VERTEXCOLOR
+    vec4 colorUpdated = color;
+#endif
 
 #include<instancesVertex>
 #include<bonesVertex>

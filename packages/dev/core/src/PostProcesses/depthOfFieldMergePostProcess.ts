@@ -1,11 +1,11 @@
-import type { Nullable } from "../types";
-import type { Camera } from "../Cameras/camera";
-import type { Effect } from "../Materials/effect";
-import type { PostProcessOptions } from "./postProcess";
-import { PostProcess } from "./postProcess";
+import { type Nullable } from "../types";
+import { type Camera } from "../Cameras/camera";
+import { type Effect } from "../Materials/effect";
+import { type PostProcessOptions, PostProcess } from "./postProcess";
 import { Constants } from "../Engines/constants";
 
-import type { AbstractEngine } from "core/Engines/abstractEngine";
+import { type AbstractEngine } from "core/Engines/abstractEngine";
+import { ThinDepthOfFieldMergePostProcess } from "./thinDepthOfFieldMergePostProcess";
 
 /**
  * The DepthOfFieldMergePostProcess merges blurred images with the original based on the values of the circle of confusion.
@@ -43,48 +43,40 @@ export class DepthOfFieldMergePostProcess extends PostProcess {
         samplingMode?: number,
         engine?: AbstractEngine,
         reusable?: boolean,
-        textureType = Constants.TEXTURETYPE_UNSIGNED_INT,
+        textureType = Constants.TEXTURETYPE_UNSIGNED_BYTE,
         blockCompilation = false
     ) {
-        super(
-            name,
-            "depthOfFieldMerge",
-            [],
-            ["circleOfConfusionSampler", "blurStep0", "blurStep1", "blurStep2"],
-            options,
+        const blockCompilationFinal = typeof options === "number" ? blockCompilation : !!options.blockCompilation;
+        const localOptions = {
+            samplers: ThinDepthOfFieldMergePostProcess.Samplers,
+            size: typeof options === "number" ? options : undefined,
             camera,
             samplingMode,
             engine,
             reusable,
-            null,
             textureType,
-            undefined,
-            null,
-            true
-        );
+            ...(options as PostProcessOptions),
+            blockCompilation: true,
+        };
+
+        super(name, ThinDepthOfFieldMergePostProcess.FragmentUrl, {
+            effectWrapper: typeof options === "number" || !options.effectWrapper ? new ThinDepthOfFieldMergePostProcess(name, engine, localOptions) : undefined,
+            ...localOptions,
+        });
+
         this.externalTextureSamplerBinding = true;
         this.onApplyObservable.add((effect: Effect) => {
             effect.setTextureFromPostProcess("textureSampler", originalFromInput);
             effect.setTextureFromPostProcessOutput("circleOfConfusionSampler", circleOfConfusion);
-            _blurSteps.forEach((step, index) => {
-                effect.setTextureFromPostProcessOutput("blurStep" + (_blurSteps.length - index - 1), step);
-            });
+            for (let i = 0; i < _blurSteps.length; i++) {
+                const step = _blurSteps[i];
+                effect.setTextureFromPostProcessOutput("blurStep" + (_blurSteps.length - i - 1), step);
+            }
         });
 
-        if (!blockCompilation) {
+        if (!blockCompilationFinal) {
             this.updateEffect();
         }
-    }
-
-    protected override _gatherImports(useWebGPU: boolean, list: Promise<any>[]) {
-        if (useWebGPU) {
-            this._webGPUReady = true;
-            list.push(import("../ShadersWGSL/depthOfFieldMerge.fragment"));
-        } else {
-            list.push(import("../Shaders/depthOfFieldMerge.fragment"));
-        }
-
-        super._gatherImports(useWebGPU, list);
     }
 
     /**

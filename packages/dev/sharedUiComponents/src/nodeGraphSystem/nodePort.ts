@@ -1,24 +1,27 @@
-import type { Nullable } from "core/types";
-import type { Observer } from "core/Misc/observable";
-import type { Vector2 } from "core/Maths/math.vector";
-import type { GraphNode } from "./graphNode";
-import type { StateManager } from "./stateManager";
-import type { ISelectionChangedOptions } from "./interfaces/selectionChangedOptions";
-import type { FrameNodePort } from "./frameNodePort";
-import type { IDisplayManager } from "./interfaces/displayManager";
-import type { IPortData } from "./interfaces/portData";
-import commonStyles from "./common.modules.scss";
-import localStyles from "./nodePort.modules.scss";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type Vector2 } from "core/Maths/math.vector";
+import { type GraphNode } from "./graphNode";
+import { type StateManager } from "./stateManager";
+import { type ISelectionChangedOptions } from "./interfaces/selectionChangedOptions";
+import { type FrameNodePort } from "./frameNodePort";
+import { type IDisplayManager } from "./interfaces/displayManager";
+import { PortDirectValueTypes, type IPortData } from "./interfaces/portData";
+import * as commonStyles from "./common.module.scss";
+import * as localStyles from "./nodePort.module.scss";
+import { BuildFloatUI } from "./tools";
 
 export class NodePort {
     protected _element: HTMLDivElement;
-    protected _img: HTMLImageElement;
+    protected _portContainer: HTMLElement;
+    protected _imgHost: HTMLImageElement;
     protected _pip: HTMLDivElement;
     protected _stateManager: StateManager;
     protected _portLabelElement: Element;
     protected _onCandidateLinkMovedObserver: Nullable<Observer<Nullable<Vector2>>>;
     protected _onSelectionChangedObserver: Nullable<Observer<Nullable<ISelectionChangedOptions>>>;
     protected _exposedOnFrame: boolean;
+    protected _portUIcontainer?: HTMLDivElement;
     public delegatedPort: Nullable<FrameNodePort> = null;
 
     public get element(): HTMLDivElement {
@@ -29,6 +32,14 @@ export class NodePort {
         return this._element;
     }
 
+    public get container(): HTMLElement {
+        if (this.delegatedPort) {
+            return this.delegatedPort.container;
+        }
+
+        return this._portContainer;
+    }
+
     public get portName() {
         return this.portData.name;
     }
@@ -36,7 +47,14 @@ export class NodePort {
     public set portName(newName: string) {
         if (this._portLabelElement) {
             this.portData.updateDisplayName(newName);
-            this._portLabelElement.innerHTML = newName;
+            this.refreshLabel();
+        }
+    }
+
+    public refreshLabel() {
+        if (this._portLabelElement) {
+            this._portLabelElement.innerHTML = this.portData.name;
+            (this._portLabelElement as HTMLElement).title = this.portData.name;
         }
     }
 
@@ -97,24 +115,46 @@ export class NodePort {
     }
 
     public refresh() {
-        this._stateManager.applyNodePortDesign(this.portData, this._element, this._img, this._pip);
+        this.refreshLabel();
+        if (this._stateManager.applyNodePortDesign(this.portData, this._element, this._imgHost, this._pip)) {
+            this._element.style.background = "#000";
+        }
+
+        if (this._portUIcontainer) {
+            if (this.portData.isConnected) {
+                if (this._portLabelElement) {
+                    this._portLabelElement.classList.remove(commonStyles.hidden);
+                }
+                this._portUIcontainer.classList.add(commonStyles.hidden);
+            } else {
+                if (this._portLabelElement) {
+                    this._portLabelElement.classList.add(commonStyles.hidden);
+                }
+                this._portUIcontainer.classList.remove(commonStyles.hidden);
+            }
+        }
     }
 
     public constructor(
         portContainer: HTMLElement,
         public portData: IPortData,
         public node: GraphNode,
-        stateManager: StateManager
+        stateManager: StateManager,
+        portUIcontainer?: HTMLDivElement
     ) {
-        this._element = portContainer.ownerDocument!.createElement("div");
+        this._portUIcontainer = portUIcontainer;
+        this._portContainer = portContainer;
+        this._element = portContainer.ownerDocument.createElement("div");
         this._element.classList.add(commonStyles.port);
         portContainer.appendChild(this._element);
         this._stateManager = stateManager;
 
-        this._img = portContainer.ownerDocument!.createElement("img");
-        this._element.appendChild(this._img);
+        this._imgHost = portContainer.ownerDocument.createElement("img");
+        this._imgHost.classList.add(localStyles["port-icon"]);
+        this._imgHost.classList.add("port-icon"); // Used to flag it as a port icon
+        this._element.appendChild(this._imgHost);
 
-        this._pip = portContainer.ownerDocument!.createElement("div");
+        this._pip = portContainer.ownerDocument.createElement("div");
         this._pip.classList.add(localStyles["pip"]);
         this._pip.style.display = "none";
         this._element.appendChild(this._pip);
@@ -134,23 +174,37 @@ export class NodePort {
 
             if (!coords || rect.left > coords.x || rect.right < coords.x || rect.top > coords.y || rect.bottom < coords.y) {
                 this._element.classList.remove(localStyles["selected"]);
+                this._element.classList.remove(localStyles["incompatible"]);
                 return;
             }
 
-            this._element.classList.add(localStyles["selected"]);
+            // Check type compatibility with the source port being dragged
+            const sourcePortData = this._stateManager.candidateSourcePortData;
+            if (sourcePortData && sourcePortData.checkCompatibilityState(this.portData) !== 0) {
+                this._element.classList.add(localStyles["incompatible"]);
+                this._element.classList.remove(localStyles["selected"]);
+            } else {
+                this._element.classList.add(localStyles["selected"]);
+                this._element.classList.remove(localStyles["incompatible"]);
+            }
             this._stateManager.onCandidatePortSelectedObservable.notifyObservers(this);
         });
 
         this._onSelectionChangedObserver = this._stateManager.onSelectionChangedObservable.add((options) => {
             const { selection } = options || {};
             if (selection === this) {
-                this._img.classList.add(localStyles["selected"]);
+                this._imgHost.classList.add(localStyles["icon-selected"]);
             } else {
-                this._img.classList.remove(localStyles["selected"]);
+                this._imgHost.classList.remove(localStyles["icon-selected"]);
             }
         });
 
         this.refresh();
+    }
+
+    public remove() {
+        this._portContainer.remove();
+        this.dispose();
     }
 
     public dispose() {
@@ -162,19 +216,63 @@ export class NodePort {
     }
 
     public static CreatePortElement(portData: IPortData, node: GraphNode, root: HTMLElement, displayManager: Nullable<IDisplayManager>, stateManager: StateManager) {
-        const portContainer = root.ownerDocument!.createElement("div");
+        const portContainer = root.ownerDocument.createElement("div");
 
         portContainer.classList.add(commonStyles.portLine);
 
         root.appendChild(portContainer);
 
         if (!displayManager || displayManager.shouldDisplayPortLabels(portData)) {
-            const portLabel = root.ownerDocument!.createElement("div");
+            const portLabel = root.ownerDocument.createElement("div");
             portLabel.classList.add(commonStyles["port-label"]);
             portLabel.innerHTML = portData.name;
+            portLabel.title = portData.name;
             portContainer.appendChild(portLabel);
         }
 
-        return new NodePort(portContainer, portData, node, stateManager);
+        let portUIcontainer: HTMLDivElement | undefined;
+        if (portData.directValueDefinition) {
+            portUIcontainer = root.ownerDocument.createElement("div");
+            portUIcontainer.classList.add(localStyles.numberContainer);
+            portContainer.appendChild(portUIcontainer);
+            portUIcontainer.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+            portUIcontainer.addEventListener("pointerup", (evt) => evt.stopPropagation());
+            portUIcontainer.addEventListener("pointermove", (evt) => evt.stopPropagation());
+            const source = portData.directValueDefinition.source;
+            const propertyName = portData.directValueDefinition.propertyName;
+            switch (portData.directValueDefinition.valueType) {
+                case PortDirectValueTypes.Float:
+                case PortDirectValueTypes.Int:
+                    BuildFloatUI(
+                        portUIcontainer,
+                        root.ownerDocument,
+                        portData.name,
+                        portData.directValueDefinition.valueType === PortDirectValueTypes.Int,
+                        source,
+                        propertyName,
+                        () => {
+                            node._forceRebuild(source, propertyName);
+                        },
+                        portData.directValueDefinition.valueMin,
+                        portData.directValueDefinition.valueMax
+                    );
+                    break;
+                case PortDirectValueTypes.String: {
+                    portUIcontainer.classList.add(localStyles.stringContainer);
+                    const textInput = root.ownerDocument.createElement("input");
+                    textInput.type = "text";
+                    textInput.value = source[propertyName] ?? "";
+                    textInput.placeholder = portData.name;
+                    textInput.onchange = () => {
+                        source[propertyName] = textInput.value;
+                        node._forceRebuild(source, propertyName);
+                    };
+                    portUIcontainer.appendChild(textInput);
+                    break;
+                }
+            }
+        }
+
+        return new NodePort(portContainer, portData, node, stateManager, portUIcontainer);
     }
 }
