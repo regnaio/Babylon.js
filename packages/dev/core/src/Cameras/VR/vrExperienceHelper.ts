@@ -371,7 +371,15 @@ export class VRExperienceHelper {
      */
     public teleportationEnabled: boolean = true;
 
-    private _defaultHeight: number;
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	_defaultHeight was declared but never initialized, defaulting to `undefined`.
+    	When used in `new Vector3(0, this._defaultHeight, 0)`, this produced NaN
+    	values that would propagate through all subsequent vector math. Initialized
+    	to 0 as a safe default.
+    */
+    private _defaultHeight: number = 0;
     private _teleportationInitialized = false;
     private _interactionsEnabled = false;
     private _displayGaze = true;

@@ -148,19 +148,33 @@ export class FollowCamera extends TargetCamera {
         let vy: number = dy * this.cameraAcceleration;
         let vz: number = dz * this.cameraAcceleration * 2;
 
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The velocity clamping used `vx < 1` to determine the sign direction, but
+        	this should be `vx < 0`. When velocity was between 0 and 1, the camera
+        	would incorrectly snap to -maxCameraSpeed instead of +maxCameraSpeed.
+        	Same fix applied to vy and vz.
+        */
         if (vx > this.maxCameraSpeed || vx < -this.maxCameraSpeed) {
-            vx = vx < 1 ? -this.maxCameraSpeed : this.maxCameraSpeed;
+            vx = vx < 0 ? -this.maxCameraSpeed : this.maxCameraSpeed;
         }
 
         if (vy > this.maxCameraSpeed || vy < -this.maxCameraSpeed) {
-            vy = vy < 1 ? -this.maxCameraSpeed : this.maxCameraSpeed;
+            vy = vy < 0 ? -this.maxCameraSpeed : this.maxCameraSpeed;
         }
 
         if (vz > this.maxCameraSpeed || vz < -this.maxCameraSpeed) {
-            vz = vz < 1 ? -this.maxCameraSpeed : this.maxCameraSpeed;
+            vz = vz < 0 ? -this.maxCameraSpeed : this.maxCameraSpeed;
         }
 
-        this.position = new Vector3(this.position.x + vx, this.position.y + vy, this.position.z + vz);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Replaced `new Vector3(...)` with in-place addition to avoid allocating a
+        	new Vector3 object every frame during camera following.
+        */
+        this.position.addInPlaceFromFloats(vx, vy, vz);
         this.setTarget(targetPosition);
     }
 

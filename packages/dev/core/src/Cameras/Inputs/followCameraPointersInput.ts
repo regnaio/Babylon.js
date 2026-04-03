@@ -121,7 +121,15 @@ export class FollowCameraPointersInput extends BaseCameraPointersInput {
         if (this.axisXControlRotation) {
             this.camera.rotationOffset += offsetX / this.angularSensibilityX;
         } else if (this.axisYControlRotation) {
-            this.camera.rotationOffset += offsetY / this.angularSensibilityX;
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The Y-axis offset was being divided by angularSensibilityX instead
+            	of angularSensibilityY. The naming convention is that
+            	angularSensibilityX controls X-axis pointer sensitivity and
+            	angularSensibilityY controls Y-axis pointer sensitivity.
+            */
+            this.camera.rotationOffset += offsetY / this.angularSensibilityY;
         }
 
         if (this.axisXControlHeight) {
@@ -192,7 +200,15 @@ export class FollowCameraPointersInput extends BaseCameraPointersInput {
         const warn =
             "It probably only makes sense to control ONE camera " + "property with each pointer axis. Set 'warningEnable = false' " + "if you are sure. Currently enabled: ";
 
-        if (+this.axisXControlRotation + +this.axisXControlHeight + +this.axisXControlRadius <= 1) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The warning conditions were inverted. They warned when the sum of axis
+        	controls was <= 1 (correct configuration) and stayed silent when > 1
+        	(misconfiguration with multiple controls on same axis). Flipped to > 1
+        	to properly warn only when multiple properties are controlled by one axis.
+        */
+        if (+this.axisXControlRotation + +this.axisXControlHeight + +this.axisXControlRadius > 1) {
             Logger.Warn(
                 warn +
                     "axisXControlRotation: " +
@@ -203,7 +219,7 @@ export class FollowCameraPointersInput extends BaseCameraPointersInput {
                     this.axisXControlRadius
             );
         }
-        if (+this.axisYControlRotation + +this.axisYControlHeight + +this.axisYControlRadius <= 1) {
+        if (+this.axisYControlRotation + +this.axisYControlHeight + +this.axisYControlRadius > 1) {
             Logger.Warn(
                 warn +
                     "axisYControlRotation: " +
@@ -214,7 +230,7 @@ export class FollowCameraPointersInput extends BaseCameraPointersInput {
                     this.axisYControlRadius
             );
         }
-        if (+this.axisPinchControlRotation + +this.axisPinchControlHeight + +this.axisPinchControlRadius <= 1) {
+        if (+this.axisPinchControlRotation + +this.axisPinchControlHeight + +this.axisPinchControlRadius > 1) {
             Logger.Warn(
                 warn +
                     "axisPinchControlRotation: " +

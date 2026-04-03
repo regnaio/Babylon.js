@@ -129,8 +129,16 @@ export class FollowCameraMouseWheelInput implements ICameraInput<FollowCamera> {
      * Gets the class name of the current input.
      * @returns the class name
      */
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	This was a copy-paste error returning the wrong class name.
+    	It returned "ArcRotateCameraMouseWheelInput" instead of
+    	"FollowCameraMouseWheelInput", which would break serialization
+    	and input identification for the FollowCamera.
+    */
     public getClassName(): string {
-        return "ArcRotateCameraMouseWheelInput";
+        return "FollowCameraMouseWheelInput";
     }
 
     /**

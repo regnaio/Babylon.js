@@ -59,8 +59,15 @@ export class StereoscopicScreenUniversalCamera extends UniversalCamera {
      * Gets camera class name
      * @returns StereoscopicScreenUniversalCamera
      */
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	getClassName() returned "StereoscopicUniversalCamera" which is a different
+    	class. This class is StereoscopicScreenUniversalCamera, so the return value
+    	must match for correct serialization and class identification.
+    */
     public override getClassName(): string {
-        return "StereoscopicUniversalCamera";
+        return "StereoscopicScreenUniversalCamera";
     }
 
     /**

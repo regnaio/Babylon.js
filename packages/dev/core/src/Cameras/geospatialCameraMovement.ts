@@ -224,7 +224,14 @@ export function ClampCenterFromPolesInPlace(center: Vector3) {
     const sineOfSphericalLatitudeLimit = 0.998749218; // ~90 degrees
     const centerMagnitude = center.length(); // distance from planet origin
     if (centerMagnitude > Epsilon) {
-        const sineSphericalLat = centerMagnitude === 0 ? 0 : center.z / centerMagnitude;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Removed a redundant `centerMagnitude === 0` ternary check that was inside
+        	a guard that already confirmed `centerMagnitude > Epsilon`. The zero check
+        	could never be true.
+        */
+        const sineSphericalLat = center.z / centerMagnitude;
         if (Math.abs(sineSphericalLat) > sineOfSphericalLatitudeLimit) {
             // Clamp the spherical latitude (and derive longitude)
             const sineOfClampedSphericalLat = Clamp(sineSphericalLat, -sineOfSphericalLatitudeLimit, sineOfSphericalLatitudeLimit);

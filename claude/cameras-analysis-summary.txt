@@ -1,0 +1,166 @@
+================================================================================
+  Babylon.js Camera System Analysis - core/src/Cameras/
+  Analyzed 63 TypeScript files across all subdirectories
+================================================================================
+
+DIRECTORY STRUCTURE
+===================
+- Root: 21 files (camera base classes, input managers, movement systems)
+- Inputs/: 24 files (per-camera-type input handlers)
+- Stereoscopic/: 10 files (anaglyph and stereoscopic camera variants)
+- VR/: 6 files (VR device orientation cameras and experience helper)
+- RigModes/: 4 files (rig mode setup functions)
+- Limits/: 1 file (geospatial camera limits)
+
+CAMERA HIERARCHY
+================
+Camera (base)
+  └── TargetCamera
+        ├── FreeCamera
+        │     ├── TouchCamera
+        │     │     └── UniversalCamera
+        │     │           └── GamepadCamera (alias)
+        │     ├── DeviceOrientationCamera
+        │     ├── VirtualJoysticksCamera
+        │     └── FlyCamera
+        ├── FollowCamera
+        ├── ArcFollowCamera
+        ├── ArcRotateCamera
+        └── GeospatialCamera
+
+CONFIRMED BUGS (FIXED)
+======================
+
+1. followCamera.ts:152,156,160 - INCORRECT SPEED CLAMPING
+   The FollowCamera._follow() method clamps velocity using `vx < 1` to determine
+   sign direction. This should be `vx < 0`. When velocity is between 0 and 1
+   (a common range), the code incorrectly assigns -maxCameraSpeed instead of
+   +maxCameraSpeed, causing the camera to snap in the wrong direction.
+
+2. followCameraMouseWheelInput.ts:133 - WRONG getClassName() RETURN VALUE
+   Returns "ArcRotateCameraMouseWheelInput" (copy-paste error from the
+   ArcRotateCamera input). Should return "FollowCameraMouseWheelInput".
+   This would cause issues with serialization and input identification.
+
+3. stereoscopicScreenUniversalCamera.ts:63 - WRONG getClassName() RETURN VALUE
+   Returns "StereoscopicUniversalCamera" instead of
+   "StereoscopicScreenUniversalCamera". The class name doesn't match the
+   actual class, which would cause serialization issues.
+
+4. followCameraPointersInput.ts:124 - WRONG SENSITIVITY USED FOR Y-AXIS
+   When axisYControlRotation is true, the Y-axis offset is divided by
+   angularSensibilityX instead of angularSensibilityY. The naming convention
+   is that angularSensibilityX controls X-axis pointer sensitivity and
+   angularSensibilityY controls Y-axis pointer sensitivity.
+
+5. followCameraPointersInput.ts:195,206,217 - INVERTED WARNING CONDITIONS
+   The misconfiguration warning triggers when the sum of axis controls is <= 1
+   (i.e., 0 or 1 controls), but the warning message says it only makes sense
+   to control ONE property per axis. The condition should be > 1 to warn when
+   MULTIPLE controls are assigned to the same axis. Currently it warns when
+   configuration is correct and stays silent when it's wrong.
+
+6. freeCameraInputsManager.ts:99-102 - INCOMPLETE clear() CLEANUP
+   The clear() method resets _mouseInput to null but fails to reset
+   _mouseWheelInput to null. This means after clear(), addMouseWheel() would
+   think the old (now detached) input still exists and skip adding a new one.
+
+7. geospatialCameraMovement.ts:227 - REDUNDANT ZERO CHECK
+   Inside a guard of `if (centerMagnitude > Epsilon)`, the code checks
+   `centerMagnitude === 0 ? 0 : ...` which can never be true since
+   centerMagnitude was already confirmed to be > Epsilon.
+
+8. followCamera.ts:163 - UNNECESSARY ALLOCATION IN HOT PATH
+   Creates a new Vector3 every frame in _follow() instead of modifying the
+   position in place. This generates garbage collection pressure during
+   continuous camera following.
+
+9. vrExperienceHelper.ts:374 - UNINITIALIZED _defaultHeight PROPERTY
+   _defaultHeight is declared as `private _defaultHeight: number;` but never
+   assigned a value anywhere in the class. When used as a fallback position
+   (line 558: `new Vector3(0, this._defaultHeight, 0)`), it produces NaN,
+   which propagates through all subsequent vector math. Should default to 0.
+
+NOTES ON ITEMS NOT FIXED
+=========================
+
+- VRExperienceHelper has many more issues (memory leaks, dead code, etc.) but
+  the entire class is deprecated in favor of WebXR. The _defaultHeight fix is
+  the only critical bug that could cause NaN propagation.
+
+- The geospatial keyboard input's left/right key mapping (adding panSensitivity
+  for left, subtracting for right) appears inverted but is actually correct for
+  the "drag a globe" interaction model where pointer movement and scene movement
+  are opposite.
+
+- Observer.remove() in geospatialCameraKeyboardInput.ts is valid - Observer
+  implements IObserver which defines remove(), and the implementation delegates
+  to _remove set by the owning Observable.
+
+- Several `any` type casts exist in VR rig mode setup functions. These are in
+  deprecated VR code and changing them would require broader refactoring.
+
+- Array index access without bounds checks in rig mode functions (_rigCameras[0],
+  _rigCameras[1]) is intentional - these arrays are always populated by the
+  camera rig setup before the mode functions are called.
+
+FILE-BY-FILE INTERACTION MAP
+============================
+
+camera.ts
+  - Base class for all cameras
+  - Imported by: targetCamera, all camera subtypes, rig modes, stereoscopic cameras
+  - Imports: Node, scene types, math vectors, matrices
+
+targetCamera.ts
+  - Extends Camera, adds target-based view matrix computation
+  - Imported by: freeCamera, followCamera, arcRotateCamera, geospatialCamera,
+    stereoscopicScreenUniversalCamera
+  - Imports: camera, math types, scene, TmpVectors
+
+freeCamera.ts
+  - Extends TargetCamera, adds collision and gravity
+  - Imported by: touchCamera, flyCamera, deviceOrientationCamera,
+    virtualJoysticksCamera, stereoscopic/anaglyph cameras
+  - Imports: targetCamera, freeCameraInputsManager, math, collisions
+
+arcRotateCamera.ts
+  - Extends TargetCamera, orbital camera around target point
+  - Imported by: arcRotateCameraInputsManager, stereoscopic/VR arc cameras
+  - Imports: targetCamera, math, behaviors, cameraInputsManager
+
+followCamera.ts
+  - Extends TargetCamera, follows a mesh target
+  - Contains FollowCamera and ArcFollowCamera
+  - Imported by: followCameraInputsManager, follow camera inputs
+  - Imports: targetCamera, math types
+
+geospatialCamera.ts
+  - Extends TargetCamera, globe-scale orbital camera
+  - Imported by: geospatial inputs, geospatialCameraMovement
+  - Imports: targetCamera, math, geospatialCameraMovement, geospatialLimits
+
+cameraInputsManager.ts
+  - Generic input management system
+  - Imported by: all specialized input managers
+  - Imports: camera types, serialization utilities
+
+cameraMovement.ts
+  - Movement utilities shared across cameras (inertia, etc.)
+  - Imported by: geospatialCameraMovement
+  - Imports: math types, engine types
+
+All Inputs/ files follow a consistent pattern:
+  - Implement ICameraInput<CameraType> interface
+  - Provide attachControl/detachControl lifecycle
+  - Feed movement data into their respective camera type
+
+All Stereoscopic/ files follow a consistent pattern:
+  - Extend the base camera type (Universal, Free, ArcRotate, Gamepad)
+  - Set rig mode in constructor
+  - Register Node constructors for serialization
+
+All VR/ files follow a consistent pattern:
+  - Extend DeviceOrientationCamera or ArcRotateCamera
+  - Add VR device orientation input
+  - Set VR rig mode with metrics

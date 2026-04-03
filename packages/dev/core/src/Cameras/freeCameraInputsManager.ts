@@ -99,5 +99,13 @@ export class FreeCameraInputsManager extends CameraInputsManager<FreeCamera> {
     public override clear(): void {
         super.clear();
         this._mouseInput = null;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	_mouseWheelInput was not being reset to null during clear(), which meant
+        	that after clearing, addMouseWheel() would think the old (now detached)
+        	input still existed and skip adding a new one.
+        */
+        this._mouseWheelInput = null;
     }
 }
