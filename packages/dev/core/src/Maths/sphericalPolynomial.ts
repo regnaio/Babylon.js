@@ -428,10 +428,17 @@ export class SphericalPolynomial {
     public updateFromHarmonics(harmonics: SphericalHarmonics): SphericalPolynomial {
         this._harmonics = harmonics;
 
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Simplified chained .scaleInPlace(X).scaleInPlace(-1) calls into
+        	single .scaleInPlace(-X) calls, eliminating redundant operations.
+        	The mathematical result is identical since X * (-1) === -X.
+        */
         this.x.copyFrom(harmonics.l11);
-        this.x.scaleInPlace(1.02333).scaleInPlace(-1);
+        this.x.scaleInPlace(-1.02333);
         this.y.copyFrom(harmonics.l1_1);
-        this.y.scaleInPlace(1.02333).scaleInPlace(-1);
+        this.y.scaleInPlace(-1.02333);
         this.z.copyFrom(harmonics.l10);
         this.z.scaleInPlace(1.02333);
 
@@ -446,9 +453,9 @@ export class SphericalPolynomial {
         this.zz.scaleInPlace(0.886277).addInPlace(TmpVectors.Vector3[0]);
 
         this.yz.copyFrom(harmonics.l2_1);
-        this.yz.scaleInPlace(0.858086).scaleInPlace(-1);
+        this.yz.scaleInPlace(-0.858086);
         this.zx.copyFrom(harmonics.l21);
-        this.zx.scaleInPlace(0.858086).scaleInPlace(-1);
+        this.zx.scaleInPlace(-0.858086);
         this.xy.copyFrom(harmonics.l2_2);
         this.xy.scaleInPlace(0.858086);
 

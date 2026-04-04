@@ -46,8 +46,15 @@ export class BezierCurve {
             refinedT = Math.min(1, Math.max(0, refinedT));
         }
 
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Replaced Math.pow() with direct multiplication for integer exponents.
+        	Direct multiplication (x * x) is faster than Math.pow(x, 2) and
+        	avoids a function call overhead for a simple squaring operation.
+        */
         // Resolve cubic bezier for the given x
-        return 3 * Math.pow(1 - refinedT, 2) * refinedT * y1 + 3 * (1 - refinedT) * Math.pow(refinedT, 2) * y2 + Math.pow(refinedT, 3);
+        return 3 * (1 - refinedT) * (1 - refinedT) * refinedT * y1 + 3 * (1 - refinedT) * refinedT * refinedT * y2 + refinedT * refinedT * refinedT;
     }
 }
 
@@ -171,9 +178,15 @@ export class Arc2 {
         /** Defines the end point of the arc */
         public endPoint: Vector2
     ) {
-        const temp = Math.pow(midPoint.x, 2) + Math.pow(midPoint.y, 2);
-        const startToMid = (Math.pow(startPoint.x, 2) + Math.pow(startPoint.y, 2) - temp) / 2;
-        const midToEnd = (temp - Math.pow(endPoint.x, 2) - Math.pow(endPoint.y, 2)) / 2;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Replaced Math.pow(x, 2) with x * x for all squaring operations.
+        	Direct multiplication is faster and avoids function call overhead.
+        */
+        const temp = midPoint.x * midPoint.x + midPoint.y * midPoint.y;
+        const startToMid = (startPoint.x * startPoint.x + startPoint.y * startPoint.y - temp) / 2;
+        const midToEnd = (temp - endPoint.x * endPoint.x - endPoint.y * endPoint.y) / 2;
         const det = (startPoint.x - midPoint.x) * (midPoint.y - endPoint.y) - (midPoint.x - endPoint.x) * (startPoint.y - midPoint.y);
 
         this.centerPoint = new Vector2(

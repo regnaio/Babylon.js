@@ -39,12 +39,20 @@ export class Viewport implements IViewportLike {
      * @param ref defines the target viewport
      * @returns the current viewport
      */
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	The "ToRef" pattern throughout Babylon.js consistently returns the ref
+    	parameter (the target that was written to), not `this`. This method was
+    	returning `this` instead, breaking the convention and potentially causing
+    	bugs if callers rely on the return value being the modified reference.
+    */
     public toGlobalToRef(renderWidth: number, renderHeight: number, ref: Viewport): Viewport {
         ref.x = this.x * renderWidth;
         ref.y = this.y * renderHeight;
         ref.width = this.width * renderWidth;
         ref.height = this.height * renderHeight;
-        return this;
+        return ref;
     }
 
     /**

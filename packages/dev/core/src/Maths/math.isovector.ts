@@ -14,6 +14,16 @@ export class _IsoVector {
      * @param x defines the first coordinate, must be an integer
      * @param y defines the second coordinate, must be an integer
      */
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	The original constructor applied Math.floor() to the local parameters
+    	x and y, but never assigned the floored values back to this.x and
+    	this.y. Because x and y are declared as public constructor parameters,
+    	they are set on `this` before the constructor body runs, so re-assigning
+    	the local parameter had no effect on the instance properties. This broke
+    	the invariant that _IsoVector should contain only integer coordinates.
+    */
     constructor(
         /** [0] defines the first coordinate */
         public x: number = 0,
@@ -21,11 +31,11 @@ export class _IsoVector {
         public y: number = 0
     ) {
         if (x !== Math.floor(x)) {
-            x = Math.floor(x);
+            this.x = Math.floor(x);
             Logger.Warn("x is not an integer, floor(x) used");
         }
         if (y !== Math.floor(y)) {
-            y = Math.floor(y);
+            this.y = Math.floor(y);
             Logger.Warn("y is not an integer, floor(y) used");
         }
     }
@@ -107,7 +117,7 @@ export class _IsoVector {
         }
         if (n !== Math.floor(n)) {
             n = Math.floor(n);
-            Logger.Warn("n is not an integer,   floor(n) used");
+            Logger.Warn("n is not an integer, floor(n) used");
         }
         const x = this.x;
         this.x = this.y - n;

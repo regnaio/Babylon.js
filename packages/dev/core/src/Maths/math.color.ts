@@ -644,15 +644,22 @@ export class Color3 implements Tensor<Tuple<number, 3>, IColor3Like>, IColor3Lik
             s = dm / max;
         }
 
-        if (max != min) {
-            if (max == r) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Changed loose equality operators (== and !=) to strict equality
+        	(=== and !==) for consistency with the rest of the file and to
+        	avoid potential type coercion issues in floating-point comparisons.
+        */
+        if (max !== min) {
+            if (max === r) {
                 h = (g - b) / dm;
                 if (g < b) {
                     h += 6;
                 }
-            } else if (max == g) {
+            } else if (max === g) {
                 h = (b - r) / dm + 2;
-            } else if (max == b) {
+            } else if (max === b) {
                 h = (r - g) / dm + 4;
             }
             h *= 60;

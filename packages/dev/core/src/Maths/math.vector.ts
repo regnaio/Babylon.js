@@ -717,11 +717,21 @@ export class Vector2 implements Vector<Tuple<number, 2>, IVector2Like>, IVector2
      * @param result define the Vector to update
      * @returns the updated Vector2
      */
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	The original code was missing an early return when len === 0 or 1.
+    	Without the early return, after copying the values to result, it fell
+    	through to scaleToRef(1/0, result) which overwrote result with
+    	Infinity/NaN. Vector3 and Vector4 normalizeToRef both have this early
+    	return; Vector2 was missing it.
+    */
     public normalizeToRef<T extends IVector2Like>(result: T): T {
         const len = this.length();
-        if (len === 0) {
+        if (len === 0 || len === 1.0) {
             result.x = this.x;
             result.y = this.y;
+            return result;
         }
         return this.scaleToRef(1.0 / len, result);
     }
@@ -6799,20 +6809,34 @@ export class Matrix implements Tensor<Tuple<Tuple<number, 4>, 4>, Matrix>, IMatr
         return this;
     }
 
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	maximizeInPlace was incorrectly using Math.min instead of Math.max,
+    	which caused it to return minimum values rather than maximum values,
+    	completely inverting the intended behavior.
+    */
     public maximizeInPlace(other: DeepImmutable<Matrix>): this {
         const m = this._m,
             otherM = other.m;
         for (let i = 0; i < 16; i++) {
-            m[i] = Math.min(m[i], otherM[i]);
+            m[i] = Math.max(m[i], otherM[i]);
         }
         this.markAsUpdated();
         return this;
     }
 
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	maximizeInPlaceFromFloats was incorrectly using Math.min instead of
+    	Math.max, which caused it to return minimum values rather than maximum
+    	values, completely inverting the intended behavior.
+    */
     public maximizeInPlaceFromFloats(...floats: Tuple<number, 16>): this {
         const m = this._m;
         for (let i = 0; i < 16; i++) {
-            m[i] = Math.min(m[i], floats[i]);
+            m[i] = Math.max(m[i], floats[i]);
         }
         this.markAsUpdated();
         return this;

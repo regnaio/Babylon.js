@@ -309,7 +309,7 @@ export interface Tensor<V extends TensorValue, I> {
     equalsWithEpsilon(other: DeepImmutable<I>, epsilon?: number): boolean;
 
     /**
-     * Returns true if the current Vectoe coordinates equals the given floats
+     * Returns true if the current Tensor coordinates equals the given floats
      * @param floats defines the coordinates to compare against
      * @returns true if both instances are equal
      */

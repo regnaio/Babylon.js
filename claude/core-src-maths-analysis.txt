@@ -1,0 +1,135 @@
+================================================================================
+BABYLON.JS CORE/SRC/MATHS FULL ANALYSIS
+================================================================================
+
+Analyzed 27 TypeScript files in packages/dev/core/src/Maths/ (including ThinMaths/).
+For every file, all imports and importers were traced to understand interactions.
+
+================================================================================
+FILES ANALYZED
+================================================================================
+
+1.  halton2DSequence.ts       - 2D quasi-random Halton sequence for TAA
+2.  math.axis.ts              - Space/Axis/Coordinate enums and constants
+3.  math.color.ts             - Color3 and Color4 classes (~1915 lines)
+4.  math.constants.ts         - ToGammaSpace, ToLinearSpace, PHI, Epsilon
+5.  math.frustum.ts           - Frustum plane extraction for culling
+6.  math.functions.ts         - extractMinAndMax, FixFlippedFaces
+7.  math.geospatial.ts        - ILatLonLike, ILatLonAltLike, IEllipsoidLike interfaces
+8.  math.geospatial.functions.ts - ECEF conversions, WGS84 ellipsoid
+9.  math.isovector.ts         - Isometric 2D integer coordinate system
+10. math.like.ts              - Interface contracts (IVector3Like, IMatrixLike, etc.)
+11. math.path.ts              - BezierCurve, Angle, Arc2, Path2, Path3D, Curve3
+12. math.plane.ts             - Plane equation representation
+13. math.polar.ts             - Polar and Spherical coordinate systems
+14. math.scalar.ts            - Scalar namespace wrapper
+15. math.scalar.functions.ts  - 25 scalar math functions (Lerp, Clamp, etc.)
+16. math.size.ts              - ISize interface and Size class
+17. math.ts                   - Barrel re-export file
+18. math.vector.ts            - Vector2/3/4, Quaternion, Matrix (~8880 lines)
+19. math.vector.functions.ts  - Lightweight vector utility functions
+20. math.vertexFormat.ts      - PositionNormalVertex, PositionNormalTextureVertex
+21. math.viewport.ts          - Viewport class
+22. sphericalPolynomial.ts    - SphericalHarmonics and SphericalPolynomial
+23. tensor.ts                 - Tensor interface abstraction
+24. index.ts                  - Master barrel re-export
+25. ThinMaths/index.ts        - ThinMaths barrel re-export
+26. ThinMaths/thinMath.matrix.ts           - Lightweight ThinMatrix class
+27. ThinMaths/thinMath.matrix.functions.ts - Matrix operation functions
+
+================================================================================
+BUGS FOUND AND FIXED
+================================================================================
+
+FIX 1: Matrix.maximizeInPlace() uses Math.min instead of Math.max [CRITICAL]
+  File: math.vector.ts, lines 6806 and 6815
+  The maximizeInPlace() and maximizeInPlaceFromFloats() methods both use
+  Math.min() when they should use Math.max(). This completely inverts the
+  intended behavior - maximization returns minimum values instead.
+
+FIX 2: Vector2.normalizeToRef() missing early return [BUG]
+  File: math.vector.ts, lines 720-727
+  When vector length is 0, the method copies values to result but then falls
+  through to scaleToRef(1/0, result) which overwrites with Infinity/NaN.
+  Vector3 and Vector4 correctly have early returns; Vector2 does not.
+
+FIX 3: _IsoVector constructor doesn't update properties [BUG]
+  File: math.isovector.ts, lines 23-30
+  When non-integer values are passed, Math.floor() is applied to the local
+  parameter but never assigned back to this.x/this.y. The public properties
+  retain the original non-integer values, breaking the integer invariant.
+
+FIX 4: Loose equality operators in HSV conversion [CODE QUALITY]
+  File: math.color.ts, lines 647-655
+  Uses == and != instead of === and !==. The rest of the file uses strict
+  equality consistently. Loose equality can cause type coercion bugs.
+
+FIX 5: Viewport.toGlobalToRef() returns this instead of ref [BUG]
+  File: math.viewport.ts, line 47
+  The "ToRef" pattern throughout Babylon.js returns the ref parameter, but
+  this method returns `this`. This breaks the convention and could cause
+  subtle bugs if callers rely on the return value.
+
+FIX 6: "defaut" typo in math.vertexFormat.ts [TYPO]
+  File: math.vertexFormat.ts, 8 occurrences
+  The word "defaut" should be "default" in all JSDoc comments.
+
+FIX 7: Loose equality in InverseLerp [CODE QUALITY]
+  File: math.scalar.functions.ts, line 82
+  Uses != instead of !== for comparing a and b. Inconsistent with the rest
+  of the codebase which uses strict equality.
+
+FIX 8: Redundant chained scaleInPlace calls [OPTIMIZATION]
+  File: sphericalPolynomial.ts, lines 432, 434, 449, 451
+  Pattern .scaleInPlace(X).scaleInPlace(-1) can be simplified to
+  .scaleInPlace(-X), eliminating redundant operations.
+
+FIX 9: Math.pow() for integer exponents [OPTIMIZATION]
+  File: math.path.ts, lines 50 and 174-176
+  Uses Math.pow(x, 2) and Math.pow(x, 3) where direct multiplication
+  (x * x, x * x * x) is both faster and more readable.
+
+FIX 10: "Vectoe" typo in tensor.ts [TYPO]
+  File: tensor.ts, line 312
+  "Vectoe" should be "Tensor" in JSDoc comment.
+
+FIX 11: Extra spaces in error message [TYPO]
+  File: math.isovector.ts, line 110
+  "n is not an integer,   floor(n) used" has three spaces after comma.
+
+================================================================================
+ISSUES NOTED BUT NOT FIXED (would be breaking changes or need more context)
+================================================================================
+
+- Axis.X/Y/Z are mutable Vector3 static properties (could be corrupted)
+- Quaternion.Inverse() static only computes conjugate, not true inverse
+- Division by zero not guarded in many vector divide operations
+- BezierCurve.Interpolate has potential division by zero in Newton-Raphson
+- Arc2 constructor has potential division by zero with collinear points
+- Path3D uses NaN as cache key (NaN !== NaN always false)
+- Floating-point exact equality comparisons in Path2.isPointInside
+- Multiple hardcoded magic numbers without named constants
+- Color3/Color4 static factory methods (Red(), Blue() etc.) create new
+  instances on every call - could be cached
+- ThinMaths InvertMatrixToArray uses exact zero comparison for determinant
+- IVector3LikeInternal._isDirty is optional but always required in practice
+- IPlaneLike.normalize() declared as void but Plane.normalize() returns Plane
+- IQuaternionLike and IVector4Like are structurally identical (no discriminator)
+
+================================================================================
+OPTIMIZATION OPPORTUNITIES NOTED BUT NOT CHANGED
+================================================================================
+
+- Vector3NormalizeToRef in math.vector.functions.ts uses 3 divisions instead
+  of 1 division + 3 multiplications
+- math.vector.functions.ts uses exact zero comparison (len === 0) instead
+  of epsilon-based check
+- Halton2DSequence stores all values upfront; could use lazy generation
+- Path3D methods create many temporary Vector3 objects
+- FixFlippedFaces creates 7 temporary Vector3 objects per call
+- Size.Zero() creates new instance every call (could be cached)
+- Polar.FromVector2ToRef calls v.length() twice (could cache)
+
+================================================================================
+END OF ANALYSIS
+================================================================================

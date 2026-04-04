@@ -79,7 +79,13 @@ export function LerpAngle(start: number, end: number, amount: number): number {
  */
 export function InverseLerp(a: number, b: number, value: number): number {
     let result: number;
-    if (a != b) {
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	Changed loose inequality (!=) to strict inequality (!==) for consistency
+    	with the rest of the codebase and to avoid potential type coercion issues.
+    */
+    if (a !== b) {
         result = Clamp((value - a) / (b - a));
     } else {
         result = 0.0;
