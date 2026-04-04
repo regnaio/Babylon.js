@@ -1,7 +1,15 @@
 import { type Nullable } from "../types";
 import { type _IShaderProcessingContext } from "../Engines/Processors/shaderProcessingOptions";
 import { type Effect } from "../Materials/effect";
-import { VertexBuffer } from "../Meshes/buffer";
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    This file is located in core/src/Buffers/ and was importing VertexBuffer from
+    "../Meshes/buffer", which is a backwards-compatibility re-export shim. Importing
+    from "./buffer" uses the canonical source directly and avoids the unnecessary
+    indirection.
+*/
+import { VertexBuffer } from "./buffer";
 
 const VertexBufferKindForNonFloatProcessing: { [kind: string]: boolean } = {
     [VertexBuffer.PositionKind]: true,

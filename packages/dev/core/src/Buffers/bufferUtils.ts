@@ -409,8 +409,16 @@ export function CopyFloatData(
     }
 
     if (input instanceof Array) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            TypedArray.prototype.set(array, offset) uses the second argument as the TARGET offset
+            in the output array, not the SOURCE offset. The old code `output.set(input, offset)`
+            was copying input[0..N] into output[offset..], but the intent is to copy
+            input[offset..offset+count] into output[0..count].
+        */
         const offset = byteOffset / 4;
-        output.set(input, offset);
+        output.set(input.slice(offset, offset + count));
     } else if (ArrayBuffer.isView(input)) {
         const offset = input.byteOffset + byteOffset;
         if ((offset & 3) !== 0) {

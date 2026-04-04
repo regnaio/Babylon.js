@@ -99,7 +99,15 @@ export class Buffer {
         const byteOffset = useBytes ? offset : offset * Float32Array.BYTES_PER_ELEMENT;
         const byteStride = stride ? (useBytes ? stride : stride * Float32Array.BYTES_PER_ELEMENT) : this.byteStride;
 
-        // a lot of these parameters are ignored as they are overridden by the buffer
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The old code `this._divisor || divisor` always used this._divisor since it is
+            initialized to `divisor || 1` (always >= 1), making the divisor parameter to
+            createVertexBuffer dead code. Using `divisor ?? this._divisor` allows callers
+            to explicitly override the divisor (including with 0), while still falling back
+            to the buffer's divisor when not specified.
+        */
         return new VertexBuffer(
             this._engine,
             this,
@@ -113,7 +121,7 @@ export class Buffer {
             undefined,
             undefined,
             true,
-            this._divisor || divisor
+            divisor ?? this._divisor
         );
     }
 
@@ -461,8 +469,16 @@ export class VertexBuffer {
         }
 
         if (Array.isArray(data)) {
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The old formula `data.length / (this.byteStride / 4) - this.byteOffset / 4`
+                subtracted byteOffset in float units instead of vertex units. This produced
+                incorrect results when byteStride != 4. The correct formula matches the typed
+                array branch: (totalBytes - offsetBytes) / strideBytes.
+            */
             // data is a regular number[] with float values
-            return data.length / (this.byteStride / 4) - this.byteOffset / 4;
+            return (data.length * 4 - this.byteOffset) / this.byteStride;
         }
 
         return (data.byteLength - this.byteOffset) / this.byteStride;

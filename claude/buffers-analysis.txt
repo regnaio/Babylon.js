@@ -1,0 +1,174 @@
+================================================================================
+ ANALYSIS OF packages/dev/core/src/Buffers/
+================================================================================
+
+Files analyzed:
+  1. index.ts
+  2. buffer.ts
+  3. buffer.align.ts
+  4. buffer.nonFloatVertexBuffers.ts
+  5. bufferUtils.ts
+  6. dataBuffer.ts
+  7. storageBuffer.ts
+
+================================================================================
+ FILE-BY-FILE SUMMARY
+================================================================================
+
+--- index.ts ---
+Central barrel export. Re-exports everything from buffer.ts, bufferUtils.ts,
+dataBuffer.ts, and storageBuffer.ts. Side-effect imports buffer.align.ts (which
+augments the VertexBuffer prototype). Does NOT export
+buffer.nonFloatVertexBuffers.ts (that is imported directly where needed).
+
+--- buffer.ts ---
+Contains three major exports:
+  - Buffer class: Wraps a native DataBuffer (GPU buffer). Manages creation,
+    updating, and disposal of vertex data. Supports updatable/static modes,
+    instanced rendering, and deferred creation.
+  - VertexBuffer class: Specialized buffer for vertex attributes. Wraps a Buffer
+    instance. Manages type, stride, offset, normalization, instancing, and hash
+    code computation. Contains static helpers for deducing stride from kind,
+    type detection, and deprecated forwarding methods to bufferUtils.
+  - IVertexBufferOptions interface: Options object for VertexBuffer constructor.
+
+Key relationships:
+  - Buffer uses DataBuffer internally
+  - VertexBuffer wraps Buffer internally
+  - VertexBuffer imports GetTypeByteLength, EnumerateFloatValues, GetFloatData
+    from bufferUtils.ts
+  - 87+ files across the codebase import from this file
+
+--- buffer.align.ts ---
+Module augmentation for VertexBuffer. Adds alignment support for engines that
+require 4-byte aligned vertex buffer strides/offsets (e.g., WebGPU via the
+forceVertexBufferStrideAndOffsetMultiple4Bytes flag). Augments VertexBuffer with:
+  - effectiveByteStride, effectiveByteOffset, effectiveBuffer properties
+  - _alignedBuffer internal storage
+  - Overrides _rebuild() and dispose() to handle aligned buffer lifecycle
+  - Overrides getWrapperBuffer() to return aligned buffer when present
+  - Implements _alignBuffer() which re-packs vertex data with 4-byte aligned
+    stride when needed
+
+--- buffer.nonFloatVertexBuffers.ts ---
+Exports checkNonFloatVertexBuffers() function. Detects when vertex buffers that
+are expected to be float are actually integer types, and triggers shader
+recompilation to update the shader code accordingly. Used by WebGPU and native
+engine pipelines.
+
+--- bufferUtils.ts ---
+Pure utility functions for buffer data manipulation:
+  - GetTypeByteLength: Maps component types to byte sizes
+  - GetTypedArrayConstructor: Maps component types to TypedArray constructors
+  - EnumerateFloatValues: Iterator over vertex data with type conversion
+  - GetFloatData: Converts arbitrary vertex data to Float32Array
+  - GetTypedArrayData: Converts to matching typed array
+  - CopyFloatData: Copies vertex data into an existing Float32Array
+  - AreIndices32Bits: Checks if indices require 32-bit storage
+  - CreateAlignedTypedArray: Creates 4-byte aligned typed arrays
+  - GetBlobBufferSource: Converts SharedArrayBuffer views to ArrayBuffer
+
+--- dataBuffer.ts ---
+Simple base class for GPU buffer handles. Properties: references (ref count),
+capacity, is32Bits, uniqueId. The underlyingResource getter returns null (meant
+to be overridden by engine-specific subclasses). Used as the low-level wrapper
+around WebGL/WebGPU buffer objects.
+
+--- storageBuffer.ts ---
+Wrapper for GPU storage buffers (read/write from compute shaders). WebGPU-
+specific. Registers itself with engine._storageBuffers on creation, removes
+itself on dispose. Supports create, update, read (async), clear, and dispose.
+The _rebuild method recreates the buffer (used after context loss).
+
+================================================================================
+ IMPORT/DEPENDENCY MAP
+================================================================================
+
+index.ts
+  ├── exports * from ./buffer
+  ├── exports * from ./bufferUtils
+  ├── exports * from ./dataBuffer
+  ├── exports * from ./storageBuffer
+  └── side-effect imports ./buffer.align
+
+buffer.ts
+  ├── imports: types (Nullable, DataArray, FloatArray), AbstractEngine,
+  │   DataBuffer, Mesh (for legacy compat), Logger, Constants
+  ├── imports from bufferUtils: EnumerateFloatValues, GetFloatData,
+  │   GetTypeByteLength
+  └── exports: Buffer, VertexBuffer, IVertexBufferOptions
+
+buffer.align.ts
+  ├── imports: Nullable type, DataBuffer type, Buffer, VertexBuffer,
+  │   GetTypeByteLength
+  └── exports: nothing (side-effect module augmentation)
+
+buffer.nonFloatVertexBuffers.ts
+  ├── imports: Nullable type, _IShaderProcessingContext type, Effect type,
+  │   VertexBuffer (from ../Meshes/buffer - backwards-compat path)
+  └── exports: checkNonFloatVertexBuffers
+
+bufferUtils.ts
+  ├── imports: Constants, Logger, type aliases
+  └── exports: all utility functions
+
+dataBuffer.ts
+  ├── imports: none
+  └── exports: DataBuffer
+
+storageBuffer.ts
+  ├── imports: DataBuffer type, DataArray type, WebGPUEngine type, Constants
+  └── exports: StorageBuffer
+
+================================================================================
+ BUGS FOUND
+================================================================================
+
+BUG 1: CopyFloatData - Incorrect output.set() usage (bufferUtils.ts:413)
+------------------------------------------------------------------------
+In the Array branch of CopyFloatData, the code does:
+    const offset = byteOffset / 4;
+    output.set(input, offset);
+
+TypedArray.prototype.set(array, targetOffset) uses the second argument as the
+TARGET offset in the output array, not the SOURCE offset. This means it copies
+input[0..N] into output[offset..offset+N], but the intent is to copy
+input[offset..offset+count] into output[0..count].
+
+Fix: output.set(input.slice(offset, offset + count))
+
+BUG 2: _maxVerticesCount - Wrong offset formula for arrays (buffer.ts:465)
+---------------------------------------------------------------------------
+The array branch computes:
+    data.length / (this.byteStride / 4) - this.byteOffset / 4
+
+This subtracts byteOffset/4 (offset in float units), but should subtract
+byteOffset/byteStride (offset in vertex units) to match the typed array formula:
+    (data.byteLength - this.byteOffset) / this.byteStride
+
+For arrays, the equivalent correct formula is:
+    (data.length * 4 - this.byteOffset) / this.byteStride
+
+Example: data.length=100, byteStride=12, byteOffset=24
+  Current: 400/12 - 24/4 = 33.33 - 6 = 27.33
+  Correct: (400-24)/12 = 376/12 = 31.33
+
+BUG 3: createVertexBuffer - divisor parameter is dead code (buffer.ts:116)
+---------------------------------------------------------------------------
+The createVertexBuffer method passes `this._divisor || divisor` to the
+VertexBuffer constructor. Since this._divisor is always >= 1 (set as
+`divisor || 1` in Buffer constructor), the || short-circuits and the
+divisor parameter to createVertexBuffer can never take effect.
+
+Fix: Use `divisor ?? this._divisor` so the caller can explicitly override.
+
+================================================================================
+ IMPROVEMENTS
+================================================================================
+
+IMPROVEMENT 1: Canonical import path (buffer.nonFloatVertexBuffers.ts:4)
+------------------------------------------------------------------------
+The file is inside packages/dev/core/src/Buffers/ but imports VertexBuffer from
+"../Meshes/buffer" (a backwards-compatibility re-export shim). It should import
+from "./buffer" directly, since it's in the same directory as the canonical
+source.
