@@ -55,7 +55,13 @@ export class FrameNodePortPropertyTabComponent extends React.Component<IFrameNod
             <div id="propertyTab">
                 <div id="header">
                     <img id="logo" src="https://www.babylonjs.com/Assets/logo-babylonjs-social-twitter.png" />
-                    <div id="title">NODE MATERIAL EDITOR</div>
+                    {/*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        The title previously read "NODE MATERIAL EDITOR" which was a copy-paste
+                        error from the Node Material Editor. This is the Node Geometry Editor.
+                    */}
+                    <div id="title">NODE GEOMETRY EDITOR</div>
                 </div>
                 <div>
                     <LineContainerComponent title="GENERAL">

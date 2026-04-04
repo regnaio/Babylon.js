@@ -66,8 +66,12 @@ export class MeshPropertyTabComponent extends React.Component<IPropertyComponent
 
         if (scene) {
             meshes = scene.meshes.filter((m) => !!m.name && m.getTotalVertices() > 0);
-            meshes.sort((a, b) => a.name.localeCompare(b.name));
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
 
+                The sort call was duplicated — meshes.sort() was called twice in a row with
+                the same comparator. Removed the redundant second call.
+            */
             meshes.sort((a, b) => a.name.localeCompare(b.name));
 
             meshOptions.push(

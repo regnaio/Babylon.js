@@ -138,11 +138,20 @@ export class TextureLineComponent extends React.Component<ITextureLineComponentP
                         }
 
                         if (options.displayAlpha) {
-                            const alpha = data[i + 2];
+                            /*
+                                Feel free to delete this comment that explains why Claude made this change:
+
+                                The alpha display logic had two bugs: it was reading from data[i+2] (the blue channel)
+                                instead of data[i+3] (the alpha channel), and then it was setting data[i+2] = 0 after
+                                already assigning it the alpha value, which was contradictory. The fix reads the actual
+                                alpha from data[i+3], sets all RGB channels to that value for grayscale visualization,
+                                and sets alpha to 255 for full opacity so the preview is visible.
+                            */
+                            const alpha = data[i + 3];
                             data[i] = alpha;
                             data[i + 1] = alpha;
                             data[i + 2] = alpha;
-                            data[i + 2] = 0;
+                            data[i + 3] = 255;
                         }
                     }
                 }

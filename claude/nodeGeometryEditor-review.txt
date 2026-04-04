@@ -1,0 +1,103 @@
+Node Geometry Editor - Full Code Review Summary
+=================================================
+
+Reviewer: Claude (Opus 4.6)
+Date: 2026-04-04
+Scope: All TypeScript/TSX files in packages/tools/nodeGeometryEditor/src/
+
+Files Reviewed (50 total):
+- index.ts, globalState.ts, nodeGeometryEditor.ts, blockTools.ts, serializationTools.ts
+- portal.tsx, graphEditor.tsx, custom.d.ts, legacy/legacy.ts
+- components/log/logComponent.tsx
+- components/nodeList/nodeListComponent.tsx
+- components/preview/previewAreaComponent.tsx, previewManager.ts, previewMeshControlComponent.tsx, previewMode.ts
+- components/propertyTab/propertyTabComponent.tsx, inputsPropertyTabComponent.tsx
+- components/propertyTab/properties/floatPropertyTabComponent.tsx, vector2PropertyTabComponent.tsx, vector3PropertyTabComponent.tsx, vector4PropertyTabComponent.tsx
+- graphSystem/blockNodeData.ts, connectionPointPortData.ts
+- graphSystem/registerDebugSupport.ts, registerDefaultInput.ts, registerElbowSupport.ts, registerExportData.ts, registerNodePortDesign.ts, registerToDisplayLedger.ts, registerToPropertyLedger.ts, registerToTypeLedger.ts
+- graphSystem/display/debugDisplayManager.ts, elbowDisplayManager.ts, inputDisplayManager.ts, outputDisplayManager.ts, sourceDisplayManager.ts, teleportInDisplayManager.ts, teleportOutDisplayManager.ts, textureDisplayManager.ts
+- graphSystem/properties/debugNodePropertyComponent.tsx, frameNodePortPropertyComponent.tsx, framePropertyComponent.tsx, genericNodePropertyComponent.tsx, inputNodePropertyComponent.tsx, meshNodePropertyComponent.tsx, nodePortPropertyComponent.tsx, outputNodePropertyComponent.tsx, pointListNodePropertyComponent.tsx, teleportOutNodePropertyComponent.tsx, textureNodePropertyComponent.tsx
+- sharedComponents/checkBoxLineComponent.tsx, textureLineComponent.tsx
+
+==========================================
+BUGS FOUND
+==========================================
+
+1. [BUG - CRITICAL] registerElbowSupport.ts
+   File: graphSystem/registerElbowSupport.ts
+   Issue: Uses NodeMaterial types (NodeMaterialBlockConnectionPointTypes, NodeMaterialConnectionPoint)
+          instead of NodeGeometry types (NodeGeometryBlockConnectionPointTypes, NodeGeometryConnectionPoint).
+          This is a copy-paste error from the Node Material Editor. The elbow support validation
+          is checking against the wrong type enum entirely (NodeMaterialBlockConnectionPointTypes.Object
+          does not exist in the geometry context), which means the guard clause is never triggered,
+          effectively allowing elbow connections on ALL types including ones that shouldn't have them.
+   Fix: Replace NodeMaterial imports and types with NodeGeometry equivalents.
+
+2. [BUG - UI] framePropertyComponent.tsx (line 54)
+   File: graphSystem/properties/framePropertyComponent.tsx
+   Issue: Title reads "NODE MATERIAL EDITOR" instead of "NODE GEOMETRY EDITOR".
+          This is a copy-paste error from the Node Material Editor.
+   Fix: Change the title text.
+
+3. [BUG - UI] frameNodePortPropertyComponent.tsx (line 58)
+   File: graphSystem/properties/frameNodePortPropertyComponent.tsx
+   Issue: Title reads "NODE MATERIAL EDITOR" instead of "NODE GEOMETRY EDITOR".
+          Same copy-paste error as above.
+   Fix: Change the title text.
+
+4. [BUG] textureLineComponent.tsx (lines 140-146)
+   File: sharedComponents/textureLineComponent.tsx
+   Issue: In the alpha display branch, the code reads from data[i+2] (blue channel)
+          instead of data[i+3] (alpha channel). Additionally, it sets data[i+2] = 0
+          after already assigning it the alpha value, which is contradictory.
+          The correct logic should read the alpha from data[i+3], set RGB to that value,
+          and leave the alpha channel at 255 for full opacity.
+   Fix: Read from data[i+3] and set data[i+3] = 255 for opacity.
+
+==========================================
+OPTIMIZATIONS / CODE QUALITY
+==========================================
+
+5. [OPTIMIZATION] nodeListComponent.tsx (lines 404-427)
+   File: components/nodeList/nodeListComponent.tsx
+   Issue: The block registration code (registering blocks to NodeLedger and setting
+          NameFormatter) is inside the outer `for (const key in allBlocks)` loop.
+          This means it re-registers ALL blocks and re-sets the NameFormatter callback
+          for every single category, doing redundant work on each render.
+   Fix: Move the registration code outside the loop.
+
+6. [CODE QUALITY] meshNodePropertyComponent.tsx (line 70)
+   File: graphSystem/properties/meshNodePropertyComponent.tsx
+   Issue: meshes.sort((a, b) => a.name.localeCompare(b.name)) is called twice
+          in a row with the same comparator. The second call is redundant.
+   Fix: Remove the duplicate sort call.
+
+7. [CODE QUALITY] propertyTabComponent.tsx (saveToSnippetServer, lines 170 vs 181)
+   File: components/propertyTab/propertyTabComponent.tsx
+   Issue: In saveToSnippetServer(), `dataToSend` is referenced in the onreadystatechange
+          callback (line 170) before its declaration (line 181). This works at runtime
+          because the callback executes asynchronously after send(), but the code ordering
+          is confusing and fragile. Moving the declaration before the callback assignment
+          makes the code clearer and less error-prone.
+   Fix: Move `dataToSend` declaration above the callback.
+
+==========================================
+NO ISSUES (files reviewed and found clean)
+==========================================
+
+The following files were reviewed and found to be well-structured with no issues:
+- index.ts, globalState.ts, nodeGeometryEditor.ts, blockTools.ts, serializationTools.ts
+- portal.tsx, custom.d.ts, legacy/legacy.ts, previewMode.ts
+- logComponent.tsx, previewAreaComponent.tsx, previewMeshControlComponent.tsx
+- inputsPropertyTabComponent.tsx, floatPropertyTabComponent.tsx
+- vector2PropertyTabComponent.tsx, vector3PropertyTabComponent.tsx, vector4PropertyTabComponent.tsx
+- blockNodeData.ts, connectionPointPortData.ts
+- registerDebugSupport.ts, registerDefaultInput.ts, registerExportData.ts
+- registerNodePortDesign.ts, registerToDisplayLedger.ts, registerToPropertyLedger.ts, registerToTypeLedger.ts
+- All display managers (debug, elbow, input, output, source, teleportIn, teleportOut, texture)
+- genericNodePropertyComponent.tsx, inputNodePropertyComponent.tsx
+- outputNodePropertyComponent.tsx, debugNodePropertyComponent.tsx
+- teleportOutNodePropertyComponent.tsx, textureNodePropertyComponent.tsx
+- nodePortPropertyComponent.tsx, pointListNodePropertyComponent.tsx
+- checkBoxLineComponent.tsx
+- previewManager.ts, graphEditor.tsx

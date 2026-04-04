@@ -137,6 +137,23 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
 
         const json = SerializationTools.Serialize(geometry, this.props.globalState);
 
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The dataToSend variable was previously declared after the onreadystatechange callback
+            that referenced it. While this worked at runtime (because the callback fires
+            asynchronously after send()), it made the code confusing and fragile. Moving the
+            declaration before the callback makes the data flow clearer.
+        */
+        const dataToSend = {
+            payload: JSON.stringify({
+                nodeGeometry: json,
+            }),
+            name: "",
+            description: "",
+            tags: "",
+        };
+
         xmlHttp.onreadystatechange = () => {
             if (xmlHttp.readyState == 4) {
                 if (xmlHttp.status == 200) {
@@ -177,15 +194,6 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
 
         xmlHttp.open("POST", NodeGeometry.SnippetUrl + (geometry.snippetId ? "/" + geometry.snippetId : ""), true);
         xmlHttp.setRequestHeader("Content-Type", "application/json");
-
-        const dataToSend = {
-            payload: JSON.stringify({
-                nodeGeometry: json,
-            }),
-            name: "",
-            description: "",
-            tags: "",
-        };
 
         xmlHttp.send(JSON.stringify(dataToSend));
     }

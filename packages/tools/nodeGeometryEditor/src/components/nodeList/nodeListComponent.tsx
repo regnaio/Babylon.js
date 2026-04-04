@@ -400,32 +400,41 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                     </LineContainerComponent>
                 );
             }
+        }
 
-            // Register blocks
-            const ledger = NodeLedger.RegisteredNodeNames;
-            for (const key in allBlocks) {
-                const blocks = allBlocks[key] as string[];
-                if (blocks.length) {
-                    for (const block of blocks) {
-                        if (!ledger.includes(block)) {
-                            ledger.push(block);
-                        }
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The block registration code (registering to NodeLedger and setting NameFormatter)
+            was previously inside the outer `for (const key in allBlocks)` loop. This meant
+            it re-registered ALL blocks and re-set the NameFormatter callback redundantly for
+            every single category on each render. Moving it outside the loop ensures it only
+            runs once per render call.
+        */
+        // Register blocks
+        const ledger = NodeLedger.RegisteredNodeNames;
+        for (const key in allBlocks) {
+            const blocks = allBlocks[key] as string[];
+            if (blocks.length) {
+                for (const block of blocks) {
+                    if (!ledger.includes(block)) {
+                        ledger.push(block);
                     }
                 }
             }
-            NodeLedger.NameFormatter = (name) => {
-                let finalName: string;
-                // custom frame
-                if (name.endsWith("Custom")) {
-                    const nameIndex = name.lastIndexOf("Custom");
-                    finalName = name.substring(0, nameIndex);
-                    finalName += " [custom]";
-                } else {
-                    finalName = name.replace("Block", "");
-                }
-                return finalName;
-            };
         }
+        NodeLedger.NameFormatter = (name) => {
+            let finalName: string;
+            // custom frame
+            if (name.endsWith("Custom")) {
+                const nameIndex = name.lastIndexOf("Custom");
+                finalName = name.substring(0, nameIndex);
+                finalName += " [custom]";
+            } else {
+                finalName = name.replace("Block", "");
+            }
+            return finalName;
+        };
 
         return (
             <div id="ngeNodeList">
