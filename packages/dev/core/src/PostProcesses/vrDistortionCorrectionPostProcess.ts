@@ -15,9 +15,17 @@ export class VRDistortionCorrectionPostProcess extends PostProcess {
     private _distortionFactors: number[];
     private _postProcessScaleFactor: number;
     private _lensCenterOffset: number;
-    private _scaleIn: Vector2;
-    private _scaleFactor: Vector2;
-    private _lensCenter: Vector2;
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        These fields were previously declared without initialization and only set inside
+        onSizeChangedObservable. If onApplyObservable fired before onSizeChanged (e.g.
+        before the first resize event), accessing .x/.y on undefined would throw a
+        runtime error. Initializing with default Vector2 values prevents this crash.
+    */
+    private _scaleIn: Vector2 = Vector2.Zero();
+    private _scaleFactor: Vector2 = Vector2.Zero();
+    private _lensCenter: Vector2 = new Vector2(0.5, 0.5);
 
     /**
      * Gets a string identifying the name of the class

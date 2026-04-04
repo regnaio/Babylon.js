@@ -622,10 +622,22 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
             meshPosition = this.mesh.parent ? this.mesh.getAbsolutePosition() : this.mesh.position;
         }
 
-        const pos = Vector3.Project(meshPosition, Matrix.Identity(), transform, this._viewPort);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
 
-        this._screenCoordinates.x = pos.x / this._viewPort.width;
-        this._screenCoordinates.y = pos.y / this._viewPort.height;
+            The viewport was previously computed once in the constructor and never updated.
+            If the engine/canvas was resized after construction, the stale viewport dimensions
+            would cause incorrect screen coordinate calculations for the light source position,
+            making the light scattering effect appear offset. Now we recompute the viewport
+            each frame using the current engine dimensions.
+        */
+        const engine = scene.getEngine();
+        const viewport = new Viewport(0, 0, 1, 1).toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
+
+        const pos = Vector3.Project(meshPosition, Matrix.Identity(), transform, viewport);
+
+        this._screenCoordinates.x = pos.x / viewport.width;
+        this._screenCoordinates.y = pos.y / viewport.height;
 
         if (this.invert) {
             this._screenCoordinates.y = 1.0 - this._screenCoordinates.y;

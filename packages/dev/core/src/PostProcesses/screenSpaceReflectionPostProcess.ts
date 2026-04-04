@@ -15,7 +15,13 @@ import { RegisterClass } from "../Misc/typeStore";
 
 import { type AbstractEngine } from "../Engines/abstractEngine";
 import { type Scene } from "../scene";
-import { Logger } from "core/Misc/logger";
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    Changed from non-portable "core/Misc/logger" import path to relative "../Misc/logger"
+    for consistency with all other imports in this file, which use relative paths.
+*/
+import { Logger } from "../Misc/logger";
 
 /**
  * The ScreenSpaceReflectionPostProcess performs realtime reflections using only and only the available informations on the screen (positions and normals).

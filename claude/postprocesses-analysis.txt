@@ -118,9 +118,45 @@ OTHER OBSERVATIONS (NOT FIXED - by design or low risk)
   meaning forceDepthStencil is always true in _prepareFrame. This appears intentional
   as a safety measure for the initial render pass.
 
+- subSurfaceScatteringPostProcess.ts:74-77 - Uses non-null assertion on
+  scene.activeCamera without checking. While technically could crash if no active
+  camera, subsurface scattering inherently requires a camera to function.
+
+- thinSSAO2PostProcess.ts:188 - _randomTexture.dispose() could throw if
+  _createRandomTexture failed, but in practice the constructor always calls it
+  synchronously so the texture is always initialized.
+
+- motionBlurPostProcess.ts:230 - The condition checking _forcedGeometryBuffer
+  is confusing (checks the nullable instance, not the boolean flag) but logically
+  correct in all code paths.
+
 - The "thin" variants (thinBlurPostProcess, thinBloomEffect, etc.) serve as the
   underlying implementation that the regular post processes delegate to. This pattern
   is consistent and well-structured throughout the codebase.
 
 - The RenderPipeline infrastructure is well-organized with clear separation between
   effects, pipelines, and the pipeline manager.
+
+================================================================================
+ADDITIONAL FIXES (COMMIT 3)
+================================================================================
+
+12. [BUG] vrDistortionCorrectionPostProcess.ts - Uninitialized fields can crash
+    File: vrDistortionCorrectionPostProcess.ts, lines 18-20
+    Description: _scaleIn, _scaleFactor, and _lensCenter were only initialized inside
+    onSizeChangedObservable. If onApplyObservable fired before onSizeChanged (before
+    the first resize event), accessing .x/.y on undefined would throw a runtime error.
+    Fixed by initializing with default Vector2 values.
+
+13. [BUG] volumetricLightScatteringPostProcess.ts - Stale viewport after engine resize
+    File: volumetricLightScatteringPostProcess.ts, line 160 and 613-633
+    Description: _viewPort was computed once in the constructor using engine dimensions.
+    If the canvas/engine was resized after construction, the stale viewport would cause
+    incorrect screen coordinate calculations for the light source position, making the
+    light scattering effect appear offset after a window resize. Fixed by recomputing
+    the viewport each frame in _updateMeshScreenCoordinates.
+
+14. [IMPROVEMENT] screenSpaceReflectionPostProcess.ts - Inconsistent import path
+    File: screenSpaceReflectionPostProcess.ts, line 18
+    Description: Changed from non-portable "core/Misc/logger" import path to relative
+    "../Misc/logger" for consistency with all other imports in the file.
