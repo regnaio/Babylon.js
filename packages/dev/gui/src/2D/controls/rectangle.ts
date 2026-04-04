@@ -55,6 +55,16 @@ export class Rectangle extends Container {
             return;
         }
         this._cornerRadius[0] = value;
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The individual corner radius setters (X, Y, Z, W) were missing _markAsDirty()
+            calls. Setting cornerRadiusX/Y/Z/W individually would change the internal
+            value but never trigger a visual redraw. Only the combined cornerRadius setter
+            called _markAsDirty(). This fix ensures each individual setter also triggers
+            a redraw, consistent with how the combined setter works.
+        */
+        this._markAsDirty();
     }
 
     /** Gets or sets the corner radius top right angle */
@@ -68,6 +78,7 @@ export class Rectangle extends Container {
             return;
         }
         this._cornerRadius[1] = value;
+        this._markAsDirty();
     }
 
     /** Gets or sets the corner radius bottom left angle */
@@ -81,6 +92,7 @@ export class Rectangle extends Container {
             return;
         }
         this._cornerRadius[2] = value;
+        this._markAsDirty();
     }
 
     /** Gets or sets the corner radius bottom right angle */
@@ -94,6 +106,7 @@ export class Rectangle extends Container {
             return;
         }
         this._cornerRadius[3] = value;
+        this._markAsDirty();
     }
 
     /**

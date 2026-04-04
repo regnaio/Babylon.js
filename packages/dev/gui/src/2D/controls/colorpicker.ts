@@ -510,7 +510,14 @@ export class ColorPicker extends Control {
             const buttonColor: string = "#c0c0c0";
             const buttonBackgroundColor: string = "#535353";
             const buttonBackgroundHoverColor: string = "#414141";
-            const buttonBackgroundClickColor: string = "515151";
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The hex color string was missing the "#" prefix. Without it, the browser
+                cannot interpret "515151" as a valid CSS color, so the click background
+                color for buttons in ShowPickerDialogAsync would not render correctly.
+            */
+            const buttonBackgroundClickColor: string = "#515151";
             const buttonDisabledColor: string = "#555555";
             const buttonDisabledBackgroundColor: string = "#454545";
             const currentSwatchesOutlineColor: string = "#404040";

@@ -355,8 +355,16 @@ export class Image extends Control {
             rotatedImage._stretch = this._stretch;
             rotatedImage._autoScale = this._autoScale;
             rotatedImage._cellId = this._cellId;
-            rotatedImage._cellWidth = n % 1 ? this._cellHeight : this._cellWidth;
-            rotatedImage._cellHeight = n % 1 ? this._cellWidth : this._cellHeight;
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The original code used `n % 1` to decide whether to swap cell width/height
+                on rotation, but n % 1 is always 0 for integer values, so the swap never
+                occurred. The correct check is `n % 2` which is truthy for odd rotation
+                counts (90° and 270°), where width and height should be swapped.
+            */
+            rotatedImage._cellWidth = n % 2 ? this._cellHeight : this._cellWidth;
+            rotatedImage._cellHeight = n % 2 ? this._cellWidth : this._cellHeight;
         }
 
         this._handleRotationForSVGImage(this, rotatedImage, n);

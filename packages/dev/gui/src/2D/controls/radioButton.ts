@@ -162,13 +162,19 @@ export class RadioButton extends Control {
         if (this._isChecked) {
             context.fillStyle = this._isEnabled ? this.color : this._disabledColor;
             const offsetWidth = actualWidth * this._checkSizeRatio;
-            const offseHeight = actualHeight * this._checkSizeRatio;
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                Fixed typo: "offseHeight" was missing the "t" — should be "offsetHeight"
+                for consistency with "offsetWidth" above.
+            */
+            const offsetHeight = actualHeight * this._checkSizeRatio;
 
             Control.drawEllipse(
                 this._currentMeasure.left + this._currentMeasure.width / 2,
                 this._currentMeasure.top + this._currentMeasure.height / 2,
                 offsetWidth / 2 - this._thickness / 2,
-                offseHeight / 2 - this._thickness / 2,
+                offsetHeight / 2 - this._thickness / 2,
                 1,
                 context
             );

@@ -953,7 +953,15 @@ export class InputText extends Control {
 
         if (this._isFocused && this._textWidth > availableWidth) {
             const textLeft = clipTextLeft - this._textWidth + availableWidth;
-            if (!this._scrollLeft) {
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The original check `if (!this._scrollLeft)` treated 0 as falsy, meaning a
+                valid scroll position of 0 would be overwritten with textLeft. This caused
+                incorrect scroll resets. Using `== null` correctly checks for null/undefined
+                without falsely matching 0.
+            */
+            if (this._scrollLeft == null) {
                 this._scrollLeft = textLeft;
             }
         } else {

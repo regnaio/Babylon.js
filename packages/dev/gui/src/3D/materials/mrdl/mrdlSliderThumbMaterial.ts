@@ -462,7 +462,14 @@ export class MRDLSliderThumbMaterial extends PushMaterial {
     /**
      * @internal
      */
-    public globaRightIndexTipPosition = new Vector4(0.0, 0.0, 0.0, 1.0);
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Fixed typo: "globaRightIndexTipPosition" was missing the "l" in "global".
+        Since this property is marked @internal, we can safely rename it without
+        worrying about external API consumers.
+    */
+    public globalRightIndexTipPosition = new Vector4(0.0, 0.0, 0.0, 1.0);
 
     /**
      * @internal
@@ -656,7 +663,15 @@ export class MRDLSliderThumbMaterial extends PushMaterial {
                 "Global_Right_Index_Tip_Position",
                 "Global_Left_Thumb_Tip_Position",
                 "Global_Right_Thumb_Tip_Position",
-                "Global_Left_Index_Middle_Position;",
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The uniform name had a trailing semicolon ("Global_Left_Index_Middle_Position;")
+                    but the bind call uses the name without the semicolon. This meant the uniform
+                    was never matched during shader binding, so the left index middle position was
+                    never uploaded to the GPU.
+                */
+                "Global_Left_Index_Middle_Position",
                 "Global_Right_Index_Middle_Position",
                 "Global_Left_Index_Tip_Proximity",
                 "Global_Right_Index_Tip_Proximity",
@@ -835,7 +850,7 @@ export class MRDLSliderThumbMaterial extends PushMaterial {
         this._activeEffect.setFloat("Use_Global_Right_Index", this.useGlobalRightIndex);
 
         this._activeEffect.setVector4("Global_Left_Index_Tip_Position", this.globalLeftIndexTipPosition);
-        this._activeEffect.setVector4("Global_Right_Index_Tip_Position", this.globaRightIndexTipPosition);
+        this._activeEffect.setVector4("Global_Right_Index_Tip_Position", this.globalRightIndexTipPosition);
 
         this._activeEffect.setVector4("Global_Left_Thumb_Tip_Position", this.globalLeftThumbTipPosition);
         this._activeEffect.setVector4("Global_Right_Thumb_Tip_Position", this.globalRightThumbTipPosition);

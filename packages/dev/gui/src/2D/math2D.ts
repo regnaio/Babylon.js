@@ -80,7 +80,17 @@ export class Matrix2D {
         const l5 = this.m[5];
 
         const det = this.determinant();
-        if (det < Epsilon * Epsilon) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The determinant can be negative for matrices with reflection/negative scaling.
+            The original check `det < Epsilon * Epsilon` only catches near-zero positive
+            determinants. A small negative determinant (e.g., -0.000001) would pass this
+            check and produce a near-infinite inverse matrix, causing wildly incorrect
+            coordinate transformations. Using Math.abs ensures both small positive and
+            small negative determinants are caught.
+        */
+        if (Math.abs(det) < Epsilon * Epsilon) {
             result.m[0] = 0;
             result.m[1] = 0;
             result.m[2] = 0;

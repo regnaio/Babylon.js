@@ -410,9 +410,18 @@ export class HolographicSlate extends ContentDisplay3D {
             offset.subtractInPlace(origin);
             projectedOffset.copyFromFloats(Vector3.Dot(offset, rightWorld), Vector3.Dot(offset, upWorld));
 
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The drag callback computed projectedOffset (the offset projected onto the
+                slate's local right/up axes) but then used the raw 3D world-space offset.x
+                and offset.y values instead. This produced incorrect panning when the slate
+                was rotated, since offset.x/y are in world space, not relative to the
+                slate surface. Now correctly uses the projected 2D coordinates.
+            */
             // By default, content takes full width available and height is cropped to keep aspect ratio
-            this._contentViewport.x = Scalar.Clamp(startViewport.x - offset.x, 0, 1 - this._contentViewport.width * this._contentScaleRatio);
-            this._contentViewport.y = Scalar.Clamp(startViewport.y - offset.y, 0, 1 - this._contentViewport.height * this._contentScaleRatio);
+            this._contentViewport.x = Scalar.Clamp(startViewport.x - projectedOffset.x, 0, 1 - this._contentViewport.width * this._contentScaleRatio);
+            this._contentViewport.y = Scalar.Clamp(startViewport.y - projectedOffset.y, 0, 1 - this._contentViewport.height * this._contentScaleRatio);
             this._applyContentViewport();
         });
     }
@@ -493,6 +502,14 @@ export class HolographicSlate extends ContentDisplay3D {
         super.dispose();
         this._titleBarMaterial.dispose();
         this._contentMaterial.dispose();
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            _backMaterial was created in _affectMaterial but was never disposed here,
+            causing a memory leak. Every HolographicSlate instance would leak one
+            FluentBackplateMaterial on disposal.
+        */
+        this._backMaterial.dispose();
 
         this._titleBar.dispose();
         this._titleBarTitle.dispose();

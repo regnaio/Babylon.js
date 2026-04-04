@@ -264,7 +264,15 @@ export class TouchHolographicButton extends TouchButton3D {
         this.pointerUpAnimation = () => {
             if (this._frontPlate) {
                 this._frontPlate.scaling.z = this._frontPlateDepth;
-                this._frontPlate.position = Vector3.Forward(this._frontPlate._scene.useRightHandedSystem).scale((this._frontPlateDepth - this._frontPlateDepth) / 2);
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The original expression `(this._frontPlateDepth - this._frontPlateDepth) / 2`
+                    always evaluates to 0, making the Vector3.Forward().scale() call produce a
+                    zero vector. Using Vector3.Zero() directly makes the intent clear and avoids
+                    the unnecessary Forward() allocation and scale computation.
+                */
+                this._frontPlate.position = Vector3.Zero();
                 this._textPlate.position = Vector3.Forward(this._textPlate._scene.useRightHandedSystem).scale(-(this._backPlateDepth + this._frontPlateDepth) / 2);
             }
         };

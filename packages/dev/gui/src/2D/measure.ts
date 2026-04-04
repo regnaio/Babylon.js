@@ -93,7 +93,16 @@ export class Measure {
         TmpRect[3].copyFromFloats(left, top + height);
 
         TmpV1.copyFromFloats(Number.MAX_VALUE, Number.MAX_VALUE);
-        TmpV2.copyFromFloats(0, 0);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The max bound (TmpV2) was initialized to (0, 0) instead of negative infinity.
+            If all four transformed corner coordinates are negative (which happens when a
+            control is positioned off-screen to the left/top), the Math.max calls would
+            never update TmpV2, incorrectly clamping the bounding box maximum to 0.
+            Using -Number.MAX_VALUE ensures the first real coordinate always wins.
+        */
+        TmpV2.copyFromFloats(-Number.MAX_VALUE, -Number.MAX_VALUE);
         for (let i = 0; i < 4; i++) {
             transform.transformCoordinates(TmpRect[i].x, TmpRect[i].y, TmpRect2[i]);
             TmpV1.x = Math.floor(Math.min(TmpV1.x, TmpRect2[i].x));

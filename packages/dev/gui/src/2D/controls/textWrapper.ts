@@ -84,7 +84,16 @@ export class TextWrapper {
     }
 
     public isWord(index: number): boolean {
-        const rWord = /\w/g;
-        return this._characters ? this._characters[index].search(rWord) !== -1 : this._text.search(rWord) !== -1;
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            When _characters was null/undefined, the original fallback searched the entire
+            _text string for any word character, ignoring the index parameter entirely.
+            This meant isWord() would return true for ANY index as long as the text
+            contained at least one word character. The fix correctly checks only the
+            character at the specified index using charAt().
+        */
+        const rWord = /\w/;
+        return this._characters ? this._characters[index].search(rWord) !== -1 : rWord.test(this._text.charAt(index));
     }
 }

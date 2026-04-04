@@ -1,0 +1,220 @@
+================================================================================
+  BABYLON.JS GUI PACKAGE - COMPREHENSIVE CODE REVIEW SUMMARY
+  Reviewed: packages/dev/gui/src/ (~100 TypeScript files)
+  Date: 2026-04-03
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. BUGS FIXED (with code changes)
+2. ISSUES IDENTIFIED BUT NOT FIXED (design decisions, breaking changes, etc.)
+
+================================================================================
+1. BUGS FIXED (with code changes applied)
+================================================================================
+
+--- 2D CORE ---
+
+FIX-01: math2D.ts - Matrix2D.invertToRef determinant check
+  Line: ~83
+  Severity: HIGH
+  The determinant check `if (det < Epsilon * Epsilon)` fails to handle small
+  negative determinants. A matrix with det=-0.000001 would pass the check and
+  produce a near-infinite inverse matrix. Fix: use Math.abs(det).
+
+FIX-02: measure.ts - addAndTransformToRef max bound initialization
+  Line: ~96
+  Severity: HIGH
+  TmpV2 (max bounds) initialized to (0,0) instead of (-MAX_VALUE, -MAX_VALUE).
+  If all transformed corner coordinates are negative (control positioned
+  off-screen to the left/top), the maximum will incorrectly clamp to 0.
+
+--- 2D CONTROLS ---
+
+FIX-03: selector.ts - String literal comparison bug
+  Line: ~47
+  Severity: HIGH
+  `this._groupHeader.text === "label"` compares against the literal string
+  "label" instead of the parameter variable `label`. The setter almost never
+  short-circuits correctly.
+
+FIX-04: rectangle.ts - Missing _markAsDirty() in corner radius setters
+  Lines: ~53-95
+  Severity: HIGH
+  Individual corner radius setters (cornerRadiusX/Y/Z/W) do not call
+  _markAsDirty(), so setting them individually never triggers a visual update.
+
+FIX-05: image.ts - n % 1 always returns 0 for integers
+  Line: ~358
+  Severity: MEDIUM
+  `n % 1` is always 0 for integer rotation counts. Cell width/height swap
+  on rotation never occurs. Should be `n % 2`.
+
+FIX-06: displayGrid.ts - Missing context.beginPath() for major horizontal lines
+  Line: ~219
+  Severity: MEDIUM
+  Major horizontal lines accumulate paths from prior iterations since
+  beginPath() is never called, causing overdraw and incorrect rendering.
+
+FIX-07: colorpicker.ts - Missing # prefix in hex color
+  Line: ~513
+  Severity: LOW
+  `buttonBackgroundClickColor = "515151"` is missing the "#" prefix.
+
+FIX-08: textWrapper.ts - isWord() searches entire text instead of character
+  Line: ~88
+  Severity: MEDIUM
+  When _characters is null, the fallback searches the entire text for any
+  word character rather than checking the character at the specific index.
+
+FIX-09: radioButton.ts - Typo in variable name
+  Line: ~165
+  Severity: LOW
+  `offseHeight` should be `offsetHeight`. (cosmetic but misleading)
+
+FIX-10: inputText.ts - Falsy check on _scrollLeft treats 0 as unset
+  Line: ~956
+  Severity: MEDIUM
+  `if (!this._scrollLeft)` evaluates to true when _scrollLeft is 0, which is
+  a valid scroll position. This causes the scroll to reset incorrectly.
+
+FIX-11: inputPassword.ts - Unnecessary allocation per frame
+  Line: ~14-20
+  Severity: LOW (performance)
+  String concatenation in a loop for bullet characters. Replaced with
+  String.prototype.repeat() for efficiency.
+
+--- 3D CONTROLS ---
+
+FIX-12: holographicSlate.ts - _backMaterial not disposed
+  Line: ~492-510
+  Severity: HIGH (memory leak)
+  _backMaterial is created in _affectMaterial but never disposed in dispose().
+
+FIX-13: holographicSlate.ts - projectedOffset computed but never used
+  Lines: ~411-415
+  Severity: HIGH (incorrect behavior)
+  The drag callback computes projectedOffset but uses raw offset.x/y instead,
+  producing incorrect panning when the slate is rotated.
+
+FIX-14: touchHolographicButton.ts - Dead computation (x - x = 0)
+  Line: ~267
+  Severity: LOW
+  `(this._frontPlateDepth - this._frontPlateDepth) / 2` always equals 0.
+  Replaced with literal 0 to clarify intent and avoid confusion.
+
+--- 3D MATERIALS ---
+
+FIX-15: mrdlSliderBarMaterial.ts / mrdlSliderThumbMaterial.ts - Semicolon in uniform name
+  Lines: ~658/659
+  Severity: CRITICAL
+  The uniform name "Global_Left_Index_Middle_Position;" contains a trailing
+  semicolon. The bind call uses the name without semicolon, so the uniform
+  value is never uploaded to the GPU.
+
+FIX-16: mrdlSliderBarMaterial.ts / mrdlSliderThumbMaterial.ts - Property name typo
+  Lines: ~464/465
+  Severity: MEDIUM (public API)
+  `globaRightIndexTipPosition` is missing the "l" in "global". This is a
+  public property. Note: fixing this is a breaking API change, so we add
+  an alias instead of renaming.
+
+FIX-17: mrdl/index.ts - Missing exports
+  Severity: MEDIUM
+  Three materials (mrdlBackglowMaterial, mrdlFrontplateMaterial,
+  mrdlInnerquadMaterial) exist in the directory but are not exported
+  from the index file.
+
+================================================================================
+2. ISSUES IDENTIFIED BUT NOT FIXED
+================================================================================
+
+These are real issues that were identified during the review but were NOT
+changed because they require broader design decisions, are breaking changes,
+or need more context from the Babylon.js team.
+
+--- Design/Breaking Changes ---
+
+- Container._reOrderControl fires onControlRemovedObservable during addControl
+  (container.ts ~299-324). Fixing this would change observable behavior.
+
+- ValueAndUnit.getValue references `window` directly (valueAndUnit.ts ~135).
+  Fixing requires engine-level API changes for non-browser environments.
+
+- ToggleButton doesn't auto-toggle isActive on click (toggleButton.ts ~276).
+  May be intentional design. Users must toggle manually.
+
+- FocusableButton._unfocusedColor captured before color is set by user
+  (focusableButton.ts ~17). Would require changing constructor pattern.
+
+- DisplayGrid uses misspelled public API names: minorLineTickness,
+  majorLineTickness (displayGrid.ts). Fixing is a breaking public API change.
+
+- Multiple 3D materials have customType/RegisterClass mismatch (e.g.,
+  serialize() writes "BABYLON.FluentBackplateMaterial" but RegisterClass
+  uses "BABYLON.GUI.FluentBackplateMaterial"). Fixing could break existing
+  serialized scenes. Affects: fluentBackplateMaterial, fluentButtonMaterial,
+  mrdlBackglowMaterial, mrdlBackplateMaterial, mrdlFrontplateMaterial,
+  mrdlInnerquadMaterial, mrdlSliderBarMaterial, mrdlSliderThumbMaterial.
+
+- Multiple 3D materials use scene.activeCamera! without null check.
+  FluentBackplateMaterial has the safe pattern (?.position ?? ZeroReadOnly),
+  but fixing all others is a larger coordinated change.
+
+--- Memory Leaks (require broader disposal pattern changes) ---
+
+- Control._FontHeightSizes static cache grows unboundedly (control.ts ~2818)
+- Checkbox/RadioButton/ToggleButton observables not cleared in dispose
+- TextBlock.onLinesReadyObservable not cleared in dispose
+- InputText.onBeforeKeyAddObservable not cleared in dispose
+- Image SVG <object> elements appended to DOM are never removed
+- Line._connectedControlDirtyObserver not cleaned up on dispose
+- ColorPicker._colorWheelCanvas never disposed
+- NearMenu._pinButton not added to children, so not auto-disposed
+- MRTK3 TouchHolographicButton creates AnimationGroups that are never disposed
+- FluentButtonMaterial._blobTexture not disposed
+- MRDLFrontplateMaterial._blobTexture not disposed
+- MRDLBackplateMaterial._iridescentMapTexture not disposed
+- MRDLSliderBar/ThumbMaterial.blobTexture not disposed
+
+--- Performance (require architectural changes) ---
+
+- control.ts _clip() allocates new Measure every call (~line 2165)
+- advancedDynamicTexture.ts _render allocates new Measure every frame (~886)
+- Button/ToggleButton scale drift from incremental pointer animations
+- InputText blink timeout recreated every frame during draw
+- Multiple 3D panel/gizmo methods allocate Vector3 objects per frame
+- FluentButtonMaterial.bindForSubMesh creates new Color3/Vector4 per frame
+
+--- Other Notes ---
+
+- InputTextArea._drawText has inconsistent x coordinates between strokeText
+  and fillText (inputTextArea.ts ~708-710). The strokeText adds
+  _currentMeasure.left but fillText does not. Needs investigation to
+  determine which is correct.
+
+- InputTextArea line.split("") doesn't handle Unicode correctly
+  (inputTextArea.ts ~519). Should use Array.from() like TextWrapper does.
+
+- Multiple 3D Holographic controls have async race conditions where
+  properties (renderingGroupId, etc.) can be accessed before async mesh
+  loading completes. Fixing requires adding null guards across many
+  accessors.
+
+- BaseGradient.parse() shares array reference with serialization object
+  instead of copying (BaseGradient.ts ~114).
+
+- Container._postMeasure signature mismatch with Control._postMeasure
+  (container.ts ~512). Container overrides with zero params while base
+  has two params.
+
+- MRDLFrontplateMaterial samplers array is empty but bindForSubMesh calls
+  setTexture for _Blob_Texture_ (mrdlFrontplateMaterial.ts ~416).
+  MRDLSliderBar/ThumbMaterial also have textures listed in uniforms
+  instead of samplers. Fixing requires shader/effect pipeline knowledge.
+
+- FluentMaterial.getActiveTextures/hasTexture don't account for
+  _albedoTexture (fluent/fluentMaterial.ts ~294-306).
+
+- Backwards-compat re-export file 3D/materials/fluentMaterial.ts is
+  dead code (not imported by any index).

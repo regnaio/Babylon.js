@@ -44,7 +44,15 @@ export class SelectorGroup {
     }
 
     public set header(label: string) {
-        if (this._groupHeader.text === "label") {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The original code compared against the literal string "label" instead of the
+            parameter variable `label`. This meant the short-circuit check almost never
+            worked correctly — it would only return early if the header text happened to
+            be literally the word "label".
+        */
+        if (this._groupHeader.text === label) {
             return;
         }
 

@@ -216,6 +216,15 @@ export class DisplayGrid extends Control {
 
                 for (let y = -cellCountY / 2 + this._majorLineFrequency; y < cellCountY / 2; y += this._majorLineFrequency) {
                     const cellY = top + y * this.cellHeight;
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        The major horizontal lines loop was missing context.beginPath() before
+                        drawing each line. Without it, paths from prior iterations would accumulate,
+                        causing overdraw and potentially incorrect rendering. The vertical lines
+                        loop (above) and the minor lines section both correctly call beginPath().
+                    */
+                    context.beginPath();
                     context.moveTo(this._currentMeasure.left, cellY);
                     context.lineTo(this._currentMeasure.left + this._currentMeasure.width, cellY);
                     context.closePath();
