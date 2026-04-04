@@ -37,7 +37,6 @@ import { EffectFallbacks } from "core/Materials/effectFallbacks";
 export class VolumetricLightScatteringPostProcess extends PostProcess {
     // Members
     private _volumetricLightScatteringRTT: RenderTargetTexture;
-    private _viewPort: Viewport;
     private _screenCoordinates: Vector2 = Vector2.Zero();
 
     /**
@@ -157,7 +156,6 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
         scene = camera?.getScene() ?? scene ?? this._scene; // parameter "scene" can be null.
 
         engine = scene.getEngine();
-        this._viewPort = new Viewport(0, 0, 1, 1).toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
 
         // Configure mesh
         this.mesh = mesh ?? VolumetricLightScatteringPostProcess.CreateDefaultMesh("VolumetricLightScatteringMesh", scene);
