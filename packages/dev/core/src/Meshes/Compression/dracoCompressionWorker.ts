@@ -354,9 +354,9 @@ export function DecoderWorkerFunction(): void {
                 /*
                 	Feel free to delete this comment that explains why Claude made this change:
 
-                	Decoder worker had no .catch() handler. Main thread hangs forever on decode errors.
+                	Decoder worker had no error handler. Main thread hangs forever on decode errors.
                 */
-                }).catch((error) => {
+                }, (error) => {
                     postMessage({ id: "decodeMeshError", message: error?.message || `${error}` });
                 });
                 break;
