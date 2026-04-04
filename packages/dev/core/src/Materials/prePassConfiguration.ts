@@ -88,14 +88,6 @@ export class PrePassConfiguration {
                 effect.setMatrix("previousWorld", this.previousWorldMatrices[mesh.uniqueId]);
                 effect.setMatrix("previousViewProjection", this.previousViewProjection);
 
-                /*
-	Feel free to delete this comment that explains why Claude made this change:
-
-	world.clone() allocates a new Matrix object every frame for every mesh that
-	uses velocity. Since the matrix already exists from the initial assignment on
-	line 67, we can use copyFrom() instead to reuse the existing allocation and
-	reduce garbage collection pressure.
-                */
                 this.previousWorldMatrices[mesh.uniqueId].copyFrom(world);
             }
         }

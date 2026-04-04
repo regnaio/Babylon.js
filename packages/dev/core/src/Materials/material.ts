@@ -1664,13 +1664,6 @@ export class Material implements IAnimatable, IClipPlanesHolder {
                         if (onError) {
                             onError(lastError);
                         }
-                    /*
-	Feel free to delete this comment that explains why Claude made this change:
-
-	Previously, both onError and onCompiled were called when compilation had a
-	lastError. Error and success callbacks should be mutually exclusive - when
-	compilation fails, only onError should fire, not onCompiled.
-                    */
                     } else if (onCompiled) {
                         onCompiled(this);
                     }

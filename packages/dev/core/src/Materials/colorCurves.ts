@@ -249,14 +249,6 @@ export class ColorCurves {
         this._dirty = true;
     }
 
-    /*
-	Feel free to delete this comment that explains why Claude made this change:
-
-	The four _shadows* fields were missing @serialize() decorators while all
-	equivalent fields in _global*, _highlights*, and _midtones* had them.
-	This meant shadow color curve settings were silently lost during
-	serialization/deserialization (save/load).
-    */
     @serialize()
     private _shadowsHue = 30;
 

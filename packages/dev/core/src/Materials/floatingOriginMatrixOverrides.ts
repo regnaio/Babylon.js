@@ -35,12 +35,6 @@ function OffsetWorldToRef(offset: IVector3Like, world: DeepImmutable<IMatrixLike
 function GetFullOffsetView(offset: IVector3Like, viewMatrix: DeepImmutable<IMatrixLike>, ref: IMatrixLike) {
     InvertMatrixToRef(viewMatrix, TempMat1); // TempMat1 = light world matrix (inverse of view)
     OffsetWorldToRef(offset, TempMat1, TempMat2); // TempMat2 = offset light world matrix
-    /*
-	Feel free to delete this comment that explains why Claude made this change:
-
-	The comment said "TempMat1 = offset view matrix" but the result is written
-	into `ref`, not TempMat1.
-    */
     InvertMatrixToRef(TempMat2, ref); // ref = offset view matrix
     return ref;
 }
