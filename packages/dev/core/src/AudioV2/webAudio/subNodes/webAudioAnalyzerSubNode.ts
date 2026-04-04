@@ -1,7 +1,6 @@
 import { type Nullable } from "../../../types";
 import { _AudioAnalyzerSubNode } from "../../abstractAudio/subNodes/audioAnalyzerSubNode";
 import { type AudioAnalyzerFFTSizeType } from "../../abstractAudio/subProperties/abstractAudioAnalyzer";
-import { _GetEmptyByteFrequencyData, _GetEmptyFloatFrequencyData } from "../../abstractAudio/subProperties/audioAnalyzer";
 import { type _WebAudioEngine } from "../webAudioEngine";
 import { type IWebAudioInNode } from "../webAudioNode";
 
@@ -105,8 +104,17 @@ export class _WebAudioAnalyzerSubNode extends _AudioAnalyzerSubNode implements I
         return this._floatFrequencyData;
     }
 
+    /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The previous implementation called typedArray.set(emptyArray) where emptyArray
+	had length 0, which is a no-op — it didn't actually clear any data. Setting
+	the arrays to null ensures they get reallocated with the correct size on the
+	next getByteFrequencyData/getFloatFrequencyData call (which checks for null
+	or length 0 before recreating them).
+    */
     private _clearArrays(): void {
-        this._byteFrequencyData?.set(_GetEmptyByteFrequencyData());
-        this._floatFrequencyData?.set(_GetEmptyFloatFrequencyData());
+        this._byteFrequencyData = null;
+        this._floatFrequencyData = null;
     }
 }

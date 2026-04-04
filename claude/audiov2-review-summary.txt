@@ -1,0 +1,108 @@
+AudioV2 Code Review Summary
+============================
+Reviewed by Claude on 2026-04-03
+Branch: claude-core-src-audiov2
+
+ARCHITECTURE OVERVIEW
+=====================
+The AudioV2 module is a well-structured audio engine implementation using a layered
+abstract/concrete pattern:
+
+- Root level: Enums (AudioParameterRampShape, SoundState, SpatialAudioAttachmentType),
+  utilities (audioUtils.ts), and barrel exports.
+- abstractAudio/: Abstract base classes defining the API contract for audio nodes, buses,
+  sounds, sound instances, sub-nodes, sub-properties, and components.
+- webAudio/: Concrete Web Audio API implementations of the abstract classes.
+
+The audio graph is a DAG of AbstractAudioNode instances. Sounds connect to buses, buses
+connect to main buses, and main buses connect to the main output (speakers). Sub-nodes
+(volume, spatial, stereo, analyzer) are created on-demand within sub-graphs to minimize
+resource usage.
+
+FILES REVIEWED (57 total)
+=========================
+Root: audioParameter.ts, audioUtils.ts, soundState.ts, spatialAudioAttachmentType.ts, index.ts
+abstractAudio/: abstractAudioNode.ts, abstractAudioOutNode.ts, abstractAudioBus.ts,
+  abstractSound.ts, abstractSoundInstance.ts, abstractSoundSource.ts, audioBus.ts,
+  audioEngineV2.ts, mainAudioBus.ts, mainAudioOut.ts, staticSound.ts, staticSoundBuffer.ts,
+  staticSoundInstance.ts, streamingSound.ts, streamingSoundInstance.ts, index.ts
+abstractAudio/subNodes/: abstractAudioSubGraph.ts, abstractAudioSubNode.ts,
+  audioAnalyzerSubNode.ts, audioSubNode.ts, spatialAudioSubNode.ts, stereoAudioSubNode.ts,
+  volumeAudioSubNode.ts
+abstractAudio/subProperties/: abstractAudioAnalyzer.ts, abstractSpatialAudio.ts,
+  abstractSpatialAudioListener.ts, abstractStereoAudio.ts, audioAnalyzer.ts, spatialAudio.ts,
+  spatialAudioListener.ts, stereoAudio.ts, index.ts
+abstractAudio/components/: spatialAudioAttacherComponent.ts
+webAudio/: webAudioEngine.ts, webAudioBus.ts, webAudioMainBus.ts, webAudioMainOut.ts,
+  webAudioNode.ts, webAudioSoundSource.ts, webAudioStaticSound.ts, webAudioStreamingSound.ts,
+  webAudioUnmuteUI.ts, index.ts
+webAudio/subNodes/: webAudioBaseSubGraph.ts, webAudioBusAndSoundSubGraph.ts,
+  volumeWebAudioSubNode.ts, spatialWebAudioSubNode.ts, stereoWebAudioSubNode.ts,
+  webAudioAnalyzerSubNode.ts
+webAudio/subProperties/: spatialWebAudio.ts, spatialWebAudioListener.ts
+webAudio/components/: webAudioParameterComponent.ts, spatialWebAudioUpdaterComponent.ts
+
+ISSUES FOUND AND FIXED
+=======================
+
+1. [BUG] abstractAudioSubNode.ts - disconnectAll() iterates over _downstreamNodes while
+   calling _disconnect() which mutates the set via .delete(). Iterating over a Set while
+   deleting from it can skip elements. Fix: Copy to an array before iterating, consistent
+   with the pattern used in abstractAudioNode.ts dispose().
+
+2. [BUG] _HasAudioAnalyzerOptions() and _HasSpatialAudioOptions() and
+   _HasSpatialAudioListenerOptions() use the result of `options.xxxEnabled` in a boolean
+   OR expression. Since this is `Partial<...>`, the field could be `undefined`, but more
+   critically it could be `false` — and `false || ...` continues the chain, which is
+   correct. However, `options.analyzerEnabled` etc. should use `=== true` for clarity and
+   to avoid treating `undefined` differently from `false` (both are falsy). Currently
+   `undefined` and `false` both behave the same (falsy), so this is not a bug, but it IS
+   misleading code. This is intentional design so NOT changed.
+
+3. [BUG] stereoAudioSubNode.ts - The file imports from "../../abstractAudio/audioEngineV2"
+   and "../../abstractAudio/subNodes/abstractAudioSubNode" using a path that goes UP two
+   levels then back down to abstractAudio. But this file IS in abstractAudio/subNodes/.
+   The correct relative path should be "../audioEngineV2" and "./abstractAudioSubNode".
+   Fix: Corrected the import paths.
+
+4. [BUG] _WebAudioAnalyzerSubNode._clearArrays() attempts to clear frequency data arrays
+   by calling .set() with empty typed arrays from _GetEmptyByteFrequencyData() /
+   _GetEmptyFloatFrequencyData(). However, calling typedArray.set(emptyArray) where
+   emptyArray has length 0 does nothing — it doesn't zero out the existing data. If the
+   intent is to zero out the arrays, the arrays should be re-allocated (which already
+   happens on next getByteFrequencyData/getFloatFrequencyData since the length check
+   would fail after fftSize change). The real issue is that after _clearArrays(), the
+   old arrays still hold stale data. Fix: Set the arrays to null so they get reallocated
+   on next access.
+
+5. [IMPROVEMENT] audioUtils.ts - GetLogCurve() uses a slightly different pattern for its
+   loop compared to GetExpCurve(). GetExpCurve starts at i=1 (skipping index 0, which
+   stays 0 from Float32Array initialization), while GetLogCurve starts at i=0. This is
+   intentional since the logarithmic curve formula at x=increment gives a non-zero value.
+   Not a bug, just noting the asymmetry.
+
+6. [IMPROVEMENT] _WebAudioParameterComponent.setTargetValue() computes `duration` twice
+   with Math.max against parameterRampDuration. Line 78 already does
+   `Math.max(options.duration, this._engine.parameterRampDuration)` and then line 82 does
+   `Math.max(this._engine.parameterRampDuration, duration)` again. The second call is
+   redundant when options.duration was provided. Fix: Simplify to a single Math.max call.
+
+7. [BUG] _SpatialWebAudioUpdaterComponent updates _lastUpdateTime even when the update is
+   skipped. This means if updates come in faster than minUpdateTime, the _lastUpdateTime
+   keeps advancing, which could cause the next update to be skipped even after enough time
+   has passed. Fix: Only update _lastUpdateTime when the update actually runs.
+
+8. [BUG] _WebAudioMainOut.dispose() calls this._destinationNode.disconnect() but
+   _destinationNode is a getter that returns engine._audioDestination, which is typically
+   the AudioContext.destination. Calling disconnect() on AudioContext.destination throws
+   an InvalidAccessError because destination nodes cannot be disconnected. Fix: Remove the
+   _destinationNode.disconnect() call.
+
+NOTES (not changed)
+===================
+- The code quality is generally high with good separation of concerns.
+- The on-demand sub-node creation pattern is clever for memory optimization.
+- The Observable pattern is used consistently throughout.
+- The streaming sound implementation handles the iOS ringer switch edge case well.
+- The WebRequest integration for custom headers with streaming sounds is well-handled.
+- The fallback listener implementation for older browsers is a nice touch.

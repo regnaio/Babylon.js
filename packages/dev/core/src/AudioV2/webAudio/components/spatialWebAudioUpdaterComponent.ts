@@ -30,8 +30,17 @@ export class _SpatialWebAudioUpdaterComponent {
                 const now = PrecisionDate.Now;
                 if (this._lastUpdateTime && now - this._lastUpdateTime < this.minUpdateTime * 1000) {
                     skipUpdate = true;
+                } else {
+                    /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	Previously, _lastUpdateTime was updated on every frame even when the
+	update was skipped. This caused a drift where the timestamp kept
+	advancing, potentially skipping the very next legitimate update window.
+	Now _lastUpdateTime is only set when the update actually executes.
+                    */
+                    this._lastUpdateTime = now;
                 }
-                this._lastUpdateTime = now;
             }
 
             if (!skipUpdate) {

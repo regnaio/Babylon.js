@@ -1,8 +1,15 @@
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The import paths were incorrectly navigating up two levels ("../../abstractAudio/...")
+	and back down, but this file is already inside abstractAudio/subNodes/. Corrected to
+	use the proper relative paths ("../" for sibling directories, "./" for same directory).
+*/
 import { type Nullable } from "../../../types";
-import { type AudioEngineV2 } from "../../abstractAudio/audioEngineV2";
-import { _AbstractAudioSubNode } from "../../abstractAudio/subNodes/abstractAudioSubNode";
-import { AudioSubNode } from "../../abstractAudio/subNodes/audioSubNode";
-import { type IStereoAudioOptions, _StereoAudioDefaults } from "../../abstractAudio/subProperties/abstractStereoAudio";
+import { type AudioEngineV2 } from "../audioEngineV2";
+import { _AbstractAudioSubNode } from "./abstractAudioSubNode";
+import { AudioSubNode } from "./audioSubNode";
+import { type IStereoAudioOptions, _StereoAudioDefaults } from "../subProperties/abstractStereoAudio";
 import { type _AbstractAudioSubGraph } from "./abstractAudioSubGraph";
 
 /** @internal */

@@ -20,13 +20,19 @@ export class _WebAudioMainOut extends _MainAudioOut implements IWebAudioInNode {
         this._setGainNode(new GainNode(engine._audioContext));
     }
 
+    /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The previous code called this._destinationNode.disconnect(), but _destinationNode
+	is typically AudioContext.destination, which is a destination node that cannot be
+	disconnected (it throws InvalidAccessError). Removed the invalid disconnect call.
+    */
     /** @internal */
     public override dispose(): void {
         super.dispose();
 
         this._volume.dispose();
         this._gainNode.disconnect();
-        this._destinationNode.disconnect();
     }
 
     /** @internal */
