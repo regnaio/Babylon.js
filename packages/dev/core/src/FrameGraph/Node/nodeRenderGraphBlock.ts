@@ -529,7 +529,19 @@ export class NodeRenderGraphBlock {
         }
 
         if (serializedOutputs) {
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The output deserialization used raw index access (this.outputs[i]) without
+            	bounds checking, unlike the input deserialization above which uses a safe
+            	.find() lookup by name. If serialized data has more outputs than the block
+            	(e.g., from a newer version or corrupted data), this would crash with
+            	"Cannot set properties of undefined". Added a bounds guard.
+            */
             for (let i = 0; i < serializedOutputs.length; i++) {
+                if (i >= this.outputs.length) {
+                    break;
+                }
                 const port = serializedOutputs[i];
                 if (port.displayName) {
                     this.outputs[i].displayName = port.displayName;

@@ -115,6 +115,12 @@ IMPROVEMENTS FOUND AND FIXED
     after task disposal, potentially accessing disposed resources.
     FIX: Added removal of all three observers in dispose().
 
+19. [BUG] nodeRenderGraphBlock.ts - Output deserialization index out-of-bounds
+    Lines 531-542: Output deserialization used raw index access (this.outputs[i])
+    without bounds checking. If serialized data has more outputs than the block
+    (e.g., from a newer version or corrupted data), this would crash.
+    FIX: Added bounds guard to break out of loop when index exceeds outputs length.
+
 ================================================================================
 ISSUES NOTED BUT NOT FIXED (too risky or architectural)
 ================================================================================
