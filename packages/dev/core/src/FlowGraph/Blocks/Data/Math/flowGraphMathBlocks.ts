@@ -116,7 +116,13 @@ export class FlowGraphSubtractBlock extends FlowGraphBinaryOperationBlock<FlowGr
         } else {
             // at this point at least one of the variables is a number.
             if (this.config?.preventIntegerFloatArithmetic && typeof a !== typeof b) {
-                throw new Error("Cannot add different types of numbers.");
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The error message incorrectly said "Cannot add" instead of "Cannot subtract".
+                    This was a copy-paste error from FlowGraphAddBlock._polymorphicAdd().
+                */
+                throw new Error("Cannot subtract different types of numbers.");
             }
             return getNumericValue(a as number) - getNumericValue(b as number);
         }
@@ -173,7 +179,13 @@ export class FlowGraphMultiplyBlock extends FlowGraphBinaryOperationBlock<FlowGr
         } else {
             // at this point at least one of the variables is a number.
             if (this.config?.preventIntegerFloatArithmetic && typeof a !== typeof b) {
-                throw new Error("Cannot add different types of numbers.");
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The error message incorrectly said "Cannot add" instead of "Cannot multiply".
+                    This was a copy-paste error from FlowGraphAddBlock._polymorphicAdd().
+                */
+                throw new Error("Cannot multiply different types of numbers.");
             }
             return getNumericValue(a as number) * getNumericValue(b as number);
         }
@@ -240,7 +252,13 @@ export class FlowGraphDivideBlock extends FlowGraphBinaryOperationBlock<FlowGrap
         } else {
             // at this point at least one of the variables is a number.
             if (this.config?.preventIntegerFloatArithmetic && typeof a !== typeof b) {
-                throw new Error("Cannot add different types of numbers.");
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The error message incorrectly said "Cannot add" instead of "Cannot divide".
+                    This was a copy-paste error from FlowGraphAddBlock._polymorphicAdd().
+                */
+                throw new Error("Cannot divide different types of numbers.");
             }
             return getNumericValue(a as number) / getNumericValue(b as number);
         }

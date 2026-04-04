@@ -142,7 +142,14 @@ export class FlowGraphInterpolationBlock<T> extends FlowGraphBlock {
         // add initial value
         const currentValue = this.initialValue.getValue(context) || type.defaultValue;
         keys.push({ frame: 0, value: currentValue });
-        const numberOfKeyFrames = this.config?.numberOfKeyFrames ?? 1;
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            `this.config?.numberOfKeyFrames` referenced a property that does not exist on
+            IFlowGraphInterpolationBlockConfiguration. The correct property name defined
+            in the interface is `keyFramesCount`.
+        */
+        const numberOfKeyFrames = this.config?.keyFramesCount ?? 1;
         for (let i = 1; i < numberOfKeyFrames + 1; i++) {
             const duration = this.keyFrames[i].duration?.getValue(context);
             let value = this.keyFrames[i].value?.getValue(context);
@@ -178,5 +185,3 @@ export class FlowGraphInterpolationBlock<T> extends FlowGraphBlock {
 }
 
 RegisterClass(FlowGraphBlockNames.ValueInterpolation, FlowGraphInterpolationBlock);
-
-// #L54P2C

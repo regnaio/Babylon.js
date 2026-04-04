@@ -1,4 +1,4 @@
-import { type EasingFunction, BackEase, BezierCurveEase, BounceEase, CircleEase, CubicEase, ElasticEase, ExponentialEase } from "core/Animations/easing";
+import { type EasingFunction, BackEase, BezierCurveEase, BounceEase, CircleEase, CubicEase, ElasticEase, ExponentialEase, PowerEase, QuadraticEase, QuarticEase, QuinticEase, SineEase } from "core/Animations/easing";
 import { type IFlowGraphBlockConfiguration, FlowGraphBlock } from "core/FlowGraph/flowGraphBlock";
 import { type FlowGraphContext } from "core/FlowGraph/flowGraphContext";
 import { type FlowGraphDataConnection } from "core/FlowGraph/flowGraphDataConnection";
@@ -49,6 +49,25 @@ function CreateEasingFunction(type: EasingFunctionType, ...parameters: number[])
             return new ElasticEase(...parameters);
         case EasingFunctionType.ExponentialEase:
             return new ExponentialEase(...parameters);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The EasingFunctionType enum defined PowerEase (6), QuadraticEase (7),
+            QuarticEase (8), QuinticEase (9), and SineEase (10), but the switch
+            statement had no cases for them. At runtime, using any of these types
+            would throw "Easing type not yet implemented". Added the missing cases
+            using the corresponding Babylon.js easing classes.
+        */
+        case EasingFunctionType.PowerEase:
+            return new PowerEase(...parameters);
+        case EasingFunctionType.QuadraticEase:
+            return new QuadraticEase();
+        case EasingFunctionType.QuarticEase:
+            return new QuarticEase();
+        case EasingFunctionType.QuinticEase:
+            return new QuinticEase();
+        case EasingFunctionType.SineEase:
+            return new SineEase();
         default:
             throw new Error("Easing type not yet implemented");
     }

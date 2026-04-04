@@ -83,11 +83,22 @@ export class FlowGraphForLoopBlock extends FlowGraphExecutionBlockWithOutSignal 
         const index = getNumericValue(this.startIndex.getValue(context));
         const step = this.step.getValue(context);
         let endIndex = getNumericValue(this.endIndex.getValue(context));
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The original guard `if (i > FlowGraphForLoopBlock.MaxLoopIterations * step)` fails
+            when step is negative because MaxLoopIterations * negativeStep is a large negative
+            number, making the condition always true on the first iteration and breaking
+            immediately. Using a separate iteration counter checked against MaxLoopIterations
+            directly handles both positive and negative step values correctly.
+        */
+        let iterations = 0;
         for (let i = index; i < endIndex; i += step) {
             this.index.setValue(new FlowGraphInteger(i), context);
             this.executionFlow._activateSignal(context);
             endIndex = getNumericValue(this.endIndex.getValue(context));
-            if (i > FlowGraphForLoopBlock.MaxLoopIterations * step) {
+            iterations++;
+            if (iterations >= FlowGraphForLoopBlock.MaxLoopIterations) {
                 break;
             }
         }

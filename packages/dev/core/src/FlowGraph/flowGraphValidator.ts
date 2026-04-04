@@ -369,7 +369,17 @@ function _DetectDataCycles(allBlocks: FlowGraphBlock[], addIssue: (issue: IFlowG
                     return true;
                 }
                 if (depColor === white) {
-                    dfs(dep);
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        The return value of the recursive dfs(dep) call was being ignored. If a cycle
+                        was detected deeper in the recursion, the calling frame would not know about it
+                        and would continue exploring, potentially marking cycle-participating nodes as
+                        fully explored (black). This could cause some cycles to go unreported.
+                    */
+                    if (dfs(dep)) {
+                        return true;
+                    }
                 }
             }
         }

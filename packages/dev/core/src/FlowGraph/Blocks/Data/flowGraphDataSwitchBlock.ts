@@ -62,7 +62,15 @@ export class FlowGraphDataSwitchBlock<T> extends FlowGraphBlock {
             if (this.config.treatCasesAsIntegers) {
                 caseValue = caseValue | 0;
                 if (this._inputCases.has(caseValue)) {
-                    return;
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        This was `return` which exits the entire constructor, leaving the block
+                        in an incomplete state if a duplicate integer case is encountered early
+                        in the array. Changed to `continue` to skip only the duplicate case and
+                        continue processing the remaining cases.
+                    */
+                    continue;
                 }
             }
             this._inputCases.set(caseValue, this.registerDataInput(`in_${caseValue}`, RichTypeAny));
@@ -75,7 +83,15 @@ export class FlowGraphDataSwitchBlock<T> extends FlowGraphBlock {
         if (isNumeric(selectionValue)) {
             outputValue = this._getOutputValueForCase(getNumericValue(selectionValue), context);
         }
-        if (!outputValue) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The original check was `if (!outputValue)` which treats falsy values like 0,
+            false, or empty string as "no match found," incorrectly falling through to the
+            default value. Changed to explicit undefined check so that valid falsy matched
+            values are correctly returned.
+        */
+        if (outputValue === undefined) {
             outputValue = this.default.getValue(context);
         }
 

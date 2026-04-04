@@ -130,7 +130,14 @@ export class FlowGraphMultiGateBlock extends FlowGraphExecutionBlock {
         super.serialize(serializationObject);
         serializationObject.config.outputSignalCount = this.config.outputSignalCount;
         serializationObject.config.isRandom = this.config.isRandom;
-        serializationObject.config.loop = this.config.isLoop;
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The property was serialized as "loop" but the IFlowGraphMultiGateBlockConfiguration
+            interface defines it as "isLoop". This mismatch meant that deserialization would
+            never restore the isLoop property, silently losing the loop setting.
+        */
+        serializationObject.config.isLoop = this.config.isLoop;
         serializationObject.config.startIndex = this.config.startIndex;
     }
 }

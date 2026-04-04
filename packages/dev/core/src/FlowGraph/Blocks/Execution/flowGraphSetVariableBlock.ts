@@ -56,7 +56,14 @@ export class FlowGraphSetVariableBlock<T> extends FlowGraphExecutionBlockWithOut
         // check if there is an animation(group) running on this variable. If there is, stop the animation - a value was force-set.
         const currentlyRunningAnimationGroups = context._getGlobalContextVariable("currentlyRunningAnimationGroups", []) as number[];
         for (const animationUniqueId of currentlyRunningAnimationGroups) {
-            const animationGroup = context.assetsContext.animationGroups.find((animationGroup) => animationGroup.uniqueId == animationUniqueId);
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                Changed `==` (loose equality) to `===` (strict equality) for consistency
+                with the rest of the codebase. Both values are numbers so the behavior is
+                identical, but strict equality is the convention used elsewhere.
+            */
+            const animationGroup = context.assetsContext.animationGroups.find((animationGroup) => animationGroup.uniqueId === animationUniqueId);
             if (animationGroup) {
                 // check if there is a target animation that has the target set to be the context
                 for (const targetAnimation of animationGroup.targetedAnimations) {
