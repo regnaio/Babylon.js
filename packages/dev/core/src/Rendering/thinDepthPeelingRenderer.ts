@@ -581,6 +581,14 @@ export class ThinDepthPeelingRenderer {
     public dispose() {
         this._disposeTextures();
         this._blendBackEffectWrapper.dispose();
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            _blendBackEffectWrapperPingPong was not being disposed, leaking its EffectWrapper
+            and associated GPU resources (Effect, shader programs). It is created alongside
+            _blendBackEffectWrapper in _createEffects() but was omitted from cleanup.
+        */
+        this._blendBackEffectWrapperPingPong.dispose();
         this._finalEffectWrapper.dispose();
         this._effectRenderer.dispose();
         this._releaseRenderPassIds();

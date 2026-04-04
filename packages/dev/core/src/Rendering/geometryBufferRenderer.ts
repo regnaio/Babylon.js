@@ -426,6 +426,14 @@ export class GeometryBufferRenderer {
 
         if (!enable) {
             this._previousTransformationMatrices = {};
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                _previousBonesTransformationMatrices was not being cleared when velocity was
+                disabled, unlike _previousTransformationMatrices above. This caused accumulated
+                Float32Array instances for skinned meshes to persist in memory indefinitely.
+            */
+            this._previousBonesTransformationMatrices = {};
         }
 
         if (!this._linkedWithPrePass) {

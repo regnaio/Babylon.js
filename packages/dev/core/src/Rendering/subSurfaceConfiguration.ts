@@ -129,7 +129,15 @@ export class SubSurfaceConfiguration implements PrePassEffectConfiguration {
             }
         }
 
-        this._ssDiffusionS.push(color.r, color.b, color.g);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The color components were being pushed in (r, b, g) order, but the duplicate
+            detection at line 127 checks in (r, g, b) order. This mismatch caused duplicate
+            detection to always fail, and sent incorrect color data to the diffusionS shader
+            uniform (green and blue channels were swapped in subsurface scattering calculations).
+        */
+        this._ssDiffusionS.push(color.r, color.g, color.b);
         this._ssDiffusionD.push(Math.max(Math.max(color.r, color.b), color.g));
         this._ssFilterRadii.push(this.getDiffusionProfileParameters(color));
         this.ssDiffusionProfileColors.push(color);

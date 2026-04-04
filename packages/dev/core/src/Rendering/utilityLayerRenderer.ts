@@ -403,7 +403,16 @@ export class UtilityLayerRenderer implements IDisposable {
         this.onPointerOutObservable.clear();
 
         if (this._afterRenderObserver) {
-            this.originalScene.onAfterCameraRenderObservable.remove(this._afterRenderObserver);
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The observer was being added to onAfterRenderCameraObservable (line 347) but
+                removed from onAfterCameraRenderObservable here. These are two different
+                observables on the Scene class — the former fires for each sub-camera in a
+                camera rig, the latter fires for the full rig camera only. The mismatch meant
+                the observer was never properly removed, causing a memory leak.
+            */
+            this.originalScene.onAfterRenderCameraObservable.remove(this._afterRenderObserver);
         }
         if (this._sceneDisposeObserver) {
             this.originalScene.onDisposeObservable.remove(this._sceneDisposeObserver);

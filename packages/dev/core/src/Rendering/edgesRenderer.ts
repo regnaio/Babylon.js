@@ -355,6 +355,17 @@ export class EdgesRenderer implements IEdgesRenderer {
 
         const scene = this._source.getScene();
         const engine = scene.getEngine();
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            When _rebuild() was called (e.g. on context loss or geometry change), a new
+            index buffer was created and assigned to this._ib without first releasing the
+            existing one. The old GPU buffer was orphaned, causing a GPU memory leak on
+            every rebuild. Only the final buffer was released in dispose().
+        */
+        if (this._ib) {
+            engine._releaseBuffer(this._ib);
+        }
         this._ib = engine.createIndexBuffer(this._linesIndices);
     }
 

@@ -114,7 +114,16 @@ export class PrePassRendererSceneComponent implements ISceneComponent {
         this.scene._beforeCameraDrawStage.registerStep(SceneComponentConstants.STEP_BEFORECAMERADRAW_PREPASS, this, this._beforeCameraDraw);
         this.scene._afterCameraDrawStage.registerStep(SceneComponentConstants.STEP_AFTERCAMERADRAW_PREPASS, this, this._afterCameraDraw);
         this.scene._beforeRenderTargetDrawStage.registerStep(SceneComponentConstants.STEP_BEFORERENDERTARGETDRAW_PREPASS, this, this._beforeRenderTargetDraw);
-        this.scene._afterRenderTargetDrawStage.registerStep(SceneComponentConstants.STEP_AFTERCAMERADRAW_PREPASS, this, this._afterRenderTargetDraw);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            This line was using STEP_AFTERCAMERADRAW_PREPASS for _afterRenderTargetDrawStage,
+            which is the wrong constant name. It should use STEP_AFTERRENDERTARGETDRAW_PREPASS
+            to match the naming pattern (line 116 correctly uses STEP_BEFORERENDERTARGETDRAW_PREPASS
+            for _beforeRenderTargetDrawStage). Both constants happen to equal 0 so this was not
+            a functional bug, but it is a correctness fix for maintainability.
+        */
+        this.scene._afterRenderTargetDrawStage.registerStep(SceneComponentConstants.STEP_AFTERRENDERTARGETDRAW_PREPASS, this, this._afterRenderTargetDraw);
 
         this.scene._beforeClearStage.registerStep(SceneComponentConstants.STEP_BEFORECLEAR_PREPASS, this, this._beforeClearStage);
         this.scene._beforeRenderTargetClearStage.registerStep(SceneComponentConstants.STEP_BEFORERENDERTARGETCLEAR_PREPASS, this, this._beforeRenderTargetClearStage);

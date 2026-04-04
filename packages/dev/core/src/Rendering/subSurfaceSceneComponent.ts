@@ -90,7 +90,16 @@ export class SubSurfaceSceneComponent implements ISceneSerializableComponent {
     /**
      * The component name helpful to identify the component in the list of scene components.
      */
-    public readonly name = SceneComponentConstants.NAME_PREPASSRENDERER;
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        The component was registering with NAME_PREPASSRENDERER ("PrePassRenderer") but
+        the initialization function at line 173 looks it up using NAME_SUBSURFACE ("SubSurface").
+        This mismatch meant scene._getComponent() never found the existing component, causing
+        a new SubSurfaceSceneComponent to be created every time SubSurfaceConfiguration
+        was instantiated.
+    */
+    public readonly name = SceneComponentConstants.NAME_SUBSURFACE;
 
     /**
      * The scene the component belongs to.
