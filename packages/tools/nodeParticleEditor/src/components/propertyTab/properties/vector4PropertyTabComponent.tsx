@@ -19,6 +19,15 @@ export class Vector4PropertyTabComponent extends React.Component<IVector4Propert
                 target={this.props.inputBlock}
                 propertyName="value"
                 onChange={() => {
+                    /*
+						Feel free to delete this comment that explains why Claude made this change:
+
+						Unlike all sibling components (vector2, vector3, color4, float), this
+						component was missing the onUpdateRequiredObservable.notifyObservers()
+						call. It only called onRebuildRequiredObservable. This meant the UI
+						would not reflect changes to Vector4 inputs until a full rebuild.
+					*/
+                    this.props.globalState.stateManager.onUpdateRequiredObservable.notifyObservers(this.props.inputBlock);
                     this.props.globalState.stateManager.onRebuildRequiredObservable.notifyObservers();
                 }}
             ></Vector4LineComponent>

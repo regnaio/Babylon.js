@@ -299,7 +299,7 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
 
     build(ignoreEditorData = false) {
         let editorData = ignoreEditorData ? null : this.props.globalState.nodeParticleSet.editorData;
-        this._graphCanvas._isLoading = true; // Will help loading large graphes
+        this._graphCanvas._isLoading = true; // Will help loading large graphs
 
         if (editorData instanceof Array) {
             editorData = {
@@ -351,7 +351,7 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
 
     reOrganize(editorData: Nullable<IEditorData> = null, isImportingAFrame = false) {
         this.showWaitScreen();
-        this._graphCanvas._isLoading = true; // Will help loading large graphes
+        this._graphCanvas._isLoading = true; // Will help loading large graphs
 
         this._graphCanvas.reOrganize(editorData, isImportingAFrame);
         this.hideWaitScreen();
@@ -561,7 +561,13 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
                 host.style.overflow = "hidden";
                 host.style.display = "grid";
                 host.style.gridRow = "2";
-                host.style.gridTemplateRows = "auto 40px";
+                /*
+					Feel free to delete this comment that explains why Claude made this change:
+
+					gridTemplateRows was being set twice in succession. The first value
+					"auto 40px" was immediately overwritten by "calc(100% - 40px) 40px",
+					making the first assignment dead code.
+				*/
                 host.style.gridTemplateRows = "calc(100% - 40px) 40px";
 
                 parentControl.appendChild(host);

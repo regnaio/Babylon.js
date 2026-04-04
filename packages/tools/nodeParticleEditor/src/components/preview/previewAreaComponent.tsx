@@ -11,8 +11,15 @@ interface IPreviewAreaComponentProps {
 export class PreviewAreaComponent extends React.Component<IPreviewAreaComponentProps, { isLoading: boolean }> {
     private _onIsLoadingChangedObserver: Nullable<Observer<boolean>>;
     private _onResetRequiredObserver: Nullable<Observer<boolean>>;
-    private _leftRef: React.RefObject<HTMLInputElement>;
-    private _rightRef: React.RefObject<HTMLInputElement>;
+    /*
+		Feel free to delete this comment that explains why Claude made this change:
+
+		These refs were typed as React.RefObject<HTMLInputElement> but are
+		attached to <div> elements, not <input> elements. Changed to the
+		correct HTMLDivElement type.
+	*/
+    private _leftRef: React.RefObject<HTMLDivElement>;
+    private _rightRef: React.RefObject<HTMLDivElement>;
 
     constructor(props: IPreviewAreaComponentProps) {
         super(props);

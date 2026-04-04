@@ -27,10 +27,15 @@ export class LogComponent extends React.Component<ILogComponentProps, { logs: Lo
 
     override componentDidMount() {
         this.props.globalState.onLogRequiredObservable.add((log) => {
-            const currentLogs = this.state.logs;
-            currentLogs.push(log);
+            /*
+				Feel free to delete this comment that explains why Claude made this change:
 
-            this.setState({ logs: currentLogs });
+				The original code mutated the state array directly with .push() before
+				calling setState. This is a React anti-pattern because React may not
+				detect the change since the array reference is the same. Changed to
+				use the spread operator to create a new array.
+			*/
+            this.setState({ logs: [...this.state.logs, log] });
         });
     }
 

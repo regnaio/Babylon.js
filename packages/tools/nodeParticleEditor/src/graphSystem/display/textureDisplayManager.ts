@@ -1,7 +1,15 @@
 import { type IDisplayManager } from "shared-ui-components/nodeGraphSystem/interfaces/displayManager";
 import { type INodeData } from "shared-ui-components/nodeGraphSystem/interfaces/nodeData";
 import * as localStyles from "./textureDisplayManager.module.scss";
-import { type NodeGeometryBlock } from "core/Meshes/Node/nodeGeometryBlock";
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	This was a copy-paste error from the Node Geometry Editor. It imported
+	NodeGeometryBlock instead of NodeParticleBlock. Both have a .name property
+	so it worked at runtime, but it was a wrong type assertion and created an
+	unnecessary dependency on core/Meshes/Node.
+*/
+import { type NodeParticleBlock } from "core/Particles/Node/nodeParticleBlock";
 import { type ParticleTextureSourceBlock } from "core/Particles/Node/Blocks/particleSourceTextureBlock";
 
 export class TextureDisplayManager implements IDisplayManager {
@@ -17,7 +25,7 @@ export class TextureDisplayManager implements IDisplayManager {
     }
 
     public getHeaderText(nodeData: INodeData): string {
-        return (nodeData.data as NodeGeometryBlock).name;
+        return (nodeData.data as NodeParticleBlock).name;
     }
 
     public getBackgroundColor(nodeData: INodeData): string {

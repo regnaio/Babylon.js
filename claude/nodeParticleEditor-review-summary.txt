@@ -1,0 +1,187 @@
+===============================================================================
+NODE PARTICLE EDITOR - FULL CODE REVIEW SUMMARY
+===============================================================================
+Reviewed: All 53 TypeScript/TSX source files in
+packages/tools/nodeParticleEditor/src/
+
+Review performed by Claude on 2026-04-04.
+
+===============================================================================
+CRITICAL BUGS (Fixed)
+===============================================================================
+
+1. registerElbowSupport.ts (lines 1-2, 7-8, 10)
+   COPY-PASTE BUG: Uses NodeMaterial types instead of NodeParticle types.
+   Imports NodeMaterialBlockConnectionPointTypes and NodeMaterialConnectionPoint
+   from core/Materials/Node/... instead of the correct NodeParticle equivalents.
+   Also checks for NodeMaterialBlockConnectionPointTypes.Object which doesn't
+   exist in the particle type system. The elbow connection type check was
+   completely non-functional -- it always returned true.
+   FIX: Changed to use NodeParticleBlockConnectionPointTypes and
+   NodeParticleConnectionPoint, and check for complex particle types (Particle,
+   Texture, System, and gradient types).
+
+2. textureDisplayManager.ts (line 4, 20)
+   COPY-PASTE BUG: Imports NodeGeometryBlock from core/Meshes/Node/ instead of
+   NodeParticleBlock from core/Particles/Node/. The cast on line 20 uses the
+   wrong type. Works at runtime because both have a .name property, but it's
+   a wrong type assertion and an unnecessary dependency.
+   FIX: Changed to import and use NodeParticleBlock.
+
+3. textureLineComponent.tsx (lines 141, 144-145)
+   ALPHA CHANNEL DISPLAY BUG: When displaying the alpha channel as grayscale:
+   - Line 141: Reads data[i+2] (BLUE channel) instead of data[i+3] (ALPHA).
+   - Lines 144-145: Sets data[i+2] = alpha then immediately overwrites with
+     data[i+2] = 0. The first write is dead code. Should set data[i+3] = 255
+     to make the grayscale alpha preview fully opaque.
+   FIX: Read from data[i+3], set RGB to alpha value, set data[i+3] = 255.
+
+4. frameNodePortPropertyComponent.tsx (line 58)
+   COPY-PASTE BUG: Title says "NODE MATERIAL EDITOR" instead of
+   "NODE PARTICLE EDITOR".
+   FIX: Changed to "NODE PARTICLE EDITOR".
+
+5. vector4PropertyTabComponent.tsx (line 22)
+   MISSING NOTIFICATION: Unlike all sibling components (vector2, vector3,
+   color4, float), this component does NOT call
+   onUpdateRequiredObservable.notifyObservers() in its onChange callback.
+   Only calls onRebuildRequiredObservable. This means the UI may not reflect
+   changes to Vector4 inputs until a full rebuild.
+   FIX: Added the missing onUpdateRequiredObservable notification.
+
+===============================================================================
+BUGS (Fixed)
+===============================================================================
+
+6. previewManager.ts (line 42, 285)
+   Observer assigned via .add() but return value never stored in
+   _onBuildObserver. dispose() calls remove(this._onBuildObserver) which is
+   always null -- cleanup is a no-op.
+   FIX: Stored the observer return value in _onBuildObserver.
+
+7. previewManager.ts (line 97-98)
+   Duplicate assignment: groundMaterial.lineColor assigned twice with
+   identical values.
+   FIX: Removed the duplicate line.
+
+8. previewAreaComponent.tsx (lines 14-15)
+   Wrong RefObject type: _leftRef and _rightRef are typed as
+   React.RefObject<HTMLInputElement> but are attached to <div> elements.
+   FIX: Changed to React.RefObject<HTMLDivElement>.
+
+9. blockNodeData.ts (lines 85-88)
+   Dispose ordering: this.data.dispose() is called first, which clears the
+   observables internally. Then the observer removals on lines 87-88 are
+   no-ops because the observables were already cleared.
+   FIX: Moved observer removal before data.dispose().
+
+10. graphEditor.tsx (lines 564-565)
+    Duplicate gridTemplateRows assignment. First value is immediately
+    overwritten by the second.
+    FIX: Removed the dead first assignment.
+
+11. meshShapeNodePropertyComponent.tsx (lines 29-31)
+    When LoadSceneAsync returns a falsy scene, the method returns early
+    without resetting isLoading to false. The UI gets stuck showing
+    "Loading..." forever.
+    FIX: Added setState({ isLoading: false }) before the early return.
+
+12. logComponent.tsx (lines 30-33)
+    React anti-pattern: Mutates state array directly with .push() before
+    calling setState. The state reference is the same object, which can cause
+    React to skip re-renders or behave unpredictably.
+    FIX: Changed to spread operator to create a new array.
+
+13. graphEditor.tsx (lines 302, 354)
+    Typo: "graphes" should be "graphs".
+    FIX: Fixed the typo in both locations.
+
+14. inputNodePropertyComponent.tsx (lines 51, 58, 87, 88)
+    Typo: variable named "isIntger" should be "isInteger".
+    FIX: Renamed to "isInteger".
+
+15. inputNodePropertyComponent.tsx (lines 193-199)
+    Mode dropdown extractValue returns inputBlock.type (positive) for both
+    contextual and system sources. But system source options use negative
+    values (-NodeParticleBlockConnectionPointTypes.Float, etc.). The dropdown
+    can't correctly highlight the selected system source option.
+    FIX: Return negative type value when inputBlock.isSystemSource.
+
+===============================================================================
+ISSUES NOTED BUT NOT FIXED (would require larger refactors or affect other
+editors/shared components)
+===============================================================================
+
+- logComponent.tsx: Observable subscription in componentDidMount never removed
+  (memory leak). No componentWillUnmount cleanup.
+
+- propertyTabComponent.tsx: onSelectionChangedObservable subscription never
+  removed in componentWillUnmount (memory leak).
+
+- previewManager.ts: stateManager.onRebuildRequiredObservable subscription
+  (line 46) never cleaned up in dispose().
+
+- previewManager.ts: engine.resize() called every frame in render loop.
+  Should ideally be on a resize event.
+
+- previewManager.ts: LogEntry constructor called with `err` (unknown type)
+  at line 187. Should be String(err) or err.message.
+
+- graphEditor.tsx: keydown listener added in constructor (line 255) but
+  never removed in componentWillUnmount.
+
+- graphEditor.tsx: _onWidgetKeyUpPointer is never assigned, so
+  removeEventListener in componentWillUnmount is a no-op.
+
+- graphEditor.tsx: Multiple observable subscriptions in constructor never
+  cleaned up.
+
+- graphEditor.tsx: componentWillUnmount() called directly from
+  onPopupClosedObservable (line 143) -- React anti-pattern.
+
+- graphEditor.tsx: customBlockData (line 383-399) assigned but never used.
+
+- nodeParticleEditor.ts: window.onbeforeunload = overwrites existing handlers.
+
+- nodeParticleEditor.ts: Previous React root not unmounted on re-show.
+
+- globalState.ts: onExportToGLBRequired observable declared but never used
+  (copy-paste from node material editor).
+
+- globalState.ts: rotatePreview and listOfCustomPreviewFiles fields unused.
+
+- globalState.ts: onGetNodeFromBlock has no default value; will throw if
+  called before graphEditor assigns it.
+
+- serializationTools.ts: UpdateLocations with a frame param resets all
+  editorData, not just frame data.
+
+- blockNodeData.ts (lines 91-98): prepareHeaderIcon always hides the icon
+  regardless of block type. The ElbowBlock-specific early return is dead code.
+
+- debugNodePropertyComponent.tsx: Observer re-subscribed inside render().
+
+- textureSourceNodePropertyComponent.tsx: URL.createObjectURL never revoked.
+
+- checkBoxLineComponent.tsx: Mutates nextState in shouldComponentUpdate.
+  Uses loose equality (==) instead of strict (===).
+
+- textureLineComponent.tsx: shouldComponentUpdate always returns true.
+  Infinite retry loop with no limit when post-process effect not ready.
+
+- nodePortPropertyComponent.tsx: Missing key prop on mapped React elements.
+
+- connectionPointPortData.ts: Double non-null assertion on line 139 with no
+  fallback for missing nodes.
+
+- blockTools.ts: Massive repetitive switch in GetBlockFromString could be
+  refactored to a map-based approach (~400 lines -> ~80 lines).
+
+- registerDebugSupport.ts: Seven repetitive if blocks could use a Set.
+
+- Multiple display managers: Unused parameters not prefixed with underscore.
+
+- vector2/vector3/vector4/color4/float property tab components are nearly
+  identical and could be consolidated into a single generic component.
+
+===============================================================================

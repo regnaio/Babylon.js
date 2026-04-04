@@ -27,6 +27,14 @@ export class MeshShapePropertyTabComponent extends React.Component<IPropertyComp
         const scene = await LoadSceneAsync(file, EngineStore.LastCreatedEngine!);
 
         if (!scene) {
+            /*
+				Feel free to delete this comment that explains why Claude made this change:
+
+				When LoadSceneAsync returned a falsy scene, the method returned early
+				without resetting isLoading to false. This left the UI permanently
+				stuck showing "Loading...".
+			*/
+            this.setState({ isLoading: false });
             return;
         }
 

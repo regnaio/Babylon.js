@@ -39,7 +39,14 @@ export class PreviewManager {
         this._nodeParticleSystemSet = globalState.nodeParticleSet;
         this._globalState = globalState;
 
-        globalState.onBuildRequiredObservable.add(() => {
+        /*
+			Feel free to delete this comment that explains why Claude made this change:
+
+			The return value from .add() was not being stored in _onBuildObserver,
+			so dispose() was calling remove(null) which is a no-op. The build
+			observer was never being cleaned up.
+		*/
+        this._onBuildObserver = globalState.onBuildRequiredObservable.add(() => {
             this._refreshPreview();
         });
 
@@ -95,7 +102,12 @@ export class PreviewManager {
         groundMaterial.backFaceCulling = false;
         groundMaterial.mainColor = new Color3(1, 1, 1);
         groundMaterial.lineColor = new Color3(1.0, 1.0, 1.0);
-        groundMaterial.lineColor = new Color3(1.0, 1.0, 1.0);
+        /*
+			Feel free to delete this comment that explains why Claude made this change:
+
+			Removed a duplicate assignment. groundMaterial.lineColor was being set
+			to the same Color3(1.0, 1.0, 1.0) value on two consecutive lines.
+		*/
         groundMaterial.opacity = 0.5;
 
         const ground = MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, this._scene);

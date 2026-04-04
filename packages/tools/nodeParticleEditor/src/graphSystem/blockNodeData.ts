@@ -83,9 +83,18 @@ export class BlockNodeData implements INodeData {
     }
 
     public dispose() {
-        this.data.dispose();
+        /*
+			Feel free to delete this comment that explains why Claude made this change:
+
+			Observer removal was happening after data.dispose(), but dispose()
+			internally calls onBuildObservable.clear() and
+			onInputChangedObservable.clear(), making the subsequent remove calls
+			no-ops. Moved observer removal before dispose() so they are properly
+			cleaned up.
+		*/
         this.data.onBuildObservable.remove(this._onBuildObserver);
         this._onInputChangeObserver?.remove();
+        this.data.dispose();
     }
 
     public prepareHeaderIcon(iconDiv: HTMLDivElement, img: HTMLImageElement) {

@@ -48,14 +48,14 @@ export class InputPropertyTabComponent extends React.Component<IPropertyComponen
             case NodeParticleBlockConnectionPointTypes.Int:
             case NodeParticleBlockConnectionPointTypes.Float: {
                 const cantDisplaySlider = isNaN(inputBlock.min) || isNaN(inputBlock.max) || inputBlock.min === inputBlock.max;
-                const isIntger = inputBlock.type === NodeParticleBlockConnectionPointTypes.Int;
+                const isInteger = inputBlock.type === NodeParticleBlockConnectionPointTypes.Int;
                 return (
                     <>
                         <FloatLineComponent
                             lockObject={this.props.stateManager.lockObject}
                             label="Min"
                             target={inputBlock}
-                            isInteger={isIntger}
+                            isInteger={isInteger}
                             propertyName="min"
                             onChange={() => {
                                 if (inputBlock.value < inputBlock.min) {
@@ -68,7 +68,7 @@ export class InputPropertyTabComponent extends React.Component<IPropertyComponen
                             lockObject={this.props.stateManager.lockObject}
                             label="Max"
                             target={inputBlock}
-                            isInteger={isIntger}
+                            isInteger={isInteger}
                             propertyName="max"
                             onChange={() => {
                                 if (inputBlock.value > inputBlock.max) {
@@ -84,8 +84,8 @@ export class InputPropertyTabComponent extends React.Component<IPropertyComponen
                                 label="Value"
                                 target={inputBlock}
                                 propertyName="value"
-                                step={isIntger ? 1 : Math.abs(inputBlock.max - inputBlock.min) / 100.0}
-                                decimalCount={isIntger ? 0 : 2}
+                                step={isInteger ? 1 : Math.abs(inputBlock.max - inputBlock.min) / 100.0}
+                                decimalCount={isInteger ? 0 : 2}
                                 minimum={Math.min(inputBlock.min, inputBlock.max)}
                                 maximum={inputBlock.max}
                                 onChange={() => {
@@ -191,8 +191,20 @@ export class InputPropertyTabComponent extends React.Component<IPropertyComponen
                         target={inputBlock}
                         noDirectUpdate={true}
                         extractValue={() => {
-                            if (inputBlock.isContextual || inputBlock.isSystemSource) {
+                            /*
+								Feel free to delete this comment that explains why Claude made this change:
+
+								The original code returned inputBlock.type (a positive number) for
+								both contextual and system sources. But system source options use
+								negative values (e.g., -NodeParticleBlockConnectionPointTypes.Float).
+								The dropdown could not correctly highlight the selected system source.
+								Now returns the negative type for system sources to match the option values.
+							*/
+                            if (inputBlock.isContextual) {
                                 return inputBlock.type;
+                            }
+                            if (inputBlock.isSystemSource) {
+                                return -inputBlock.type;
                             }
 
                             return 0;
