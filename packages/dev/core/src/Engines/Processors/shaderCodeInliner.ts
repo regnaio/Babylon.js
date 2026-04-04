@@ -151,7 +151,15 @@ export class ShaderCodeInliner {
 
             // remove the function from the source code
             const partBefore = inlineTokenIndex > 0 ? this._sourceCode.substring(0, inlineTokenIndex) : "";
-            const partAfter = funcBodyEndIndex + 1 < this._sourceCode.length - 1 ? this._sourceCode.substring(funcBodyEndIndex + 1) : "";
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The original condition used `< this._sourceCode.length - 1` which is off by one.
+            	When funcBodyEndIndex + 1 equals length - 1 (one character remaining), the
+            	condition evaluates to false and the last character is silently dropped.
+            	Changed to `< this._sourceCode.length` to preserve all remaining characters.
+            */
+            const partAfter = funcBodyEndIndex + 1 < this._sourceCode.length ? this._sourceCode.substring(funcBodyEndIndex + 1) : "";
 
             this._sourceCode = partBefore + partAfter;
 
@@ -286,7 +294,14 @@ export class ShaderCodeInliner {
                 const funcBody = this._replaceNames(body, parameters, paramNames);
 
                 let partBefore = functionCallIndex > 0 ? this._sourceCode.substring(0, functionCallIndex) : "";
-                const partAfter = callParamsEndIndex + 1 < this._sourceCode.length - 1 ? this._sourceCode.substring(callParamsEndIndex + 1) : "";
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	Same off-by-one fix as in _collectFunctions: the original condition used
+                	`< this._sourceCode.length - 1` which drops the last character when a
+                	function call ends at the second-to-last position in the source code.
+                */
+                const partAfter = callParamsEndIndex + 1 < this._sourceCode.length ? this._sourceCode.substring(callParamsEndIndex + 1) : "";
 
                 if (retParamName) {
                     // case where the function returns a value. We generate:

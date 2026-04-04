@@ -19,6 +19,8 @@ declare module "../../Engines/abstractEngine" {
         _cachedStencilOperationDepthFail: number;
         /** @internal */
         _cachedStencilReference: number;
+        /** @internal */
+        _cachedStencilFunctionMask: number;
 
         /**
          * Gets the current stencil operation when stencil passes
@@ -271,6 +273,16 @@ AbstractEngine.prototype.setStencilBackOperationPass = function (operation: numb
     this._stencilState.stencilBackOpStencilDepthPass = operation;
 };
 
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	stencilFunctionMask (the comparison mask used with getStencilFunctionMask/
+	setStencilFunctionMask) was not being cached or restored by cacheStencilState/
+	restoreStencilState. This is different from stencilMask (the write mask). Code
+	such as the highlight layer modifies stencilFunctionMask between cache and
+	restore calls, so without caching it, the function mask would not be properly
+	restored, potentially causing rendering artifacts.
+*/
 AbstractEngine.prototype.cacheStencilState = function (): void {
     this._cachedStencilBuffer = this.getStencilBuffer();
     this._cachedStencilFunction = this.getStencilFunction();
@@ -279,6 +291,7 @@ AbstractEngine.prototype.cacheStencilState = function (): void {
     this._cachedStencilOperationFail = this.getStencilOperationFail();
     this._cachedStencilOperationDepthFail = this.getStencilOperationDepthFail();
     this._cachedStencilReference = this.getStencilFunctionReference();
+    this._cachedStencilFunctionMask = this.getStencilFunctionMask();
 };
 
 AbstractEngine.prototype.restoreStencilState = function (): void {
@@ -289,4 +302,5 @@ AbstractEngine.prototype.restoreStencilState = function (): void {
     this.setStencilOperationFail(this._cachedStencilOperationFail);
     this.setStencilOperationDepthFail(this._cachedStencilOperationDepthFail);
     this.setStencilFunctionReference(this._cachedStencilReference);
+    this.setStencilFunctionMask(this._cachedStencilFunctionMask);
 };

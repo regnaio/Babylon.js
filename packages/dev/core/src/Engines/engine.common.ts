@@ -176,14 +176,24 @@ export function GetFontOffset(font: string): { ascent: number; height: number; d
 export async function CreateImageBitmapFromSource(engine: AbstractEngine, imageSource: string, options?: ImageBitmapOptions): Promise<ImageBitmap> {
     return await new Promise<ImageBitmap>((resolve, reject) => {
         const image = new Image();
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The original code had no .catch() handlers on the image.decode() and
+        	createImageBitmap() promise chains. If either rejected, the outer Promise
+        	would never settle (neither resolve nor reject would be called), causing
+        	an unhandled promise rejection and a permanently hung Promise.
+        */
         image.onload = () => {
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
-            image.decode().then(() => {
-                // eslint-disable-next-line @typescript-eslint/no-floating-promises, github/no-then
-                engine.createImageBitmap(image, options).then((imageBitmap) => {
-                    resolve(imageBitmap);
-                });
-            });
+            // eslint-disable-next-line github/no-then
+            image
+                .decode()
+                .then(() => {
+                    // eslint-disable-next-line github/no-then
+                    engine.createImageBitmap(image, options).then((imageBitmap) => {
+                        resolve(imageBitmap);
+                    }, reject);
+                }, reject);
         };
         image.onerror = () => {
             // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors

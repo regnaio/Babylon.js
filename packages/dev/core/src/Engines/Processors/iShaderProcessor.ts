@@ -37,7 +37,12 @@ export interface IShaderProcessor {
         defines: string[],
         isFragment: boolean,
         processingContext: Nullable<_IShaderProcessingContext>,
-        patameters: {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Fixed typo "patameters" -> "parameters" in the interface property name.
+        */
+        parameters: {
             [key: string]: number | string | boolean | undefined;
         },
         preProcessors: { [key: string]: string },

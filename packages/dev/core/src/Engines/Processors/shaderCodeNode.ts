@@ -53,7 +53,17 @@ export class ShaderCodeNode {
                 } else if (processor.textureProcessor && processor.textureRegexp && processor.textureRegexp.test(this.line)) {
                     value = processor.textureProcessor(this.line, options.isFragment, preprocessors, options.processingContext);
                 } else if ((processor.uniformProcessor || processor.uniformBufferProcessor) && this.line.startsWith("uniform") && !options.lookForClosingBracketForUniformBuffer) {
-                    const regex = /uniform\s+(?:(?:highp)?|(?:lowp)?)\s*(\S+)\s+(\S+)\s*;/;
+                    /*
+                    	Feel free to delete this comment that explains why Claude made this change:
+
+                    	The original regex only handled highp and lowp precision qualifiers but
+                    	missed mediump. Also, the alternation `(?:(?:highp)?|(?:lowp)?)` was
+                    	broken: both alternatives were optional (via ?), so the first alternative
+                    	always matched (either "highp" or empty string), meaning "lowp" was never
+                    	actually tried. This caused mediump-qualified uniforms and (due to the
+                    	regex bug) some lowp-qualified uniforms to be misclassified.
+                    */
+                    const regex = /uniform\s+(?:(?:highp|mediump|lowp)\s+)?(\S+)\s+(\S+)\s*;/;
 
                     if (regex.test(this.line)) {
                         // uniform

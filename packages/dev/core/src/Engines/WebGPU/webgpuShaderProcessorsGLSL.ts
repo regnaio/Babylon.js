@@ -95,9 +95,19 @@ export class WebGPUShaderProcessorGLSL extends WebGPUShaderProcessor {
             let location: number;
             if (isFragment) {
                 location = this._webgpuProcessingContext.availableVaryings[name];
-                this._missingVaryings[location] = "";
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	The original code assigned `this._missingVaryings[location] = ""` before
+                	checking if location is undefined. When the varying is not found in the
+                	vertex shader, location is undefined, which creates a property with the
+                	string key "undefined" on the array. Moved the undefined check before the
+                	assignment to avoid this unintended side effect.
+                */
                 if (location === undefined) {
                     Logger.Warn(`Invalid fragment shader: The varying named "${name}" is not declared in the vertex shader! This declaration will be ignored.`);
+                } else {
+                    this._missingVaryings[location] = "";
                 }
             } else {
                 location = this._webgpuProcessingContext.getVaryingNextLocation(varyingType, this._getArraySize(name, varyingType, preProcessors)[2]);

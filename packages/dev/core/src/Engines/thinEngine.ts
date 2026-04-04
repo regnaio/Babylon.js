@@ -1387,7 +1387,15 @@ export class ThinEngine extends AbstractEngine {
             } else {
                 // number[] or Int32Array, check if 32 bit is necessary
                 for (let index = 0; index < indices.length; index++) {
-                    if (indices[index] >= 65535) {
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	Uint16Array can hold values 0-65535 inclusive. The original check `>= 65535`
+                	would unnecessarily promote index arrays to Uint32Array when 65535 is a valid
+                	Uint16 value. Changed to `> 65535` so only values that actually exceed the
+                	Uint16 range trigger the promotion.
+                */
+                    if (indices[index] > 65535) {
                         return new Uint32Array(indices);
                     }
                 }

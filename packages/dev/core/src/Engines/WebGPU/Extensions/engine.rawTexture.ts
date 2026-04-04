@@ -554,7 +554,7 @@ ThinWebGPUEngine.prototype.updateRawTexture3D = function (
         const needConversion = format === Constants.TEXTUREFORMAT_RGB;
 
         if (needConversion) {
-            bufferView = ConvertRGBtoRGBATextureData(bufferView, texture.width, texture.height, textureType);
+            bufferView = ConvertRGBtoRGBATextureData(bufferView, texture.width, texture.height, textureType, texture.depth);
         }
 
         const data = new Uint8Array(bufferView.buffer, bufferView.byteOffset, bufferView.byteLength);
@@ -639,7 +639,7 @@ ThinWebGPUEngine.prototype.updateRawTexture2DArray = function (
         const needConversion = format === Constants.TEXTUREFORMAT_RGB;
 
         if (needConversion) {
-            bufferView = ConvertRGBtoRGBATextureData(bufferView, texture.width, texture.height, textureType);
+            bufferView = ConvertRGBtoRGBATextureData(bufferView, texture.width, texture.height, textureType, texture.depth);
         }
 
         const data = new Uint8Array(bufferView.buffer, bufferView.byteOffset, bufferView.byteLength);
@@ -658,35 +658,41 @@ ThinWebGPUEngine.prototype.updateRawTexture2DArray = function (
 /**
  * @internal
  */
-function ConvertRGBtoRGBATextureData(rgbData: any, width: number, height: number, textureType: number): ArrayBufferView {
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	Added a depth parameter (default 1) so that 3D textures and 2D array textures
+	correctly convert all slices. The original function only converted width*height
+	pixels, silently losing all slices beyond the first for textures with depth > 1.
+*/
+function ConvertRGBtoRGBATextureData(rgbData: any, width: number, height: number, textureType: number, depth: number = 1): ArrayBufferView {
     // Create new RGBA data container.
     let rgbaData: any;
     let val1 = 1;
+    const totalPixels = width * height * depth;
     if (textureType === Constants.TEXTURETYPE_FLOAT) {
-        rgbaData = new Float32Array(width * height * 4);
+        rgbaData = new Float32Array(totalPixels * 4);
     } else if (textureType === Constants.TEXTURETYPE_HALF_FLOAT) {
-        rgbaData = new Uint16Array(width * height * 4);
+        rgbaData = new Uint16Array(totalPixels * 4);
         val1 = 15360; // 15360 is the encoding of 1 in half float
     } else if (textureType === Constants.TEXTURETYPE_UNSIGNED_INTEGER) {
-        rgbaData = new Uint32Array(width * height * 4);
+        rgbaData = new Uint32Array(totalPixels * 4);
     } else {
-        rgbaData = new Uint8Array(width * height * 4);
+        rgbaData = new Uint8Array(totalPixels * 4);
     }
 
     // Convert each pixel.
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-            const index = (y * width + x) * 3;
-            const newIndex = (y * width + x) * 4;
+    for (let i = 0; i < totalPixels; i++) {
+        const index = i * 3;
+        const newIndex = i * 4;
 
-            // Map Old Value to new value.
-            rgbaData[newIndex + 0] = rgbData[index + 0];
-            rgbaData[newIndex + 1] = rgbData[index + 1];
-            rgbaData[newIndex + 2] = rgbData[index + 2];
+        // Map Old Value to new value.
+        rgbaData[newIndex + 0] = rgbData[index + 0];
+        rgbaData[newIndex + 1] = rgbData[index + 1];
+        rgbaData[newIndex + 2] = rgbData[index + 2];
 
-            // Add fully opaque alpha channel.
-            rgbaData[newIndex + 3] = val1;
-        }
+        // Add fully opaque alpha channel.
+        rgbaData[newIndex + 3] = val1;
     }
 
     return rgbaData;

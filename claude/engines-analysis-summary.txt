@@ -1,0 +1,181 @@
+================================================================================
+Babylon.js core/src/Engines/ - Full Code Analysis Summary
+================================================================================
+Date: 2026-04-03
+Branch: claude-core-src-engines
+Analyzed: ~110 TypeScript files across 8 subdirectories
+================================================================================
+
+METHODOLOGY
+-----------
+Every .ts file in core/src/Engines/ was read in full. For each file, all
+imports and exports were traced to understand cross-file interactions. Issues
+were identified and then independently verified against the actual source code.
+18 of 20 initially identified issues were confirmed as real.
+
+================================================================================
+HIGH SEVERITY BUGS (confirmed)
+================================================================================
+
+1. [WebGPU] querySet.dispose never called - resource leak
+   File: WebGPU/webgpuOcclusionQuery.ts:122
+   Code: setTimeout(() => querySet.dispose, 1000)
+   Fix:  setTimeout(() => querySet.dispose(), 1000)
+   Impact: Old query sets are never disposed, leaking GPU resources every time
+   the occlusion query set is recreated.
+
+2. [WebGPU] Signed int texture formats return wrong type constant
+   File: WebGPU/webgpuTextureHelper.ts:125-129
+   R32Sint/RG32Sint/RGBA32Sint cases return TEXTURETYPE_UNSIGNED_INTEGER
+   Fix: Return Constants.TEXTURETYPE_INT
+   Impact: Signed integer textures could be interpreted with wrong data type.
+
+3. [WebGPU] _getColorBlendState checks array truthiness instead of indexed value
+   File: WebGPU/webgpuCacheRenderPipeline.ts:760
+   Code: if (!this._alphaBlendEnabled) -- but _alphaBlendEnabled is boolean[]
+   Fix:  if (!this._alphaBlendEnabled[targetIndex])
+   Impact: Color blend state never explicitly disabled via this code path.
+
+4. [WebGL Extensions] Missing cube map face target offset in mipmap upload
+   File: Extensions/engine.rawTexture.ts:516
+   Code: gl.texImage2D(faceIndex, ...) -- missing gl.TEXTURE_CUBE_MAP_POSITIVE_X +
+   Fix:  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex, ...)
+   Impact: Custom mipmapGenerator cube textures upload to wrong face targets.
+
+5. [Native] setBool cache never hits due to type mismatch
+   File: Native/nativePipelineContext.ts:548-557
+   Cache stores number (0/1) but compares with boolean via strict equality.
+   1 !== true and 0 !== false, so the cache check always fails.
+   Fix: Compare against (bool ? 1 : 0) instead of bool directly.
+   Impact: Every setBool call passes through to engine, wasting performance.
+
+6. [Root] Unhandled promise rejection in CreateImageBitmapFromSource
+   File: engine.common.ts:179-186
+   image.decode().then() and createImageBitmap().then() have no .catch()
+   Fix: Add .catch(reject) to both chains.
+   Impact: If decode or createImageBitmap rejects, the Promise hangs forever.
+
+7. [Root] Off-by-one in index data normalization
+   File: thinEngine.ts:1390
+   Code: if (indices[index] >= 65535) -- Uint16 can hold 65535
+   Fix:  if (indices[index] > 65535)
+   Impact: Index value 65535 unnecessarily promotes to Uint32Array.
+
+8. [Root] renderTargetWrapper setSamples stores requested value, not actual
+   File: renderTargetWrapper.ts:239-249
+   Code: this._samples = value (requested) instead of this._samples = result (actual)
+   Fix: this._samples = result
+   Impact: If engine clamps sample count, _samples mismatches actual GPU state.
+
+9. [Processors] Off-by-one in shader inliner partAfter extraction
+   File: Processors/shaderCodeInliner.ts:154, 289
+   Condition uses < length - 1 instead of < length, dropping last character.
+   Fix: Change to < this._sourceCode.length
+   Impact: Inline function at end of shader code can lose final character.
+
+10. [Processors] Regex missing mediump precision qualifier
+    File: Processors/shaderCodeNode.ts:56
+    Only handles highp and lowp; mediump uniforms get misclassified.
+    Fix: /uniform\s+(?:(?:highp|mediump|lowp)\s+)?(\S+)\s+(\S+)\s*;/
+    Impact: mediump-qualified uniforms fall through to wrong processing branch.
+
+11. [AbstractEngine] stencilFunctionMask not cached/restored
+    File: AbstractEngine/abstractEngine.stencil.ts:274-291
+    cacheStencilState/restoreStencilState miss stencilFunctionMask.
+    Fix: Add _cachedStencilFunctionMask to cache and restore operations.
+    Impact: Stencil function mask modified by highlight layer never restored.
+
+12. [WebGPU Extensions] ConvertRGBtoRGBATextureData ignores depth for 3D textures
+    File: WebGPU/Extensions/engine.rawTexture.ts:557, 642
+    Only converts width*height pixels; depth dimension ignored.
+    Fix: Pass depth parameter and multiply total pixels by depth.
+    Impact: 3D/2DArray RGB textures silently lose all slices beyond the first.
+
+================================================================================
+MEDIUM SEVERITY ISSUES (confirmed)
+================================================================================
+
+13. [WebGPU] _missingVaryings[undefined] assignment before null check
+    File: WebGPU/webgpuShaderProcessorsGLSL.ts:97-99
+    Writes to _missingVaryings[location] before checking if location is undefined.
+    Fix: Move the undefined check before the assignment.
+
+14. [WebGPU Extensions] maxLevel=0 treated as falsy for cube textures
+    File: WebGPU/Extensions/engine.cubeTexture.ts:276
+    Code: if (maxLevel) -- treats 0 as unset
+    Fix: if (maxLevel !== undefined)
+
+================================================================================
+LOW SEVERITY ISSUES (confirmed)
+================================================================================
+
+15. [Extensions] Duplicated condition in multiview
+    File: Extensions/engine.multiview.ts:252-253
+    camera._rigPostProcess && camera._rigPostProcess && ...
+    Fix: Remove duplicate check.
+
+16. [Extensions] Typo "UNESIGNED" in warning message
+    File: Extensions/engine.renderTargetCube.ts:52
+    Fix: Change to "UNSIGNED"
+
+17. [Extensions] Swapped @param docs for width/height
+    File: Extensions/engine.multiview.ts:151-152
+    Fix: Swap the descriptions.
+
+18. [Processors] Typo "patameters" in interface
+    File: Processors/iShaderProcessor.ts:40
+    Fix: Rename to "parameters"
+    Note: This is in a @internal interface, so breaking change risk is minimal.
+
+================================================================================
+NOT CONFIRMED (excluded from fixes)
+================================================================================
+
+- nativeDataStream.ts "infinite loop" claim: No loop construct at those lines.
+  Oversized writes would overflow but not loop.
+
+- webGLRenderTargetWrapper.ts "missing null check": Existing guard on the array.
+  Individual element out-of-bounds is a caller responsibility.
+
+================================================================================
+ADDITIONAL NOTES FROM ANALYSIS
+================================================================================
+
+- AbstractEngine/abstractEngine.views.ts: Module-level shared Observables
+  (OnBeforeViewRenderObservable, OnAfterViewRenderObservable) are singletons
+  shared across all engine instances. This is by design for the current
+  single-engine architecture but would break multi-engine setups. Not fixed
+  as it requires architectural discussion.
+
+- AbstractEngine/abstractEngine.states.ts: getInputElement is defined in 3
+  places (states, dom, views). The views version wins due to import order.
+  Not fixed as removing it requires verifying the import dependency chain.
+
+- Extensions/engine.dynamicBuffer.ts: updateDynamicIndexBuffer accepts offset
+  parameter but ignores it (always uses bufferData instead of bufferSubData).
+  Not fixed as this may be intentional for WebGL performance reasons.
+
+- Various files use eslint-disable for floating promises. The engine.common.ts
+  fix (#6 above) addresses the most critical instance.
+
+================================================================================
+FILES MODIFIED BY THIS ANALYSIS
+================================================================================
+
+1.  WebGPU/webgpuOcclusionQuery.ts
+2.  WebGPU/webgpuTextureHelper.ts
+3.  WebGPU/webgpuCacheRenderPipeline.ts
+4.  Extensions/engine.rawTexture.ts
+5.  Native/nativePipelineContext.ts
+6.  engine.common.ts
+7.  thinEngine.ts
+8.  renderTargetWrapper.ts
+9.  Processors/shaderCodeInliner.ts
+10. Processors/shaderCodeNode.ts
+11. AbstractEngine/abstractEngine.stencil.ts
+12. WebGPU/Extensions/engine.rawTexture.ts
+13. WebGPU/webgpuShaderProcessorsGLSL.ts
+14. WebGPU/Extensions/engine.cubeTexture.ts
+15. Extensions/engine.multiview.ts
+16. Extensions/engine.renderTargetCube.ts
+17. Processors/iShaderProcessor.ts

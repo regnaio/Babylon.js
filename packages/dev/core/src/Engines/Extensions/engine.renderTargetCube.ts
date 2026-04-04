@@ -49,7 +49,12 @@ ThinEngine.prototype.createRenderTargetCubeTexture = function (size: number, opt
 
     if (fullOptions.type === Constants.TEXTURETYPE_FLOAT && !this._caps.textureFloat) {
         fullOptions.type = Constants.TEXTURETYPE_UNSIGNED_BYTE;
-        Logger.Warn("Float textures are not supported. Cube render target forced to TEXTURETYPE_UNESIGNED_BYTE type");
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Fixed typo "UNESIGNED" -> "UNSIGNED" in the warning message.
+        */
+        Logger.Warn("Float textures are not supported. Cube render target forced to TEXTURETYPE_UNSIGNED_BYTE type");
     }
 
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, filters.mag);

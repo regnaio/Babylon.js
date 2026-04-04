@@ -118,8 +118,16 @@ export class WebGPUOcclusionQuery {
     private _delayQuerySetDispose(): void {
         const querySet = this._querySet;
         if (querySet) {
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The original code passed `querySet.dispose` as a reference without calling it.
+            	The arrow function returned the method object but never invoked it, so the
+            	query set was never actually disposed, causing a GPU resource leak every time
+            	the occlusion query set was recreated.
+            */
             // Wait a bit before disposing of the queryset, in case some queries are still running for it
-            setTimeout(() => querySet.dispose, 1000);
+            setTimeout(() => querySet.dispose(), 1000);
         }
     }
 

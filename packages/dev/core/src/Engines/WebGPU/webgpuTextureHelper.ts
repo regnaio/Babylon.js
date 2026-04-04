@@ -122,11 +122,18 @@ export class WebGPUTextureHelper {
             case WebGPUConstants.TextureFormat.RGBA32Uint:
                 return Constants.TEXTURETYPE_UNSIGNED_INTEGER;
 
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	These cases handle signed 32-bit integer texture formats (R32Sint, RG32Sint,
+            	RGBA32Sint) but were incorrectly returning TEXTURETYPE_UNSIGNED_INTEGER.
+            	They should return TEXTURETYPE_INT to match the signed nature of the format.
+            */
             // One component = 32 bits signed
             case WebGPUConstants.TextureFormat.R32Sint:
             case WebGPUConstants.TextureFormat.RG32Sint:
             case WebGPUConstants.TextureFormat.RGBA32Sint:
-                return Constants.TEXTURETYPE_UNSIGNED_INTEGER;
+                return Constants.TEXTURETYPE_INT;
 
             case WebGPUConstants.TextureFormat.R32Float:
             case WebGPUConstants.TextureFormat.RG32Float:

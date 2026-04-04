@@ -757,7 +757,16 @@ export abstract class WebGPUCacheRenderPipeline {
     }
 
     private _getColorBlendState(targetIndex: number): Nullable<GPUBlendComponent> {
-        if (!this._alphaBlendEnabled) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	_alphaBlendEnabled is a boolean[] (array), which is always truthy. The original
+        	check `!this._alphaBlendEnabled` would never be true, so color blending was never
+        	explicitly disabled via this code path. Changed to index the array by targetIndex,
+        	matching the sibling method _getAphaBlendState which correctly uses
+        	this._alphaBlendEnabled[targetIndex].
+        */
+        if (!this._alphaBlendEnabled[targetIndex]) {
             return null;
         }
 

@@ -273,7 +273,14 @@ ThinWebGPUEngine.prototype._setCubeMapTextureParams = function (texture: Interna
     texture.samplingMode = loadMipmap ? Constants.TEXTURE_TRILINEAR_SAMPLINGMODE : Constants.TEXTURE_BILINEAR_SAMPLINGMODE;
     texture._cachedWrapU = Constants.TEXTURE_CLAMP_ADDRESSMODE;
     texture._cachedWrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
-    if (maxLevel) {
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	The original check `if (maxLevel)` treats 0 as falsy, so explicitly passing
+    	maxLevel=0 would skip the assignment. Changed to `!== undefined` to correctly
+    	distinguish between "not provided" and "explicitly zero".
+    */
+    if (maxLevel !== undefined) {
         texture._maxLodLevel = maxLevel;
     }
 };

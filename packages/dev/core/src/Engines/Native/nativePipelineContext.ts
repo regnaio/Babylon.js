@@ -546,13 +546,23 @@ export class NativePipelineContext implements IPipelineContext {
      * @param bool value to be set.
      */
     public setBool(uniformName: string, bool: boolean): void {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The cache stores the boolean as a number (0 or 1) via `bool ? 1 : 0`, but the
+        	original comparison `cache === bool` used strict equality to compare a number
+        	against a boolean. Since `1 !== true` and `0 !== false` in JavaScript strict
+        	equality, the cache check would never match, defeating the caching optimization
+        	and causing unnecessary engine calls on every frame for boolean uniforms.
+        */
+        const numericValue = bool ? 1 : 0;
         const cache = this._valueCache[uniformName];
-        if (cache !== undefined && cache === bool) {
+        if (cache !== undefined && cache === numericValue) {
             return;
         }
 
-        if (this._engine.setInt(this._uniforms[uniformName]!, bool ? 1 : 0)) {
-            this._valueCache[uniformName] = bool ? 1 : 0;
+        if (this._engine.setInt(this._uniforms[uniformName]!, numericValue)) {
+            this._valueCache[uniformName] = numericValue;
         }
     }
 

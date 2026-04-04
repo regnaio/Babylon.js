@@ -147,8 +147,8 @@ declare module "../../Cameras/camera" {
         /**
          * @internal
          * ensures the multiview texture of the camera exists and has the specified width/height
-         * @param width height to set on the multiview texture
-         * @param height width to set on the multiview texture
+         * @param width width to set on the multiview texture
+         * @param height height to set on the multiview texture
          */
         _resizeOrCreateMultiviewTexture(width: number, height: number): void;
     }
@@ -248,9 +248,16 @@ Scene.prototype._renderMultiviewToSingleView = function (camera: Camera) {
     // copying the result into the sub cameras instead of rendering them and proceeding as normal from there
 
     // Render to a multiview texture
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	The condition `camera._rigPostProcess && camera._rigPostProcess && ...` had
+    	camera._rigPostProcess checked twice in a row (copy-paste error). Removed the
+    	redundant duplicate check.
+    */
     camera._resizeOrCreateMultiviewTexture(
-        camera._rigPostProcess && camera._rigPostProcess && camera._rigPostProcess.width > 0 ? camera._rigPostProcess.width : this.getEngine().getRenderWidth(true),
-        camera._rigPostProcess && camera._rigPostProcess && camera._rigPostProcess.height > 0 ? camera._rigPostProcess.height : this.getEngine().getRenderHeight(true)
+        camera._rigPostProcess && camera._rigPostProcess.width > 0 ? camera._rigPostProcess.width : this.getEngine().getRenderWidth(true),
+        camera._rigPostProcess && camera._rigPostProcess.height > 0 ? camera._rigPostProcess.height : this.getEngine().getRenderHeight(true)
     );
     if (!this._multiviewSceneUbo) {
         this._createMultiviewUbo();

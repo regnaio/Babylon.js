@@ -244,7 +244,15 @@ export class RenderTargetWrapper {
         const result = this._isMulti
             ? this._engine.updateMultipleRenderTargetTextureSampleCount(this, value, initializeBuffers)
             : this._engine.updateRenderTargetTextureSampleCount(this, value);
-        this._samples = value;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The engine's updateRenderTargetTextureSampleCount may clamp or adjust the
+        	requested sample count to the nearest supported value. The original code stored
+        	the requested `value` instead of the actual `result` returned by the engine,
+        	causing _samples to potentially misrepresent the actual GPU sample count.
+        */
+        this._samples = result;
         return result;
     }
 

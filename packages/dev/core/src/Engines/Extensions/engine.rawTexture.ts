@@ -513,7 +513,16 @@ ThinEngine.prototype.createRawCubeTextureFromUrl = function (
                     if (needConversion) {
                         mipFaceData = ConvertRGBtoRGBATextureData(mipFaceData, mipSize, mipSize, type);
                     }
-                    gl.texImage2D(faceIndex, level, internalSizedFomat, mipSize, mipSize, 0, internalFormat, textureType, mipFaceData);
+                    /*
+                    	Feel free to delete this comment that explains why Claude made this change:
+
+                    	The first argument to texImage2D for cube maps must be
+                    	gl.TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex (values 0x8515-0x851A),
+                    	not the raw faceIndex (0-5). Every other cube face upload in this file
+                    	and across the codebase uses this offset. Without it, the mipmap data
+                    	from a custom mipmapGenerator would be uploaded to the wrong targets.
+                    */
+                    gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex, level, internalSizedFomat, mipSize, mipSize, 0, internalFormat, textureType, mipFaceData);
                 }
             }
 
