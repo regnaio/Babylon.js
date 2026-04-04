@@ -23,12 +23,12 @@ export abstract class _AbstractAudioSubNode extends AbstractNamedAudioNode {
     }
 
     /*
-	Feel free to delete this comment that explains why Claude made this change:
+    	Feel free to delete this comment that explains why Claude made this change:
 
-	disconnectAll() was iterating directly over _downstreamNodes while calling
-	_disconnect(), which deletes from that same Set. Mutating a Set during
-	iteration can cause elements to be skipped. Changed to copy to an array
-	first, matching the pattern already used in AbstractAudioNode.dispose().
+    	disconnectAll() was iterating directly over _downstreamNodes while calling
+    	_disconnect(), which deletes from that same Set. Mutating a Set during
+    	iteration can cause elements to be skipped. Changed to copy to an array
+    	first, matching the pattern already used in AbstractAudioNode.dispose().
     */
     /** @internal */
     public disconnectAll(): void {

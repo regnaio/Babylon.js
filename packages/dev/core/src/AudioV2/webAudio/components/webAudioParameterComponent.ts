@@ -76,10 +76,10 @@ export class _WebAudioParameterComponent {
         }
 
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+        	Feel free to delete this comment that explains why Claude made this change:
 
-	The duration was being clamped against parameterRampDuration twice: once on line 78
-	and again on line 82. Consolidated into a single Math.max call for clarity.
+        	The duration was being clamped against parameterRampDuration twice: once on line 78
+        	and again on line 82. Consolidated into a single Math.max call for clarity.
         */
         const duration = Math.max(typeof options?.duration === "number" ? options.duration : 0, this._engine.parameterRampDuration);
 

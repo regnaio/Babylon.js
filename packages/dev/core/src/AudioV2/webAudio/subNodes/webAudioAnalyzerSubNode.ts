@@ -105,13 +105,13 @@ export class _WebAudioAnalyzerSubNode extends _AudioAnalyzerSubNode implements I
     }
 
     /*
-	Feel free to delete this comment that explains why Claude made this change:
+    	Feel free to delete this comment that explains why Claude made this change:
 
-	The previous implementation called typedArray.set(emptyArray) where emptyArray
-	had length 0, which is a no-op — it didn't actually clear any data. Setting
-	the arrays to null ensures they get reallocated with the correct size on the
-	next getByteFrequencyData/getFloatFrequencyData call (which checks for null
-	or length 0 before recreating them).
+    	The previous implementation called typedArray.set(emptyArray) where emptyArray
+    	had length 0, which is a no-op — it didn't actually clear any data. Setting
+    	the arrays to null ensures they get reallocated with the correct size on the
+    	next getByteFrequencyData/getFloatFrequencyData call (which checks for null
+    	or length 0 before recreating them).
     */
     private _clearArrays(): void {
         this._byteFrequencyData = null;

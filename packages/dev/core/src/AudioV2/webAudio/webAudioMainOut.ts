@@ -21,11 +21,11 @@ export class _WebAudioMainOut extends _MainAudioOut implements IWebAudioInNode {
     }
 
     /*
-	Feel free to delete this comment that explains why Claude made this change:
+    	Feel free to delete this comment that explains why Claude made this change:
 
-	The previous code called this._destinationNode.disconnect(), but _destinationNode
-	is typically AudioContext.destination, which is a destination node that cannot be
-	disconnected (it throws InvalidAccessError). Removed the invalid disconnect call.
+    	The previous code called this._destinationNode.disconnect(), but _destinationNode
+    	is typically AudioContext.destination, which is a destination node that cannot be
+    	disconnected (it throws InvalidAccessError). Removed the invalid disconnect call.
     */
     /** @internal */
     public override dispose(): void {
