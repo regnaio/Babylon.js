@@ -407,14 +407,21 @@ export abstract class WebXRAbstractMotionController implements IDisposable {
             };
             if (this._controllerCache) {
                 // look for it in the cache
-                const found = this._controllerCache.filter((c) => {
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    Replaced filter()[0] with find() which short-circuits on the first
+                    match instead of iterating the entire array. Minor performance
+                    improvement for the cache lookup.
+                */
+                const found = this._controllerCache.find((c) => {
                     return c.filename === loadingParams.filename && c.path === loadingParams.path;
                 });
-                if (found[0]) {
-                    for (const mesh of found[0].meshes) {
+                if (found) {
+                    for (const mesh of found.meshes) {
                         mesh.setEnabled(true);
                     }
-                    meshesLoaded(found[0].meshes);
+                    meshesLoaded(found.meshes);
                     return;
                     // found, don't continue to load
                 }
@@ -488,7 +495,14 @@ export abstract class WebXRAbstractMotionController implements IDisposable {
 
     // Look through only immediate children. This will return null if no mesh exists with the given name.
     protected _getImmediateChildByName(node: AbstractMesh, name: string): AbstractMesh | undefined {
-        return <AbstractMesh | undefined>node.getChildren((n) => n.name == name, true)[0];
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Changed == to === for strict equality, matching the pattern used in
+            _getChildByName on line 486. Loose equality (==) can produce unexpected
+            results with type coercion.
+        */
+        return <AbstractMesh | undefined>node.getChildren((n) => n.name === name, true)[0];
     }
 
     /**

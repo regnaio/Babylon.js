@@ -162,7 +162,14 @@ export class WebXRPlaneDetector extends WebXRAbstractFeature {
         if (this._xrSessionManager.session.initiateRoomCapture) {
             return await this._xrSessionManager.session.initiateRoomCapture();
         }
-        throw "initiateRoomCapture is not supported on this session";
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Throwing a raw string bypasses proper error handling — no stack trace is
+            captured, instanceof Error checks fail, and catch blocks expecting Error
+            objects will misbehave. Changed to throw a proper Error instance.
+        */
+        throw new Error("initiateRoomCapture is not supported on this session");
     }
 
     protected _onXRFrame(frame: XRFrame) {

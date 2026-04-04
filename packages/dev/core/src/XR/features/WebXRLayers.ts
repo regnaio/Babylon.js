@@ -230,17 +230,33 @@ export class WebXRLayers extends WebXRAbstractFeature {
                 return;
             }
             data.texture.clearColor = new Color4(0, 0, 0, 0);
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The texture was being pushed into renderTargetTextures twice and
+                renderOnlyInRenderTargetTextures was set twice due to a copy-paste error.
+                This caused the same texture to render twice per frame, wasting GPU resources.
+                Removed the duplicate lines.
+            */
             babylonLayer.renderTargetTextures.push(data.texture);
             babylonLayer.renderOnlyInRenderTargetTextures = true;
             // for stereo (not for gui) it should be onBeforeCameraRenderObservable
             this._xrSessionManager.scene.onBeforeRenderObservable.add(() => {
                 data.texture.render();
             });
-            babylonLayer.renderTargetTextures.push(data.texture);
-            babylonLayer.renderOnlyInRenderTargetTextures = true;
             // add it back when the session ends
             this._xrSessionManager.onXRSessionEnded.addOnce(() => {
-                babylonLayer.renderTargetTextures.splice(babylonLayer.renderTargetTextures.indexOf(data.texture), 1);
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    Array.indexOf() returns -1 when the element is not found, and
+                    Array.splice(-1, 1) removes the last element — which is not the
+                    intended behavior. Added bounds check to prevent accidental removal.
+                */
+                const idx = babylonLayer.renderTargetTextures.indexOf(data.texture);
+                if (idx !== -1) {
+                    babylonLayer.renderTargetTextures.splice(idx, 1);
+                }
                 babylonLayer.renderOnlyInRenderTargetTextures = false;
             });
         });

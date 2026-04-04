@@ -1,0 +1,172 @@
+================================================================================
+                BABYLON.JS CORE/SRC/XR/ — FULL CODE ANALYSIS SUMMARY
+================================================================================
+
+Analyzed by: Claude
+Date: 2026-04-03
+Files analyzed: 52 TypeScript files across 4 directories:
+  - /XR/ (root: 13 files)
+  - /XR/features/ (25 files, including Layers/ subdirectory)
+  - /XR/motionController/ (10 files)
+  - /XR/native/ (3 files)
+
+================================================================================
+                            ARCHITECTURE OVERVIEW
+================================================================================
+
+The XR module implements WebXR support for Babylon.js with the following
+layered architecture:
+
+1. SESSION LAYER
+   - webXRSessionManager.ts: Core XR session lifecycle management
+   - webXRTypes.ts: Shared enums/interfaces (WebXRState, WebXRTrackingState)
+
+2. CAMERA & RENDERING
+   - webXRCamera.ts: Dual-eye FreeCamera subclass for XR
+   - webXRLayerWrapper.ts: Abstract XR layer wrapper with foveation
+   - webXRWebGLLayer.ts: WebGL layer implementation
+   - webXRRenderTargetTextureProvider.ts: Abstract RTT provider
+   - webXRManagedOutputCanvas.ts: Canvas lifecycle for XR rendering
+
+3. INPUT
+   - webXRInput.ts: Input source manager
+   - webXRInputSource.ts: Individual controller representation
+   - motionController/*: Motion controller profiles and rendering
+
+4. EXPERIENCE
+   - webXRExperienceHelper.ts: High-level XR lifecycle + spectator mode
+   - webXRDefaultExperience.ts: Factory for complete XR setup
+   - webXREnterExitUI.ts: UI buttons for entering/exiting XR
+
+5. FEATURES (features/*)
+   - WebXRFeaturesManager.ts: Feature registry with version control
+   - 20+ features: anchors, hand tracking, hit testing, planes, meshes,
+     eye tracking, light estimation, depth sensing, layers, etc.
+
+6. NATIVE
+   - nativeXRFrame.ts, nativeXRRenderTarget.ts: BabylonNative XR support
+
+================================================================================
+                         BUGS & ISSUES FOUND (FIXED)
+================================================================================
+
+1. [BUG] WebXRLayers.ts — Duplicate texture push (copy-paste error)
+   Lines 233-240: The texture was pushed to renderTargetTextures twice and
+   renderOnlyInRenderTargetTextures was set to true twice. This causes the
+   same texture to be rendered twice per frame, wasting GPU resources, and
+   leaves a duplicate entry in the array.
+   SEVERITY: HIGH
+
+2. [BUG] WebXRLayers.ts — Array splice without indexOf bounds check
+   Line 243: splice(indexOf(data.texture), 1) would remove the last element
+   if indexOf returned -1 (texture not found).
+   SEVERITY: MEDIUM
+
+3. [BUG] WebXRCompositionLayer.ts — Wrong logical operator (|| vs &&)
+   Line 60: Used || (OR) instead of && (AND) to check if color and depth
+   stencil dimensions match. With OR, it uses the depth stencil texture if
+   EITHER dimension matches, when the intent is clearly to require BOTH.
+   SEVERITY: MEDIUM
+
+4. [BUG] webXRRenderTargetTextureProvider.ts — splice without bounds check
+   Line 118: Same pattern as #2 — indexOf could return -1, causing splice
+   to remove the last element instead of doing nothing.
+   SEVERITY: MEDIUM
+
+5. [BUG] webXREnterExitUI.ts — Missing null check in dispose
+   Line 246: navigator.xr.removeEventListener called without checking if
+   navigator.xr exists. If the browser doesn't support WebXR, dispose throws.
+   SEVERITY: MEDIUM
+
+6. [BUG] WebXRRawCameraAccess.ts — Typo in variable name
+   Line 199: Variable named 'referenceSPace' instead of 'referenceSpace'.
+   While not a runtime error (variable is locally scoped), it's confusing
+   and inconsistent with the rest of the codebase.
+   SEVERITY: LOW
+
+7. [BUG] WebXRPlaneDetector.ts — Throwing string instead of Error
+   Line 165: throw "string" instead of throw new Error("string"). Throwing
+   strings bypasses proper error handling — no stack trace, no instanceof
+   Error checks work, and catch blocks expecting Error objects will misbehave.
+   SEVERITY: LOW
+
+8. [QUALITY] webXRCamera.ts — Variable shadowing in nested loop
+   Line 303: Inner for loop declares 'let i' which shadows the outer loop's
+   'i'. While JavaScript's let scoping means this works correctly, it is
+   confusing and a maintenance hazard.
+   SEVERITY: LOW (no runtime impact, but confusing)
+
+9. [QUALITY] webXRAbstractMotionController.ts — filter()[0] → find()
+   Line 410: Uses filter() to create a full array then takes [0], when
+   find() would short-circuit on first match. Minor perf improvement.
+   SEVERITY: LOW
+
+10. [QUALITY] webXRAbstractMotionController.ts — Inconsistent equality operator
+    Line 491: _getImmediateChildByName uses == while _getChildByName on
+    line 486 uses ===. Should be consistent.
+    SEVERITY: LOW
+
+11. [QUALITY] webXRExperienceHelper.ts — Ternary → nullish coalescing
+    Line 287: Uses `options?.preferredCameraIndex ? ... : 0` which would
+    treat index 0 as falsy (works by coincidence since default is also 0).
+    Should use ?? for correct semantics.
+    SEVERITY: LOW (works by coincidence)
+
+================================================================================
+                    ISSUES IDENTIFIED BUT NOT FIXED
+                  (too risky or require broader discussion)
+================================================================================
+
+- WebXRControllerPhysics.ts: Magic epsilon 0.001 should be a named constant
+- WebXRControllerPointerSelection.ts: Mutating options object directly
+- WebXRControllerTeleportation.ts: setTimeout() inside XR frame loop
+- WebXRMeshDetector.ts: try-catch swallowing errors silently
+- WebXRDepthSensing.ts: Global mutable state affecting all material plugins
+- WebXRNearInteraction.ts: Floating point exact-zero comparison
+- WebXRWalkingLocomotion.ts: Magic numbers in vitality calculation
+- Multiple motion controllers: Hardcoded array indices for mesh children
+- Multiple files: Global ID counters that never reset
+- webXRManagedOutputCanvas.ts: Silent error swallowing in promise chain
+- webXRSessionManager.ts: getFramebufferDimensions() called twice in same path
+- Several files: Using <any> type casts where specific types would be safer
+
+================================================================================
+                         FILE-BY-FILE CROSS REFERENCES
+================================================================================
+
+webXRSessionManager.ts
+  Imported by: webXRCamera, webXRExperienceHelper, webXRInput, webXRInputSource,
+               webXRFeaturesManager, webXRManagedOutputCanvas, all features
+  Imports: webXRWebGLLayer, webXRRenderTargetTextureProvider, webXRTypes
+
+webXRCamera.ts
+  Imported by: webXRExperienceHelper, webXRInput, webXRInputSource
+  Imports: webXRSessionManager, webXRTypes
+
+webXRExperienceHelper.ts
+  Imported by: webXRDefaultExperience, webXREnterExitUI
+  Imports: webXRSessionManager, webXRCamera, webXRFeaturesManager
+
+webXRInput.ts
+  Imported by: webXRDefaultExperience
+  Imports: webXRSessionManager, webXRInputSource, webXRCamera
+
+webXRFeaturesManager.ts
+  Imported by: webXRExperienceHelper, all features (for registration)
+  Imports: All feature types (for type mapping)
+
+webXRLayerWrapper.ts
+  Imported by: webXRWebGLLayer, WebXRCompositionLayer, webXRManagedOutputCanvas,
+               webXRSessionManager, webXRRenderTargetTextureProvider
+  Imports: webXRSessionManager
+
+All Features (features/*.ts)
+  Each imports: webXRFeaturesManager (for registration), WebXRAbstractFeature,
+                webXRSessionManager
+  Each exports: Feature class + options interface
+
+All Motion Controllers (motionController/*.ts)
+  Each imports: webXRAbstractMotionController, webXRMotionControllerManager
+  Each exports: Controller class with static registration
+
+================================================================================

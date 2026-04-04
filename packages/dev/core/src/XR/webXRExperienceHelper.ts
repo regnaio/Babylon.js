@@ -284,7 +284,16 @@ export class WebXRExperienceHelper implements IDisposable {
 
         const fps = options?.fps ? options.fps : 1000.0;
         const refreshRate = (1.0 / fps) * 1000.0;
-        const cameraIndex = options?.preferredCameraIndex ? options?.preferredCameraIndex : 0;
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Replaced the ternary with nullish coalescing (??). The old code used a
+            truthiness check which treats 0 as falsy — so preferredCameraIndex: 0
+            would fall through to the default by coincidence (also 0). Using ??
+            makes the intent explicit: only use the default when the value is
+            null/undefined, not when it is 0.
+        */
+        const cameraIndex = options?.preferredCameraIndex ?? 0;
 
         const updateSpectatorCamera = () => {
             if (this._spectatorCamera) {

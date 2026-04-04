@@ -196,9 +196,15 @@ export class WebXRRawCameraAccess extends WebXRAbstractFeature {
     }
 
     protected _onXRFrame(_xrFrame: XRFrame): void {
-        const referenceSPace = this._xrSessionManager.referenceSpace;
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
 
-        const pose = _xrFrame.getViewerPose(referenceSPace);
+            Fixed typo: 'referenceSPace' → 'referenceSpace' for consistency with the
+            rest of the codebase.
+        */
+        const referenceSpace = this._xrSessionManager.referenceSpace;
+
+        const pose = _xrFrame.getViewerPose(referenceSpace);
         if (!pose || !pose.views) {
             return;
         }

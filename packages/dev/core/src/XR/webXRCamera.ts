@@ -299,9 +299,16 @@ export class WebXRCamera extends FreeCamera {
             }
             // add any custom render targets to this camera, if available in the scene
             const customRenderTargets = this.getScene().customRenderTargets;
-            // use a for loop
-            for (let i = 0; i < customRenderTargets.length; i++) {
-                const rt = customRenderTargets[i];
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The inner loop declared 'let j' (previously 'let i') which shadowed
+                the outer loop's 'i'. While JavaScript's block scoping means this
+                works correctly at runtime, it is confusing and a maintenance hazard.
+                Renamed to 'j' for clarity.
+            */
+            for (let j = 0; j < customRenderTargets.length; j++) {
+                const rt = customRenderTargets[j];
                 // make sure we don't add the same render target twice
                 if (currentRig.customRenderTargets.indexOf(rt) === -1) {
                     currentRig.customRenderTargets.push(rt);

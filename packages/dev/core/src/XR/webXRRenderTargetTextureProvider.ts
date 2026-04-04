@@ -115,7 +115,17 @@ export abstract class WebXRLayerRenderTargetTextureProvider implements IWebXRRen
     }
 
     protected _destroyRenderTargetTexture(renderTargetTexture: RenderTargetTexture) {
-        this._renderTargetTextures.splice(this._renderTargetTextures.indexOf(renderTargetTexture), 1);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Array.indexOf() returns -1 when the element is not found, and
+            Array.splice(-1, 1) removes the last element — which is not the
+            intended behavior. Added bounds check to prevent accidental removal.
+        */
+        const index = this._renderTargetTextures.indexOf(renderTargetTexture);
+        if (index !== -1) {
+            this._renderTargetTextures.splice(index, 1);
+        }
         renderTargetTexture.dispose();
     }
 

@@ -57,7 +57,15 @@ export class WebXRCompositionLayerRenderTargetTextureProvider extends WebXRLayer
             let depthStencilTexture;
             const depthStencilTextureWidth = subImage.depthStencilTextureWidth ?? colorTextureWidth;
             const depthStencilTextureHeight = subImage.depthStencilTextureHeight ?? colorTextureHeight;
-            if (colorTextureWidth === depthStencilTextureWidth || colorTextureHeight === depthStencilTextureHeight) {
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The logical operator was || (OR) but the intent is to use the shared
+                depth-stencil texture only when BOTH width AND height match. With OR,
+                mismatched dimensions could slip through (e.g. width matches but height
+                doesn't), leading to rendering artifacts.
+            */
+            if (colorTextureWidth === depthStencilTextureWidth && colorTextureHeight === depthStencilTextureHeight) {
                 depthStencilTexture = subImage.depthStencilTexture;
             }
 

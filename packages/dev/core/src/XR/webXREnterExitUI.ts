@@ -243,7 +243,14 @@ export class WebXREnterExitUI implements IDisposable {
             renderCanvas.parentNode.removeChild(this.overlay);
         }
         this.activeButtonChangedObservable.clear();
-        (navigator as any).xr.removeEventListener("sessiongranted", this._onSessionGranted);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            navigator.xr may be undefined if the browser does not support WebXR.
+            Without the null check, dispose() would throw a TypeError when called
+            in a non-WebXR environment.
+        */
+        (navigator as any).xr?.removeEventListener("sessiongranted", this._onSessionGranted);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
