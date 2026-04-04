@@ -24,7 +24,13 @@ export class DraggableLineWithButtonComponent extends React.Component<IDraggable
                     event.dataTransfer.setData("babylonjs-render-graph-node", this.props.data);
                 }}
             >
-                {this.props.data.substr(0, this.props.data.length - (this.props.lenSuffixToRemove ?? 6))}
+                {/*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    Replaced deprecated String.prototype.substr() with String.prototype.substring().
+                    substr() is a legacy function and substring() is the modern standard equivalent.
+                */}
+                {this.props.data.substring(0, this.props.data.length - (this.props.lenSuffixToRemove ?? 6))}
                 <div
                     className="icon"
                     onClick={() => {

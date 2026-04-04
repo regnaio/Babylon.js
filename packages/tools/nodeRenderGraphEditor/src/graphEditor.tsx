@@ -195,11 +195,13 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
             this._historyStack.dispose();
             this._historyStack = null as any;
         }
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
 
-        if (this._previewManager) {
-            this._previewManager.dispose();
-            this._previewManager = null as any;
-        }
+            There was a duplicate _previewManager disposal block here that was identical
+            to the one a few lines above (lines 187-190). Since _previewManager was already
+            disposed and set to null above, this second block was unreachable dead code.
+        */
     }
 
     constructor(props: IGraphEditorProps) {
@@ -377,14 +379,14 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
 
         try {
             if (this.props.globalState.hostScene) {
-                // We wait for the graph to be ready only if the editor is linked to a host scene (most probabaly a playground).
+                // We wait for the graph to be ready only if the editor is linked to a host scene (most probably a playground).
                 // Else, the node render graph is a dummy one for editing purpose only.
                 await nodeRenderGraph.buildAsync(false, true, false);
             } else {
                 await nodeRenderGraph.buildAsync(false, false);
             }
         } catch (err) {
-            // We care about errors only if there is a host scene (the editor isprobably linked to a playground).
+            // We care about errors only if there is a host scene (the editor is probably linked to a playground).
             if (this.props.globalState.hostScene) {
                 if (LogErrorTrace) {
                     (console as any).log(err);
@@ -396,7 +398,7 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
 
     build(ignoreEditorData = false) {
         let editorData = ignoreEditorData ? null : this.props.globalState.nodeRenderGraph.editorData;
-        this._graphCanvas._isLoading = true; // Will help loading large graphes
+        this._graphCanvas._isLoading = true; // Will help loading large graphs
 
         if (editorData instanceof Array) {
             editorData = {
@@ -448,7 +450,7 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
 
     reOrganize(editorData: Nullable<IEditorData> = null, isImportingAFrame = false) {
         this.showWaitScreen();
-        this._graphCanvas._isLoading = true; // Will help loading large graphes
+        this._graphCanvas._isLoading = true; // Will help loading large graphs
 
         this._graphCanvas.reOrganize(editorData, isImportingAFrame);
         this.hideWaitScreen();

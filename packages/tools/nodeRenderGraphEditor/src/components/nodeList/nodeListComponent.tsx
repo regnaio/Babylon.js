@@ -288,32 +288,40 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                     </LineContainerComponent>
                 );
             }
+        }
 
-            // Register blocks
-            const ledger = NodeLedger.RegisteredNodeNames;
-            for (const key in allBlocks) {
-                const blocks = allBlocks[key] as string[];
-                if (blocks.length) {
-                    for (const block of blocks) {
-                        if (!ledger.includes(block)) {
-                            ledger.push(block);
-                        }
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The block registration code and NameFormatter assignment were previously nested
+            inside the outer for-loop that builds the blockMenu. This caused all blocks to
+            be redundantly re-registered and NameFormatter to be reassigned on every iteration
+            of the outer loop. Moved this code outside the loop so it only runs once.
+        */
+        // Register blocks
+        const ledger = NodeLedger.RegisteredNodeNames;
+        for (const key in allBlocks) {
+            const blocks = allBlocks[key] as string[];
+            if (blocks.length) {
+                for (const block of blocks) {
+                    if (!ledger.includes(block)) {
+                        ledger.push(block);
                     }
                 }
             }
-            NodeLedger.NameFormatter = (name) => {
-                let finalName: string;
-                // custom frame
-                if (name.endsWith("Custom")) {
-                    const nameIndex = name.lastIndexOf("Custom");
-                    finalName = name.substring(0, nameIndex);
-                    finalName += " [custom]";
-                } else {
-                    finalName = name.replace("Block", "").replace(/_/g, " ");
-                }
-                return finalName;
-            };
         }
+        NodeLedger.NameFormatter = (name) => {
+            let finalName: string;
+            // custom frame
+            if (name.endsWith("Custom")) {
+                const nameIndex = name.lastIndexOf("Custom");
+                finalName = name.substring(0, nameIndex);
+                finalName += " [custom]";
+            } else {
+                finalName = name.replace("Block", "").replace(/_/g, " ");
+            }
+            return finalName;
+        };
 
         return (
             <div id="nrgeNodeList">

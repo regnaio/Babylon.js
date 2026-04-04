@@ -1,0 +1,347 @@
+================================================================================
+NODE RENDER GRAPH EDITOR - FULL CODE REVIEW
+================================================================================
+Reviewed: packages/tools/nodeRenderGraphEditor/src/ (38 source files)
+Date: 2026-04-04
+Reviewer: Claude Opus 4.6
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. Architecture Overview
+2. File-by-File Analysis (imports/exports/interactions)
+3. Issues Found (Bugs, Errors, Improvements)
+4. Summary of Fixes Applied
+
+================================================================================
+1. ARCHITECTURE OVERVIEW
+================================================================================
+
+The Node Render Graph Editor (NRGE) is a visual node-based editor for
+constructing Babylon.js render graphs. It follows the same architecture pattern
+as the Node Material Editor (NME), with a shared UI component library
+(shared-ui-components) providing the graph canvas, node system, and property
+infrastructure.
+
+Key architectural layers:
+- Entry point: index.ts -> nodeRenderGraphEditor.ts (NodeRenderGraphEditor.Show)
+- Core state: globalState.ts (GlobalState class, central state management)
+- Main UI: graphEditor.tsx (GraphEditor React component)
+- Serialization: serializationTools.ts
+- Block creation: blockTools.ts (factory + color mapping)
+- Graph system: graphSystem/ (node data, port data, display managers,
+  property components, registration functions)
+- Preview: components/preview/ (preview manager, mesh controls, area)
+- Property panel: components/propertyTab/
+- Shared components: sharedComponents/ (reusable UI widgets)
+
+================================================================================
+2. FILE-BY-FILE ANALYSIS
+================================================================================
+
+--- index.ts ---
+  Exports: Re-exports from ./nodeRenderGraphEditor
+  Imported by: External consumers, legacy.ts
+
+--- globalState.ts ---
+  Imports: core/* (NodeRenderGraph, Observable, DataStorage, Scene, etc.),
+           graph system registrations, preview types, serialization tools
+  Exports: GlobalState class
+  Imported by: Nearly every file in the editor (central state hub)
+  Notes: Manages all observables, state manager, preview settings, engine config
+
+--- nodeRenderGraphEditor.ts ---
+  Imports: React, ReactDOM, GlobalState, GraphEditor, SerializationTools,
+           register functions, Scene, CreatePopup
+  Exports: INodeEditorOptions, NodeRenderGraphEditor class
+  Notes: Static Show() method bootstraps the entire editor. Registers display
+         managers, property managers, and type ledger on each show.
+
+--- graphEditor.tsx ---
+  Imports: React, GlobalState, NodeListComponent, PropertyTabComponent, Portal,
+           LogComponent, BlockTools, PreviewManager, PreviewMeshControlComponent,
+           PreviewAreaComponent, SerializationTools, GraphCanvasComponent,
+           TypeLedger, various core types, SplitContainer, Splitter, HistoryStack
+  Exports: GraphEditor class
+  Notes: Main editor component. Manages graph building, node creation,
+         drag-and-drop, undo/redo, preview popup.
+
+--- portal.tsx ---
+  Imports: React, ReactDOM, GlobalState
+  Exports: Portal class
+  Notes: React portal to render children into globalState.hostElement
+
+--- serializationTools.ts ---
+  Imports: GlobalState, core types, GraphFrame, NodeRenderGraph,
+           NodeRenderGraphBlock
+  Exports: SerializationTools class
+  Notes: Static methods for serialize/deserialize/update locations
+
+--- blockTools.ts ---
+  Imports: Scene, FrameGraph, all block types from core
+  Exports: BlockTools class
+  Notes: Factory (GetBlockFromString), color mapping
+         (GetColorFromConnectionNodeType), type conversion methods
+
+--- legacy/legacy.ts ---
+  Re-exports from ../index
+
+--- components/log/logComponent.tsx ---
+  Imports: React, GlobalState
+  Exports: LogEntry class, LogComponent class
+  Imported by: globalState.ts (LogEntry), graphEditor.tsx (both)
+  Notes: Displays build log messages. LogEntry is both defined and used here.
+
+--- components/nodeList/nodeListComponent.tsx ---
+  Imports: React, GlobalState, LineContainerComponent, DraggableLineComponent,
+           DraggableLineWithButtonComponent, LineWithFileButtonComponent, Tools,
+           addButton/deleteButton SVGs, NodeLedger
+  Exports: NodeListComponent
+  Notes: Left panel showing all available blocks for drag-and-drop
+
+--- components/preview/previewAreaComponent.tsx ---
+  Imports: React, GlobalState, DataStorage, Observer types, SVG icons
+  Exports: PreviewAreaComponent
+  Notes: Preview canvas + light toggle buttons
+
+--- components/preview/previewManager.ts ---
+  Imports: GlobalState, core engine types, Scene, camera, lights,
+           NodeRenderGraph, SceneLoader, GUI types, etc.
+  Exports: PreviewManager
+  Notes: Manages standalone preview scene, engine, render graph clone
+
+--- components/preview/previewMeshControlComponent.tsx ---
+  Imports: React, GlobalState, PreviewType, DataStorage, OptionsLine, SVG icons
+  Exports: PreviewMeshControlComponent
+  Notes: Mesh type selector, environment picker, frame/popup buttons
+
+--- components/preview/previewType.ts ---
+  Exports: PreviewType enum (Box, Cylinder, Plane, ShaderBall, Sphere, Custom)
+
+--- components/propertyTab/propertyTabComponent.tsx ---
+  Imports: React, GlobalState, many shared-ui-components, SerializationTools,
+           frame/node property components, DataStorage, Engine, NodeRenderGraph
+  Exports: PropertyTabComponent
+  Notes: Right panel property editor. Switches between node/frame/port views.
+
+--- components/propertyTab/textureMemoryUsagePropertyTabComponent.tsx ---
+  Imports: React, GlobalState, LineContainerComponent, TextLineComponent
+  Exports: TextureMemoryUsagePropertyTabComponent
+  Notes: Shows texture memory statistics
+
+--- graphSystem/blockNodeData.ts ---
+  Imports: INodeContainer, INodeData, IPortData, ConnectionPointPortData,
+           styles, NodeRenderGraphBlock, teleport block types
+  Exports: BlockNodeData
+  Notes: Adapter between NodeRenderGraphBlock and INodeData interface
+
+--- graphSystem/connectionPointPortData.ts ---
+  Imports: core block/connection point types, GlobalState, GraphCanvasComponent,
+           GraphNode, INodeContainer, IPortData, PortDataDirection,
+           GetConnectionErrorMessage, TypeLedger
+  Exports: ConnectionPointPortData
+  Notes: Adapter between NodeRenderGraphConnectionPoint and IPortData
+
+--- graphSystem/display/elbowDisplayManager.ts ---
+  Imports: BlockTools, IDisplayManager, INodeData, styles, block types
+  Exports: ElbowDisplayManager
+
+--- graphSystem/display/inputDisplayManager.ts ---
+  Imports: BlockTools, IDisplayManager, INodeData, styles, InputBlock types
+  Exports: InputDisplayManager
+
+--- graphSystem/display/outputDisplayManager.ts ---
+  Imports: IDisplayManager, INodeData
+  Exports: OutputDisplayManager
+
+--- graphSystem/display/postProcessDisplayManager.ts ---
+  Imports: IDisplayManager, INodeData
+  Exports: PostProcessDisplayManager
+
+--- graphSystem/display/teleportInDisplayManager.ts ---
+  Imports: TeleportInBlock, BlockTools, IDisplayManager, INodeData,
+           Nullable, StateManager
+  Exports: TeleportInDisplayManager
+
+--- graphSystem/display/teleportOutDisplayManager.ts ---
+  Imports: BlockTools, IDisplayManager, INodeData, TeleportOutBlock,
+           Nullable, StateManager
+  Exports: TeleportOutDisplayManager
+
+--- graphSystem/display/textureDisplayManager.ts ---
+  Imports: IDisplayManager, INodeData
+  Exports: TextureDisplayManager
+
+--- graphSystem/properties/frameNodePortPropertyComponent.tsx ---
+  Imports: React, LineContainerComponent, GlobalState, core types,
+           StateManager, TextInputLineComponent, GraphFrame, FrameNodePort,
+           ButtonLineComponent
+  Exports: FrameNodePortPropertyTabComponent
+
+--- graphSystem/properties/framePropertyComponent.tsx ---
+  Imports: React, LineContainerComponent, GlobalState, core types,
+           TextInputLineComponent, GraphFrame, Color3LineComponent,
+           ButtonLineComponent, input block types
+  Exports: FramePropertyTabComponent
+
+--- graphSystem/properties/genericNodePropertyComponent.tsx ---
+  Imports: React, LineContainerComponent, CheckBoxLineComponent,
+           IPropertyComponentProps, many shared-ui-components line components,
+           NodeRenderGraphBlock, property decorators, Constants, ForceRebuild
+  Exports: samplingModeList, textureFormatList, textureTypeList,
+           textureDepthStencilFormatList, TextureTargetTypeList,
+           GenericPropertyComponent, GeneralPropertyTabComponent,
+           GenericPropertyTabComponent
+
+--- graphSystem/properties/inputNodePropertyComponent.tsx ---
+  Imports: React, GlobalState, LineContainerComponent, CheckBoxLineComponent,
+           GeneralPropertyTabComponent + list exports from generic,
+           FloatLineComponent, OptionsLine, core types, InputBlock types
+  Exports: InputPropertyTabComponent
+
+--- graphSystem/properties/nodePortPropertyComponent.tsx ---
+  Imports: React, LineContainerComponent, CheckBoxLineComponent, StateManager,
+           TextInputLineComponent, NodePort, TextLineComponent,
+           NodeRenderGraphConnectionPoint types
+  Exports: NodePortPropertyTabComponent
+
+--- graphSystem/properties/teleportOutNodePropertyComponent.tsx ---
+  Imports: React, GeneralPropertyTabComponent, IPropertyComponentProps,
+           Observer, Nullable, LineContainerComponent, TeleportOutBlock,
+           OptionsLine, GlobalState, TeleportInBlock
+  Exports: TeleportOutPropertyTabComponent
+
+--- graphSystem/registerDebugSupport.ts ---
+  Exports: RegisterDebugSupport function
+
+--- graphSystem/registerDefaultInput.ts ---
+  Imports: GlobalState, INodeContainer, IPortData, StateManager,
+           BlockNodeData, connection point types, InputBlock
+  Exports: RegisterDefaultInput function
+
+--- graphSystem/registerElbowSupport.ts ---
+  Exports: RegisterElbowSupport function
+
+--- graphSystem/registerExportData.ts ---
+  Imports: GlobalState, StateManager, SerializationTools
+  Exports: RegisterExportData function
+
+--- graphSystem/registerNodePortDesign.ts ---
+  Imports: BlockTools, StateManager, IPortData, ConnectionPointPortData,
+           connection point types
+  Exports: RegisterNodePortDesign function
+
+--- graphSystem/registerToDisplayLedger.ts ---
+  Imports: All display managers, DisplayLedger
+  Exports: RegisterToDisplayManagers function
+
+--- graphSystem/registerToPropertyLedger.ts ---
+  Imports: PropertyLedger, property components
+  Exports: RegisterToPropertyTabManagers function
+
+--- graphSystem/registerToTypeLedger.ts ---
+  Imports: TypeLedger, BlockNodeData, ConnectionPointPortData, connection types
+  Exports: RegisterTypeLedger function
+
+--- sharedComponents/ (7 files) ---
+  checkBoxLineComponent.tsx - Checkbox with observable support
+  draggableLineComponent.tsx - Draggable block line for node list
+  draggableLineWithButtonComponent.tsx - Draggable line with action button
+  fileButtonLineComponent.tsx - File upload button
+  lineContainerComponent.tsx - Collapsible section container
+  lineWithFileButtonComponent.tsx - Line with file upload
+  textureLineComponent.tsx - Texture preview with channel selection
+
+================================================================================
+3. ISSUES FOUND
+================================================================================
+
+--- BUG #1: Wrong title in frameNodePortPropertyComponent.tsx (line 58) ---
+Severity: Medium (Incorrect UI text)
+The title says "NODE MATERIAL EDITOR" but should say "NODE RENDER GRAPH EDITOR".
+This is a copy-paste error from the Node Material Editor codebase.
+
+--- BUG #2: Wrong title in framePropertyComponent.tsx (line 53) ---
+Severity: Medium (Incorrect UI text)
+Same copy-paste error: "NODE MATERIAL EDITOR" should be "NODE RENDER GRAPH EDITOR".
+
+--- BUG #3: Alpha channel display bug in textureLineComponent.tsx (lines 138-141) ---
+Severity: High (Functional bug)
+When displaying the alpha channel, the code reads `data[i + 2]` (blue channel)
+instead of `data[i + 3]` (alpha channel). Then it zeros `data[i + 2]` (blue)
+instead of setting `data[i + 3]` to 255 (opaque alpha for display). This means
+the "A" button in the texture preview displays the blue channel as grayscale
+rather than the actual alpha channel.
+
+--- BUG #4: Duplicate _previewManager disposal in graphEditor.tsx (lines 199-202) ---
+Severity: Low (Dead code)
+In componentWillUnmount(), _previewManager is checked, disposed, and set to null
+at lines 187-190. Then the exact same check/dispose/null is repeated at lines
+199-202. The second block is unreachable dead code since _previewManager was
+already set to null.
+
+--- BUG #5: Memory leak in logComponent.tsx ---
+Severity: Medium (Memory leak)
+componentDidMount() adds an observer to onLogRequiredObservable but there is no
+componentWillUnmount() to remove it. When the component unmounts, the observer
+remains, causing a memory leak and potential errors if the observable fires
+after unmount.
+
+--- BUG #6: Duplicate nested div with same id in previewAreaComponent.tsx ---
+Severity: Low (Invalid HTML, potential CSS/JS issues)
+Lines 58 and 60 both render `<div id="preview-config-bar">`, creating a nested
+duplicate. The outer div is unnecessary wrapper that creates invalid HTML
+(duplicate IDs).
+
+--- BUG #7: Block registration nested in wrong loop in nodeListComponent.tsx ---
+Severity: Low (Performance - redundant work)
+Lines 292-315 (the NodeLedger registration loop and NameFormatter assignment)
+are inside the outer `for (const key in allBlocks)` loop that builds blockMenu.
+This means ALL blocks get re-registered and NameFormatter gets re-assigned on
+every iteration of the outer loop. This code should run once, outside the loop.
+
+--- BUG #8: Division by zero in textureMemoryUsagePropertyTabComponent.tsx ---
+Severity: Low (Potential NaN display)
+Line 33 computes `Math.round((100 * (totalSize - optimisedSize)) / totalSize)`
+before the JSX guard `{totalSize !== 0 && ...}`. If totalSize is 0, the saving
+variable is NaN. While the JSX won't display it, the computation still runs.
+
+--- IMPROVEMENT #1: Deprecated substr() in draggableLineWithButtonComponent.tsx ---
+Severity: Low (Deprecation warning)
+Line 36 uses `String.prototype.substr()` which is deprecated. Should use
+`substring()` or `slice()` instead.
+
+--- IMPROVEMENT #2: Typos in graphEditor.tsx ---
+Severity: Low (Comments/strings)
+- Line 380: "probabaly" should be "probably"
+- Line 387: "isprobably" should be "is probably"
+- Lines 399, 451: "graphes" should be "graphs"
+
+--- IMPROVEMENT #3: Unused observer in previewManager.ts ---
+Severity: Low (Dead code)
+_onUpdateRequiredObserver is declared (line 45) but never assigned a value.
+The dispose() method tries to remove it (line 589), but it's always null so
+the removal is a no-op.
+
+================================================================================
+4. SUMMARY OF FIXES APPLIED
+================================================================================
+
+1. Fixed "NODE MATERIAL EDITOR" -> "NODE RENDER GRAPH EDITOR" in
+   frameNodePortPropertyComponent.tsx
+2. Fixed "NODE MATERIAL EDITOR" -> "NODE RENDER GRAPH EDITOR" in
+   framePropertyComponent.tsx
+3. Fixed alpha channel display bug in textureLineComponent.tsx
+4. Removed duplicate _previewManager disposal in graphEditor.tsx
+5. Added componentWillUnmount with observer cleanup to logComponent.tsx
+6. Removed duplicate nested div in previewAreaComponent.tsx
+7. Moved block registration outside the loop in nodeListComponent.tsx
+8. Added guard for division by zero in textureMemoryUsagePropertyTabComponent.tsx
+9. Replaced deprecated substr() with substring() in
+   draggableLineWithButtonComponent.tsx
+10. Fixed typos in graphEditor.tsx comments
+11. Removed unused _onUpdateRequiredObserver in previewManager.ts
+
+================================================================================
+END OF REVIEW
+================================================================================

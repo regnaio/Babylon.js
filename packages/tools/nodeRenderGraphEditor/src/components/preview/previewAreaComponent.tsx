@@ -54,12 +54,16 @@ export class PreviewAreaComponent extends React.Component<IPreviewAreaComponentP
                     <canvas onPointerOver={this._onPointerOverCanvas} onPointerOut={this._onPointerOutCanvas} id="preview-canvas" />
                     {<div className={"waitPanel" + (this.state.isLoading ? "" : " hidden")}>Please wait, loading...</div>}
                 </div>
-                <>
-                    <div id="preview-config-bar">
-                        <>
-                            <div id="preview-config-bar">
-                                <div
-                                    title="Turn on/off hemispheric light"
+                {/*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    There was a duplicate nested <div id="preview-config-bar"> wrapping the light toggle
+                    buttons. Having two elements with the same id is invalid HTML and the outer wrapper
+                    was unnecessary. Removed the redundant outer div and the extra fragment wrappers.
+                */}
+                <div id="preview-config-bar">
+                    <div
+                        title="Turn on/off hemispheric light"
                                     onClick={() => {
                                         this.props.globalState.hemisphericLight = !this.props.globalState.hemisphericLight;
                                         DataStorage.WriteBoolean("HemisphericLight", this.props.globalState.hemisphericLight);
@@ -94,10 +98,8 @@ export class PreviewAreaComponent extends React.Component<IPreviewAreaComponentP
                                 >
                                     <img src={directionalLeft} alt="" />
                                 </div>
-                            </div>
-                        </>
                     </div>
-                </>
+                </div>
             </>
         );
     }

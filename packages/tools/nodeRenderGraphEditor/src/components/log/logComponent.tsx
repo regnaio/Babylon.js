@@ -1,5 +1,7 @@
 import * as React from "react";
 import { type GlobalState } from "../../globalState";
+import { type Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
 
 import "./log.scss";
 
@@ -18,6 +20,14 @@ export class LogEntry {
 
 export class LogComponent extends React.Component<ILogComponentProps, { logs: LogEntry[] }> {
     private _logConsoleRef: React.RefObject<HTMLDivElement>;
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Added _onLogRequiredObserver to track the observer subscription so it can be
+        properly cleaned up in componentWillUnmount. Without this, the observer was
+        never removed, causing a memory leak when the component unmounted.
+    */
+    private _onLogRequiredObserver: Nullable<Observer<LogEntry>>;
     constructor(props: ILogComponentProps) {
         super(props);
 
@@ -26,12 +36,16 @@ export class LogComponent extends React.Component<ILogComponentProps, { logs: Lo
     }
 
     override componentDidMount() {
-        this.props.globalState.onLogRequiredObservable.add((log) => {
+        this._onLogRequiredObserver = this.props.globalState.onLogRequiredObservable.add((log) => {
             const currentLogs = this.state.logs;
             currentLogs.push(log);
 
             this.setState({ logs: currentLogs });
         });
+    }
+
+    override componentWillUnmount() {
+        this.props.globalState.onLogRequiredObservable.remove(this._onLogRequiredObserver);
     }
 
     override componentDidUpdate() {

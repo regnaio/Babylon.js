@@ -50,7 +50,14 @@ export class FramePropertyTabComponent extends React.Component<IFramePropertyTab
             <div id="propertyTab">
                 <div id="header">
                     <img id="logo" src="https://www.babylonjs.com/Assets/logo-babylonjs-social-twitter.png" />
-                    <div id="title">NODE MATERIAL EDITOR</div>
+                    {/*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        This title incorrectly said "NODE MATERIAL EDITOR" due to a copy-paste from the
+                        Node Material Editor codebase. It should say "NODE RENDER GRAPH EDITOR" to match
+                        the actual editor this component belongs to.
+                    */}
+                    <div id="title">NODE RENDER GRAPH EDITOR</div>
                 </div>
                 <div>
                     <LineContainerComponent title="GENERAL">

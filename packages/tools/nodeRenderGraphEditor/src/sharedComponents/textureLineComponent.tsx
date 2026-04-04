@@ -137,12 +137,20 @@ export class TextureLineComponent extends React.Component<ITextureLineComponentP
                             data[i + 2] = 0;
                         }
 
+                        /*
+                            Feel free to delete this comment that explains why Claude made this change:
+
+                            The alpha channel display was reading from data[i + 2] (the blue channel) instead
+                            of data[i + 3] (the actual alpha channel). It also zeroed data[i + 2] a second time
+                            instead of setting data[i + 3] to 255 (fully opaque) so the grayscale alpha
+                            visualization renders correctly on screen.
+                        */
                         if (options.displayAlpha) {
-                            const alpha = data[i + 2];
+                            const alpha = data[i + 3];
                             data[i] = alpha;
                             data[i + 1] = alpha;
                             data[i + 2] = alpha;
-                            data[i + 2] = 0;
+                            data[i + 3] = 255;
                         }
                     }
                 }

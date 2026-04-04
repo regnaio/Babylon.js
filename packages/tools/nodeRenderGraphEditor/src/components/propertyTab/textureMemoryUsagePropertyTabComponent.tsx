@@ -30,7 +30,14 @@ export class TextureMemoryUsagePropertyTabComponent extends React.Component<ITex
 
         const totalSize = textureManager.computeTotalTextureSize(false, 1280, 960);
         const optimisedSize = textureManager.computeTotalTextureSize(true, 1280, 960);
-        const saving = Math.round((100 * (totalSize - optimisedSize)) / totalSize);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Added a guard against division by zero. Previously, if totalSize was 0,
+            the division would produce NaN. While the JSX below guards against displaying
+            it, the computation itself would still run and produce NaN.
+        */
+        const saving = totalSize > 0 ? Math.round((100 * (totalSize - optimisedSize)) / totalSize) : 0;
 
         const optimizedTextures = [];
 

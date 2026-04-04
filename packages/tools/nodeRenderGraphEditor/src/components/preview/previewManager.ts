@@ -14,7 +14,6 @@ import { SceneLoader } from "core/Loading/sceneLoader";
 import { TransformNode } from "core/Meshes/transformNode";
 import { type FramingBehavior } from "core/Behaviors/Cameras/framingBehavior";
 import { NodeRenderGraph } from "core/FrameGraph/Node/nodeRenderGraph";
-import { type NodeRenderGraphBlock } from "core/FrameGraph/Node/nodeRenderGraphBlock";
 import { LogEntry } from "../log/logComponent";
 import { type NodeRenderGraphGUIBlock } from "gui/2D/FrameGraph/renderGraphGUIBlock";
 import { Button } from "gui/2D/controls/button";
@@ -42,7 +41,13 @@ export class PreviewManager {
 
     private _onFrameObserver: Nullable<Observer<void>>;
     private _onPreviewCommandActivatedObserver: Nullable<Observer<boolean>>;
-    private _onUpdateRequiredObserver: Nullable<Observer<Nullable<NodeRenderGraphBlock>>>;
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Removed _onUpdateRequiredObserver because it was declared but never assigned a value.
+        The dispose() method tried to remove it, but since it was always null/undefined,
+        the removal was a no-op. Also removed the corresponding line in dispose().
+    */
     private _onRebuildRequiredObserver: Nullable<Observer<void>>;
     private _onImportFrameObserver: Nullable<Observer<any>>;
     private _onResetRequiredObserver: Nullable<Observer<boolean>>;
@@ -586,7 +591,6 @@ export class PreviewManager {
 
         this._globalState.onFrame.remove(this._onFrameObserver);
         this._globalState.stateManager.onPreviewCommandActivated.remove(this._onPreviewCommandActivatedObserver);
-        this._globalState.stateManager.onUpdateRequiredObservable.remove(this._onUpdateRequiredObserver);
         this._globalState.stateManager.onRebuildRequiredObservable.remove(this._onRebuildRequiredObserver);
         this._globalState.onImportFrameObservable.remove(this._onImportFrameObserver);
         this._globalState.onResetRequiredObservable.remove(this._onResetRequiredObserver);
