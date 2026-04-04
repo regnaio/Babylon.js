@@ -1,7 +1,14 @@
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    Removed the heavy `Texture` import that was only used to access
+    `Texture.BILINEAR_SAMPLINGMODE`. The identical constant is available as
+    `Constants.TEXTURE_BILINEAR_SAMPLINGMODE` from the already-imported `Constants`
+    class, avoiding pulling the entire Texture class into the bundle.
+*/
 import { type Nullable } from "../types";
 import { type Camera } from "../Cameras/camera";
 import { type Effect } from "../Materials/effect";
-import { Texture } from "../Materials/Textures/texture";
 import { type PostProcessOptions, PostProcess } from "./postProcess";
 import { type AbstractEngine } from "../Engines/abstractEngine";
 import { Constants } from "../Engines/constants";
@@ -39,7 +46,7 @@ export class FxaaPostProcess extends PostProcess {
             uniforms: ThinFXAAPostProcess.Uniforms,
             size: typeof options === "number" ? options : undefined,
             camera,
-            samplingMode: samplingMode || Texture.BILINEAR_SAMPLINGMODE,
+            samplingMode: samplingMode || Constants.TEXTURE_BILINEAR_SAMPLINGMODE,
             engine,
             reusable,
             textureType,

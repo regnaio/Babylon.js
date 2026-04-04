@@ -70,6 +70,36 @@ IMPROVEMENTS FOUND AND FIXED
    Description: Fixed typos "intializing" -> "initializing" and "preivous" ->
    "previous" in code comments.
 
+8. [OPTIMIZATION] fxaaPostProcess.ts - Unnecessary heavy Texture import
+   File: fxaaPostProcess.ts, line 4
+   Description: The `Texture` class was imported solely to access
+   `Texture.BILINEAR_SAMPLINGMODE`. The identical constant is available as
+   `Constants.TEXTURE_BILINEAR_SAMPLINGMODE` from the already-imported `Constants`
+   class. Using `Constants` avoids pulling the entire Texture class into the bundle
+   for tree-shaking purposes.
+
+9. [OPTIMIZATION] sharpenPostProcess.ts - Redundant side-effect shader import
+   File: sharpenPostProcess.ts, line 7
+   Description: The side-effect import `import "../Shaders/sharpen.fragment"` eagerly
+   loads the GLSL shader. However, ThinSharpenPostProcess already dynamically imports
+   the shader (both GLSL and WGSL variants) in its _gatherImports method. This import
+   was redundant and forced the GLSL shader to always be bundled even when only WebGPU
+   is used.
+
+10. [IMPROVEMENT] highlightsPostProcess.ts - Missing RegisterClass call
+    File: highlightsPostProcess.ts
+    Description: Every other PostProcess in the directory registers itself with
+    `RegisterClass("BABYLON.<ClassName>", <ClassName>)` for deserialization support.
+    HighlightsPostProcess was the only one missing this, meaning it could not be
+    properly deserialized from serialized scene data.
+
+11. [BUG] thinColorCorrectionPostProcess.ts - LUT texture resource leak
+    File: thinColorCorrectionPostProcess.ts
+    Description: The constructor creates a `Texture` for the color LUT table, but
+    there was no `dispose()` override to clean it up. Disposing the post process
+    would leak the color table texture. Added a dispose override that cleans up
+    the texture before calling super.dispose().
+
 ================================================================================
 OTHER OBSERVATIONS (NOT FIXED - by design or low risk)
 ================================================================================

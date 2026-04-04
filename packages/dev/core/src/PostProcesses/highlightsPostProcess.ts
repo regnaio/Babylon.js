@@ -3,6 +3,15 @@ import { type Camera } from "../Cameras/camera";
 import { type PostProcessOptions, PostProcess } from "./postProcess";
 import { type AbstractEngine } from "core/Engines/abstractEngine";
 import { Constants } from "../Engines/constants";
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    Added the missing RegisterClass import and call. Every other PostProcess in this
+    directory registers itself with RegisterClass so it can be deserialized by name.
+    HighlightsPostProcess was the only one missing this, which meant it could not be
+    properly deserialized from serialized scene data.
+*/
+import { RegisterClass } from "../Misc/typeStore";
 
 /**
  * Extracts highlights from the image
@@ -51,3 +60,5 @@ export class HighlightsPostProcess extends PostProcess {
         super._gatherImports(useWebGPU, list);
     }
 }
+
+RegisterClass("BABYLON.HighlightsPostProcess", HighlightsPostProcess);

@@ -1,10 +1,17 @@
 import { type Nullable } from "../types";
 import { type Camera } from "../Cameras/camera";
 import { type Effect } from "../Materials/effect";
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    Removed the redundant side-effect shader import `import "../Shaders/sharpen.fragment"`.
+    The ThinSharpenPostProcess already dynamically imports the shader (both GLSL and WGSL
+    variants) in its _gatherImports method, making this eager import unnecessary. Removing
+    it avoids forcing the GLSL shader to always be bundled even when only WebGPU is used.
+*/
 import { type PostProcessOptions, PostProcess } from "./postProcess";
 import { Constants } from "../Engines/constants";
 
-import "../Shaders/sharpen.fragment";
 import { RegisterClass } from "../Misc/typeStore";
 import { serialize } from "../Misc/decorators";
 import { SerializationHelper } from "../Misc/decorators.serialization";

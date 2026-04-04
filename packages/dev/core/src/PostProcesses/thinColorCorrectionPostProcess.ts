@@ -62,4 +62,16 @@ export class ThinColorCorrectionPostProcess extends EffectWrapper {
         super.bind(noDefaultBindings);
         this._drawWrapper.effect!.setTexture("colorTable", this._colorTableTexture);
     }
+
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Added a dispose override to clean up the internally created LUT texture.
+        Without this, disposing the post process would leak the color table texture
+        since nothing else holds a reference to it.
+    */
+    public override dispose() {
+        this._colorTableTexture.dispose();
+        super.dispose();
+    }
 }
