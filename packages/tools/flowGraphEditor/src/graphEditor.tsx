@@ -236,8 +236,15 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
         const globalState = this.props.globalState;
 
         if (globalState.hostDocument) {
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                The previous code removed the keydown listener and then immediately re-added it,
+                which meant the listener was never actually cleaned up on unmount. This caused a
+                memory leak and could lead to keyboard shortcuts firing multiple times if the
+                editor was re-mounted. Removed the erroneous re-add call.
+            */
             globalState.hostDocument.removeEventListener("keydown", this._onDocumentKeyDown, false);
-            globalState.hostDocument.addEventListener("keydown", this._onDocumentKeyDown, false);
             globalState.hostDocument.removeEventListener("keyup", this._onWidgetKeyUpPointer, false);
         }
 

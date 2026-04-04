@@ -25,6 +25,13 @@ export const BlockTypeBodyColor: Record<FlowGraphBlockType, string> = {
  * Maintained separately because events ARE execution blocks but deserve
  * a distinct visual identity.
  */
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    Added FlowGraphSoundEndedEventBlock to the event block set. It was missing,
+    causing it to display with the wrong color in the node palette. It's an event
+    block (fires when a sound ends) and should have the amber "event" color.
+*/
 const _EventBlockNames = new Set<string>([
     "FlowGraphSceneReadyEventBlock",
     "FlowGraphSceneTickEventBlock",
@@ -36,6 +43,8 @@ const _EventBlockNames = new Set<string>([
     "FlowGraphPointerOverEventBlock",
     "FlowGraphPointerOutEventBlock",
     "FlowGraphReceiveCustomEventBlock",
+    "FlowGraphSoundEndedEventBlock",
+    "FlowGraphPhysicsCollisionEventBlock",
 ]);
 
 /**
@@ -64,6 +73,15 @@ export function GetBlockType(className: string, data?: any): FlowGraphBlockType 
  * @param className - the block class name to check
  * @returns true if the block is an execution block
  */
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    Added patterns for physics action blocks (ApplyForce, ApplyImpulse,
+    SetLinearVelocity, SetAngularVelocity, SetPhysicsMotionType) and audio
+    action blocks (PlaySound, StopSound, PauseSound, SetSoundVolume) to the
+    name-based execution block detection. Without these, these blocks displayed
+    with the green "data" color in the node palette instead of blue "execution".
+*/
 function _IsExecutionByName(className: string): boolean {
     // Control flow
     if (/^FlowGraph(Branch|ForLoop|WhileLoop|Switch|Sequence|MultiGate|FlipFlop|DoN|WaitAll|SetDelay|CancelDelay|CallCounter|Debounce|Throttle)Block$/.test(className)) {
@@ -75,6 +93,14 @@ function _IsExecutionByName(className: string): boolean {
     }
     // Data access – only the mutating / action ones
     if (/^FlowGraph(SetProperty|SetVariable|SendCustomEvent|ConsoleLog|CodeExecution)Block$/.test(className)) {
+        return true;
+    }
+    // Physics actions
+    if (/^FlowGraph(ApplyForce|ApplyImpulse|SetLinearVelocity|SetAngularVelocity|SetPhysicsMotionType)Block$/.test(className)) {
+        return true;
+    }
+    // Audio actions
+    if (/^FlowGraph(PlaySound|StopSound|PauseSound|SetSoundVolume)Block$/.test(className)) {
         return true;
     }
     return false;

@@ -21,7 +21,15 @@ export class ErrorBoundary extends React.Component<PropsWithChildren<{}>, IError
         this.state = { hasError: false, error: "" };
     }
 
-    static GetDerivedStateFromError(error: Error): IErrorBoundaryState {
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        React requires the static lifecycle method to be named exactly `getDerivedStateFromError`
+        (lowercase 'g'). The previous PascalCase name `GetDerivedStateFromError` was never
+        recognized by React, making the entire ErrorBoundary non-functional — render errors
+        would crash the editor instead of being caught and displayed.
+    */
+    static getDerivedStateFromError(error: Error): IErrorBoundaryState {
         return { hasError: true, error: error.message };
     }
 

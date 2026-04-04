@@ -88,6 +88,13 @@ export const HelpTopics: IHelpTopic[] = [
         title: "Time Scale (Speed Control)",
         sections: [
             {
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    Removed the "2×" row from the help table because the UI only renders speed
+                    buttons for [0.1, 0.25, 0.5, 1] — there is no 2× button. The help text was
+                    misleading users into looking for a feature that doesn't exist.
+                */
                 html: `<p>The <b>Speed</b> buttons in the toolbar let you slow down or speed up the entire scene execution:</p>
 <table>
 <tr><th>Button</th><th>Effect</th></tr>
@@ -95,7 +102,6 @@ export const HelpTopics: IHelpTopic[] = [
 <tr><td><b>0.25×</b></td><td>25% speed — slow motion</td></tr>
 <tr><td><b>0.5×</b></td><td>50% speed — half speed</td></tr>
 <tr><td><b>1×</b></td><td>Normal speed (default)</td></tr>
-<tr><td><b>2×</b></td><td>Double speed — fast forward</td></tr>
 </table>
 <p>The time scale affects <b>everything</b>: scene animations, FlowGraph delta time, interpolation blocks, async waits, timer-based logic, and render-loop code that reads engine delta time.</p>
 <p>The active speed button is highlighted in orange. The selected speed persists when the scene is reloaded via Reset.</p>`,

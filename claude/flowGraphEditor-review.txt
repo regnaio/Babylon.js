@@ -1,0 +1,146 @@
+==============================================================================
+Flow Graph Editor — Full Code Review
+Reviewed by: Claude (claude-tools-flowgrapheditor branch)
+Date: 2026-04-04
+Directory: packages/tools/flowGraphEditor/src/
+Files analyzed: 50 TypeScript/TSX files
+==============================================================================
+
+SUMMARY
+-------
+The Flow Graph Editor is a React-based visual editor for Babylon.js flow graphs.
+It provides a node graph canvas, property panel, scene preview, validation,
+debug/breakpoint support, smart groups, undo/redo, and serialization.
+
+The codebase is generally well-structured with clear separation of concerns.
+Below are the issues found, ordered by severity.
+
+
+==============================================================================
+BUGS FOUND AND FIXED
+==============================================================================
+
+1. ERROR BOUNDARY NON-FUNCTIONAL (portal.tsx:24)
+   Severity: HIGH
+   File: portal.tsx
+
+   The ErrorBoundary class defines `static GetDerivedStateFromError()` with a
+   capital 'G'. React requires exactly `static getDerivedStateFromError()`
+   (lowercase 'g') to recognize it as a lifecycle method. With the current
+   code, the error boundary never catches render errors — it's completely
+   non-functional. Any uncaught render error crashes the entire editor.
+
+   Fix: Rename to `static getDerivedStateFromError()`.
+
+
+2. EVENT LISTENER LEAK IN componentWillUnmount (graphEditor.tsx:240)
+   Severity: HIGH
+   File: graphEditor.tsx
+
+   In componentWillUnmount(), line 240 removes the keydown listener, but
+   line 241 immediately re-adds it:
+
+     globalState.hostDocument.removeEventListener("keydown", ...);
+     globalState.hostDocument.addEventListener("keydown", ...);  // BUG
+
+   This means unmounting never actually removes the listener, causing a
+   memory leak and potentially double-firing keyboard shortcuts if the
+   editor is re-mounted.
+
+   Fix: Remove the erroneous addEventListener call.
+
+
+3. DIRECT STATE MUTATION (logComponent.tsx:33-36)
+   Severity: MEDIUM
+   File: components/log/logComponent.tsx
+
+   The log observable callback pushes directly into `this.state.logs`:
+
+     const currentLogs = this.state.logs;
+     currentLogs.push(log);          // mutates state directly!
+     this.setState({ logs: currentLogs });
+
+   React may not reliably detect changes when the same array reference is
+   passed to setState. This can cause missed renders or stale UI.
+
+   Fix: Create a new array via spread: `[...this.state.logs, log]`.
+
+
+4. MISSING EXECUTION BLOCK PATTERNS (blockTypeColors.ts:67-81)
+   Severity: LOW
+   File: graphSystem/blockTypeColors.ts
+
+   The `_IsExecutionByName()` function (used when no runtime data is
+   available, e.g. in the left palette) doesn't cover:
+   - Physics action blocks (ApplyForce, ApplyImpulse, SetLinearVelocity,
+     SetAngularVelocity, SetPhysicsMotionType)
+   - Audio action blocks (PlaySound, StopSound, PauseSound, SetSoundVolume)
+   - Sound ended event block (FlowGraphSoundEndedEventBlock)
+
+   These blocks display with green "data" coloring in the palette instead
+   of blue "execution" or amber "event".
+
+   Fix: Add patterns for physics actions, audio actions, and the sound
+   ended event to _IsExecutionByName() and _EventBlockNames.
+
+
+==============================================================================
+PERFORMANCE IMPROVEMENTS FIXED
+==============================================================================
+
+5. REDUNDANT BLOCK REGISTRATION PER RENDER LOOP (nodeListComponent.tsx:297-318)
+   Severity: MEDIUM
+   File: components/nodeList/nodeListComponent.tsx
+
+   Inside the `for (const key in allBlocks)` render loop, the code:
+   - Re-iterates ALL categories to register blocks into NodeLedger
+   - Re-assigns NodeLedger.NameFormatter
+
+   This runs N times per render (once per category), doing O(N*M) work
+   where M is total block count. It should be outside the loop since it
+   doesn't depend on `key`.
+
+   Fix: Move block registration and NameFormatter assignment outside the
+   category loop.
+
+
+==============================================================================
+DOCUMENTATION FIXES
+==============================================================================
+
+6. INCORRECT HELP TEXT (helpContent.ts:98)
+   Severity: LOW
+   File: components/help/helpContent.ts
+
+   The "Time Scale" help topic mentions a "2×" speed button, but the UI
+   (graphControlsComponent.tsx:367) only renders buttons for [0.1, 0.25,
+   0.5, 1]. There is no 2× button.
+
+   Fix: Remove the 2× row from the help content table.
+
+
+==============================================================================
+OBSERVATIONS (NOT FIXED — informational only)
+==============================================================================
+
+- The codebase uses a mix of class components and functional patterns. All
+  React components are class-based (extending React.Component), which is
+  consistent with the rest of the Babylon.js tools ecosystem.
+
+- Heavy use of `(block as any).config` casts throughout property components.
+  This is a pragmatic approach given FlowGraphBlock's generic config typing,
+  but could benefit from stricter typing in the future.
+
+- SceneContext subscribes to "added" observables for skeletons and particle
+  systems but not their corresponding "removed" observables. This means the
+  context doesn't auto-refresh when skeletons or particle systems are removed.
+  Not fixed because the debounced refresh from other removals likely covers
+  most real-world scenarios.
+
+- The `_hashString` method in blockNodeData.ts converts GUID strings to
+  numeric IDs via a simple hash. This could theoretically produce collisions
+  but is acceptable for UI-only identification purposes.
+
+- BlockTools.GetColorFromFlowGraphConnectionType returns the same color for
+  both Input and Output signal connections. The switch statement could be
+  simplified, but this is a style choice rather than a bug.

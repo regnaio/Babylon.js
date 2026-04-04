@@ -292,31 +292,40 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                     </LineContainerComponent>
                 );
             }
+        }
 
-            // Register blocks
-            const ledger = NodeLedger.RegisteredNodeNames;
-            for (const cat in allBlocks) {
-                const blocks = allBlocks[cat] as string[];
-                if (blocks.length) {
-                    for (const block of blocks) {
-                        if (!ledger.includes(block)) {
-                            ledger.push(block);
-                        }
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Block registration into NodeLedger and the NameFormatter assignment were previously
+            inside the outer `for (const key in allBlocks)` loop, causing them to re-execute
+            once per category on every render. Since they iterate all categories themselves and
+            don't depend on the outer `key`, they only need to run once. Moved them outside the
+            loop to avoid O(N*M) redundant work.
+        */
+        // Register blocks
+        const ledger = NodeLedger.RegisteredNodeNames;
+        for (const cat in allBlocks) {
+            const blocks = allBlocks[cat] as string[];
+            if (blocks.length) {
+                for (const block of blocks) {
+                    if (!ledger.includes(block)) {
+                        ledger.push(block);
                     }
                 }
             }
-            NodeLedger.NameFormatter = (name) => {
-                let finalName = name;
-                // Remove "FlowGraph" prefix and "Block" suffix for display
-                if (finalName.startsWith("FlowGraph")) {
-                    finalName = finalName.substring(9);
-                }
-                if (finalName.endsWith("Block")) {
-                    finalName = finalName.substring(0, finalName.length - 5);
-                }
-                return finalName;
-            };
         }
+        NodeLedger.NameFormatter = (name) => {
+            let finalName = name;
+            // Remove "FlowGraph" prefix and "Block" suffix for display
+            if (finalName.startsWith("FlowGraph")) {
+                finalName = finalName.substring(9);
+            }
+            if (finalName.endsWith("Block")) {
+                finalName = finalName.substring(0, finalName.length - 5);
+            }
+            return finalName;
+        };
 
         return (
             <div id="fgeNodeList">

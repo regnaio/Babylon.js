@@ -30,10 +30,15 @@ export class LogComponent extends React.Component<ILogComponentProps, { logs: Lo
 
     override componentDidMount() {
         this.props.globalState.onLogRequiredObservable.add((log) => {
-            const currentLogs = this.state.logs;
-            currentLogs.push(log);
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
 
-            this.setState({ logs: currentLogs });
+                The previous code mutated the existing state array directly by pushing onto it,
+                then passed the same array reference to setState. React may not detect changes
+                when the same reference is reused, potentially causing missed renders. Creating
+                a new array via spread ensures React always sees a new reference.
+            */
+            this.setState((prev) => ({ logs: [...prev.logs, log] }));
         });
     }
 
