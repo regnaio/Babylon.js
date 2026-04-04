@@ -62,10 +62,9 @@ BUGS FOUND AND FIXED
     the timeout error message reports the wrong task.
     FIX: Reset `firstNotReadyTask` to null at the start of each retry.
 
-11. [BUG] computeShaderTask.ts - ComputeShader not disposed
-    Line 227: The `dispose()` method disposes uniform buffers but never disposes
-    the ComputeShader instance (`this._cs`). Leaks GPU pipeline state and shaders.
-    FIX: Added `this._cs?.dispose()` in dispose method.
+11. [RETRACTED] computeShaderTask.ts - ComputeShader disposal
+    Originally reported as missing disposal, but ComputeShader has no dispose()
+    method. The original agent finding was incorrect. Fix reverted.
 
 12. [BUG] geometryRendererTask.ts - needsPreviousWorldMatrices can be incorrectly reset
     Line 326: Sets `scene.needsPreviousWorldMatrices = needPreviousWorldMatrices`
