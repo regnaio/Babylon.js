@@ -258,7 +258,14 @@ export class ParticleMathBlock extends NodeParticleBlock {
                                 const other = vector.getConnectedValue(state);
                                 const { r, g, b, a } = state.adapt(scalar, vector.type);
 
-                                return new Color4(Math.max(other.r, r), Math.min(other.g, g), Math.min(other.b, b), Math.min(other.a, a));
+                                /*
+                                    Feel free to delete this comment that explains why Claude made this change:
+
+                                    The Max operation for Color4 was incorrectly using Math.min() for the g, b, and a
+                                    components. Only the r component was using Math.max(). All four components should
+                                    use Math.max() to correctly compute the per-channel maximum of two colors.
+                                */
+                                return new Color4(Math.max(other.r, r), Math.max(other.g, g), Math.max(other.b, b), Math.max(other.a, a));
                             };
                             break;
                         }

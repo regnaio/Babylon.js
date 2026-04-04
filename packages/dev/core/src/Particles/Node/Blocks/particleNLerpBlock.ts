@@ -1,4 +1,5 @@
-import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
+import { Vector2, Vector3 } from "core/Maths/math.vector";
+import { Color4 } from "core/Maths/math.color";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeParticleBlock } from "../nodeParticleBlock";
 import { NodeParticleBlockConnectionPointTypes } from "../Enums/nodeParticleBlockConnectionPointTypes";
@@ -99,10 +100,22 @@ export class ParticleNLerpBlock extends NodeParticleBlock {
                     return result;
                 }
                 case NodeParticleBlockConnectionPointTypes.Color4: {
-                    const result = new Vector4(func(gradient, left.r, right.r), func(gradient, left.g, right.g), func(gradient, left.b, right.b), func(gradient, left.a, right.a));
-                    result.normalize();
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
 
-                    return result;
+                        Was returning a Vector4 instead of Color4 for Color4 input type. Downstream code
+                        expects .r/.g/.b/.a accessors which don't exist on Vector4 (which uses .x/.y/.z/.w).
+                        Color4 does not have a normalize() method, so normalization is done manually.
+                    */
+                    const r = func(gradient, left.r, right.r);
+                    const g = func(gradient, left.g, right.g);
+                    const b = func(gradient, left.b, right.b);
+                    const a = func(gradient, left.a, right.a);
+                    const len = Math.sqrt(r * r + g * g + b * b + a * a);
+                    if (len > 0) {
+                        return new Color4(r / len, g / len, b / len, a / len);
+                    }
+                    return new Color4(0, 0, 0, 0);
                 }
             }
 

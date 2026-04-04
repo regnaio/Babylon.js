@@ -1,4 +1,5 @@
-import { Vector2, Vector3, Vector4 } from "core/Maths/math.vector";
+import { Vector2, Vector3 } from "core/Maths/math.vector";
+import { Color4 } from "core/Maths/math.color";
 import { RegisterClass } from "../../../Misc/typeStore";
 import { NodeParticleBlock } from "../nodeParticleBlock";
 import { NodeParticleBlockConnectionPointTypes } from "../Enums/nodeParticleBlockConnectionPointTypes";
@@ -91,7 +92,14 @@ export class ParticleSmoothStepBlock extends NodeParticleBlock {
                     return new Vector3(func(source.x, edge0, edge1), func(source.y, edge0, edge1), func(source.z, edge0, edge1));
                 }
                 case NodeParticleBlockConnectionPointTypes.Color4: {
-                    return new Vector4(func(source.r, edge0, edge1), func(source.g, edge0, edge1), func(source.b, edge0, edge1), func(source.a, edge0, edge1));
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        Was returning a Vector4 instead of Color4 for Color4 input type. Downstream code
+                        expects .r/.g/.b/.a accessors which don't exist on Vector4 (which uses .x/.y/.z/.w),
+                        causing undefined values when the result is used as a color.
+                    */
+                    return new Color4(func(source.r, edge0, edge1), func(source.g, edge0, edge1), func(source.b, edge0, edge1), func(source.a, edge0, edge1));
                 }
             }
 

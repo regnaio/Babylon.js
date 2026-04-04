@@ -92,6 +92,15 @@ export class CloudPoint {
      */
     public _globalPosition: Vector3 = Vector3.Zero();
 
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        The size getter and setter were both referencing this.size which calls themselves,
+        causing infinite recursion (stack overflow) whenever the size property was accessed
+        or set. Added a private _size backing field to break the recursion.
+    */
+    private _size: Vector3 = Vector3.One();
+
     /**
      * Creates a Point Cloud object.
      * Don't create particles manually, use instead the PCS internal tools like _addParticle()
@@ -113,14 +122,14 @@ export class CloudPoint {
      * get point size
      */
     public get size(): Vector3 {
-        return this.size;
+        return this._size;
     }
 
     /**
      * Set point size
      */
     public set size(scale: Vector3) {
-        this.size = scale;
+        this._size = scale;
     }
 
     /**

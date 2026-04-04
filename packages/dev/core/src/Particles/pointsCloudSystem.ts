@@ -213,7 +213,14 @@ export class PointsCloudSystem implements IDisposable {
         const greenForCoord = imageData[greenIndex];
         const blueForCoord = imageData[blueIndex];
         const alphaForCoord = imageData[alphaIndex];
-        return new Color4(redForCoord / 255, greenForCoord / 255, blueForCoord / 255, alphaForCoord);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The alpha channel was not being divided by 255 like the RGB channels.
+            Since imageData values are bytes in the range [0, 255], all four channels
+            need to be normalized to [0, 1] for correct Color4 representation.
+        */
+        return new Color4(redForCoord / 255, greenForCoord / 255, blueForCoord / 255, alphaForCoord / 255);
     }
 
     private _setPointsColorOrUV(

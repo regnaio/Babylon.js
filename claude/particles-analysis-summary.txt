@@ -1,0 +1,79 @@
+================================================================================
+Babylon.js core/src/Particles/ - Code Review Summary
+================================================================================
+Reviewed by Claude | Date: 2026-04-03
+Total files analyzed: ~85 TypeScript files across Particles/, EmitterTypes/,
+Node/, Node/Blocks/, Node/Blocks/Emitters/, Node/Blocks/Update/,
+Node/Blocks/Conditions/, Node/Blocks/Teleport/, Node/Blocks/Triggers/,
+and Queue/ subdirectories.
+
+================================================================================
+BUGS FOUND AND FIXED
+================================================================================
+
+1. particleMathBlock.ts (line 261) - WRONG MATH FUNCTION IN COLOR4 MAX
+   The Max operation for Color4 type used Math.min() for the g, b, and a
+   components instead of Math.max(). This meant "Max" was actually returning
+   minimum values for 3 of the 4 color channels.
+
+2. particleSmoothStepBlock.ts (line 94) - WRONG RETURN TYPE FOR COLOR4
+   The SmoothStep operation returned a Vector4 instead of Color4 for Color4
+   inputs. Downstream code expecting .r/.g/.b/.a accessors would get undefined
+   since Vector4 uses .x/.y/.z/.w.
+
+3. particleStepBlock.ts (line 86) - WRONG RETURN TYPE FOR COLOR4
+   Same issue as #2 - Step operation returned Vector4 instead of Color4.
+
+4. particleNLerpBlock.ts (lines 101-105) - WRONG RETURN TYPE FOR COLOR4
+   NLerp returned Vector4 for Color4 inputs. Additionally, it called
+   .normalize() which doesn't exist on Color4, so the fix manually computes
+   normalization and returns a proper Color4.
+
+5. nodeParticleSystemSet.ts (line 432) - CONCAT RESULT DISCARDED
+   Array.concat() returns a new array and does NOT mutate the original.
+   The code called locations.concat(this.editorData.locations) without
+   assigning the result, so merged editor locations were silently lost.
+
+6. pointsCloudSystem.ts (line 216) - ALPHA NOT NORMALIZED TO [0,1]
+   RGB channels were divided by 255 to normalize from byte [0-255] to float
+   [0-1], but the alpha channel was not, resulting in alpha values 255x too
+   large.
+
+7. baseParticleSystem.ts (line 390) - LOOSE EQUALITY CHECK
+   The isAnimationSheetEnabled setter used == instead of === for comparison,
+   inconsistent with every other setter in the file which all use ===.
+
+8. nodeParticleBlock.ts (line 357) - EARLY RETURN INSTEAD OF CONTINUE
+   In _deserializePortDisplayNamesAndExposedOnFrame(), if a serialized input
+   wasn't found by name, the method returned entirely instead of continuing to
+   the next port. This caused all remaining inputs AND all output ports to be
+   skipped during deserialization.
+
+9. cloudPoint.ts (lines 115-124) - INFINITE RECURSION IN GETTER/SETTER
+   The size getter returned this.size (calling itself), and the setter assigned
+   to this.size (calling itself). Both cause infinite recursion / stack overflow
+   if ever accessed. Fixed by adding a private _size backing field.
+
+================================================================================
+OTHER OBSERVATIONS (NOT FIXED - may be intentional or low-risk)
+================================================================================
+
+- attractor.ts: Uses `lengthSquared() + 1` for distance softening. Unconventional
+  but may be intentional for artistic/physics tuning. Math.max(lengthSquared(), 1)
+  would be more conventional.
+
+- Emitter clone() methods (cylinder, hemispheric, sphere): Pass fewer constructor
+  args than the constructor accepts, but DeepCopier.DeepCopy() immediately after
+  overwrites all properties anyway, so this is NOT a bug.
+
+- thinParticleSystem.function.ts: limitVelocityDamping applies a fixed multiplier
+  (default 0.4) rather than clamping to the limit. This is the same behavior as
+  Unity's particle system, so likely intentional.
+
+- Multiple Node blocks: Context assignments (state.particleContext/systemContext)
+  happen per-particle-per-frame. Could potentially be optimized but would require
+  architectural changes to the build state system.
+
+- nodeParticleSystemSet.ts: Uses JSON.parse(JSON.stringify()) for deep clone in
+  serialize(). Works correctly; structuredClone would be more efficient but may
+  not be available in all target environments.

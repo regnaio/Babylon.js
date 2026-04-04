@@ -387,7 +387,13 @@ export class BaseParticleSystem implements IClipPlanesHolder {
     }
 
     public set isAnimationSheetEnabled(value: boolean) {
-        if (this._isAnimationSheetEnabled == value) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Changed loose equality (==) to strict equality (===) for consistency with
+            every other setter in this file, and to avoid potential type coercion issues.
+        */
+        if (this._isAnimationSheetEnabled === value) {
             return;
         }
 

@@ -429,7 +429,14 @@ export class NodeParticleSystemSet {
             }
 
             if (merge && this.editorData && this.editorData.locations) {
-                locations.concat(this.editorData.locations);
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    Array.concat() returns a new array and does not mutate the original. The previous
+                    code called locations.concat(...) without assigning the result, silently discarding
+                    the merged editor data locations.
+                */
+                locations.push(...this.editorData.locations);
             }
 
             if (source.locations) {

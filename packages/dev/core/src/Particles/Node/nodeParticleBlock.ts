@@ -354,7 +354,15 @@ export class NodeParticleBlock {
                 const input = this.inputs.find((i) => i.name === port.name);
 
                 if (!input) {
-                    return;
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        Was using 'return' which exits the entire method when a single serialized
+                        input is not found by name. This caused all remaining inputs and all output
+                        ports to be skipped during deserialization. Changed to 'continue' to only
+                        skip the unrecognized port and keep processing the rest.
+                    */
+                    continue;
                 }
 
                 if (port.displayName) {
