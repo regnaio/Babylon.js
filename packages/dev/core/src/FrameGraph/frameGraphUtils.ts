@@ -26,17 +26,24 @@ export function FindMainObjectRenderer(frameGraph: FrameGraph): Nullable<FrameGr
 
 /**
  * Creates a utility layer renderer compatible with the given frame graph.
- * @param frameFraph The frame graph to create the utility layer renderer for
+ * @param frameGraph The frame graph to create the utility layer renderer for
  * @param handleEvents True if the utility layer renderer should handle events, false otherwise (default is true)
  * @returns The created utility layer renderer
  */
-export function CreateUtilityLayerRenderer(frameFraph: FrameGraph, handleEvents = true): UtilityLayerRenderer {
-    const scene = frameFraph.scene;
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The parameter was misspelled as "frameFraph" instead of "frameGraph". Additionally,
+	line 39 was using scene.frameGraph! instead of the passed-in parameter, which would
+	search the wrong frame graph (or throw) if the scene has a different one assigned.
+*/
+export function CreateUtilityLayerRenderer(frameGraph: FrameGraph, handleEvents = true): UtilityLayerRenderer {
+    const scene = frameGraph.scene;
     const layer = new UtilityLayerRenderer(scene, handleEvents, true);
 
     layer.utilityLayerScene.activeCamera = scene.activeCamera;
 
-    let camera = FrameGraphUtils.FindMainCamera(scene.frameGraph!);
+    let camera = FrameGraphUtils.FindMainCamera(frameGraph);
 
     if (!camera && scene.cameras.length > 0) {
         camera = scene.cameras[0];
@@ -80,7 +87,7 @@ export const FrameGraphUtils = {
 
     /**
      * Creates a utility layer renderer compatible with the given frame graph.
-     * @param frameFraph The frame graph to create the utility layer renderer for
+     * @param frameGraph The frame graph to create the utility layer renderer for
      * @param handleEvents True if the utility layer renderer should handle events, false otherwise
      * @returns The created utility layer renderer
      */

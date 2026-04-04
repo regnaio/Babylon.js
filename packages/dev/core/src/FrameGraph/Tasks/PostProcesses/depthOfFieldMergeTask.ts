@@ -21,7 +21,13 @@ export class FrameGraphDepthOfFieldMergeTask extends FrameGraphPostProcessTask {
 
     public override record(skipCreationOfDisabledPasses = false): FrameGraphRenderPass {
         if (this.sourceTexture === undefined || this.circleOfConfusionTexture === undefined || this.blurSteps.length === 0) {
-            throw new Error(`FrameGraphBloomMergeTask "${this.name}": sourceTexture, circleOfConfusionTexture and blurSteps are required`);
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The error message incorrectly referenced "FrameGraphBloomMergeTask" due to a
+            	copy-paste error. This class is FrameGraphDepthOfFieldMergeTask.
+            */
+            throw new Error(`FrameGraphDepthOfFieldMergeTask "${this.name}": sourceTexture, circleOfConfusionTexture and blurSteps are required`);
         }
 
         this.postProcess.updateEffect("#define BLUR_LEVEL " + (this.blurSteps.length - 1) + "\n");

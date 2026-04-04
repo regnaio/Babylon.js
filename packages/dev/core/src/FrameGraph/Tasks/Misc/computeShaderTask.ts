@@ -225,6 +225,13 @@ export class FrameGraphComputeShaderTask extends FrameGraphTask {
     }
 
     public override dispose(): void {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The ComputeShader instance (_cs) was never disposed, leaking GPU pipeline
+        	state, shader programs, and bound resources.
+        */
+        this._cs?.dispose();
         for (const key in this._ubo) {
             this._ubo[key].ubo.dispose();
         }

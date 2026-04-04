@@ -52,7 +52,14 @@ export class FrameGraphSSAO2Task extends FrameGraphPostProcessTask {
             }
         );
 
-        pass.addDependencies([this.depthTexture]);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	normalTexture was bound and read in the shader but not declared as a dependency.
+        	Without this, the frame graph may not correctly order passes, potentially reading
+        	the normal texture before it has been written.
+        */
+        pass.addDependencies([this.depthTexture, this.normalTexture]);
 
         this.postProcess.textureWidth = this._sourceWidth;
         this.postProcess.textureHeight = this._sourceHeight;

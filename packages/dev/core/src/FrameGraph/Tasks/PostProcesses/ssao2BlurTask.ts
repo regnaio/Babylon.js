@@ -39,6 +39,14 @@ export class FrameGraphSSAO2BlurTask extends FrameGraphPostProcessTask {
             }
         );
 
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	depthTexture was bound and read in the shader but never declared as a pass
+        	dependency. Without this, the frame graph may not correctly order passes.
+        */
+        pass.addDependencies(this.depthTexture);
+
         this.postProcess.textureSize = this._isHorizontal ? this._outputWidth : this._outputHeight;
 
         return pass;

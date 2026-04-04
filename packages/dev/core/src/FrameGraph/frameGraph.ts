@@ -326,6 +326,14 @@ export class FrameGraph implements IDisposable {
         return await new Promise((resolve, reject) => {
             this._whenReadyAsyncCancel = _RetryWithInterval(
                 () => {
+                    /*
+                    	Feel free to delete this comment that explains why Claude made this change:
+
+                    	firstNotReadyTask was never reset between retries, so it always reported
+                    	the first-ever not-ready task in the timeout error. If that task became
+                    	ready but a different task stayed not-ready, the error message was wrong.
+                    */
+                    firstNotReadyTask = null;
                     let ready = this._renderContext._isReady();
                     for (const task of this._tasks) {
                         const taskIsReady = task.isReady();
@@ -458,6 +466,13 @@ export class FrameGraph implements IDisposable {
         this.clear();
         this.textureManager._dispose();
         this._renderContext._dispose();
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	onBuildObservable was not being cleared in dispose(). Any observers attached
+        	to it would remain referenced, preventing garbage collection of subscribers.
+        */
+        this.onBuildObservable.clear();
 
         this._scene.removeFrameGraph(this);
     }

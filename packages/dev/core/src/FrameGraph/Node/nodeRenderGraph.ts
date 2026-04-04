@@ -564,7 +564,14 @@ export class NodeRenderGraph {
             }
 
             if (merge && this.editorData && this.editorData.locations) {
-                locations.concat(this.editorData.locations);
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	Array.concat() does not mutate the original array - it returns a new one.
+                	The return value was being discarded, so merge locations were silently lost.
+                	Changed to push() which mutates the array in place.
+                */
+                locations.push(...this.editorData.locations);
             }
 
             if (source.locations) {
@@ -794,6 +801,14 @@ export class NodeRenderGraph {
 
         this.attachedBlocks.length = 0;
         this.onBuildErrorObservable.clear();
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	onBeforeBuildObservable was not being cleared in dispose(), while
+        	onBuildErrorObservable was. This could retain observer references
+        	and prevent garbage collection.
+        */
+        this.onBeforeBuildObservable.clear();
     }
 
     /**

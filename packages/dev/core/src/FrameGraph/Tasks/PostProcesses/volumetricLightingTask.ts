@@ -220,10 +220,17 @@ export class FrameGraphVolumetricLightingTask extends FrameGraphTask {
     }
 
     public override isReady() {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	_renderLightingVolumeMaterial.isReady() was checked twice (copy-paste error),
+        	while _renderLightingVolumeTask.isReady() was never checked. This could cause
+        	the task to report "ready" when the object renderer sub-task's shaders aren't compiled.
+        */
         return (
             this._renderLightingVolumeMaterial.isReady() &&
             this._clearLightingVolumeTextureTask.isReady() &&
-            this._renderLightingVolumeMaterial.isReady() &&
+            this._renderLightingVolumeTask.isReady() &&
             this._blendLightingVolumeTask.isReady()
         );
     }

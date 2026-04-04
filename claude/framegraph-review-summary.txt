@@ -1,0 +1,117 @@
+FrameGraph Code Review Summary
+================================
+Reviewed by Claude on 2026-04-03
+Branch: claude-core-src-framegraph
+
+All ~100 TypeScript files in packages/dev/core/src/FrameGraph/ were reviewed,
+including cross-referencing imports and interactions between files.
+
+================================================================================
+BUGS FOUND AND FIXED
+================================================================================
+
+1. [BUG] frameGraphUtils.ts - Wrong variable used in CreateUtilityLayerRenderer
+   Line 39: Uses `scene.frameGraph!` instead of the passed-in `frameFraph` parameter.
+   If the scene has a different frame graph or none, this searches the wrong graph
+   or throws on the `!` assertion.
+   FIX: Changed to use the passed-in parameter.
+
+2. [BUG] frameGraphUtils.ts - Typo in parameter name `frameFraph`
+   Line 33: Parameter named `frameFraph` instead of `frameGraph`.
+   Shows up in documentation/intellisense as a misspelling.
+   FIX: Renamed to `frameGraph` throughout.
+
+3. [BUG] depthOfFieldMergeTask.ts - Wrong class name in error message
+   Line 24: Error says "FrameGraphBloomMergeTask" but class is
+   "FrameGraphDepthOfFieldMergeTask". Copy-paste error misleads debugging.
+   FIX: Corrected class name in error message.
+
+4. [BUG] volumetricLightingTask.ts - Duplicate isReady() check, missing actual check
+   Line 226: `_renderLightingVolumeMaterial.isReady()` is checked twice.
+   `_renderLightingVolumeTask.isReady()` is never checked. This means the task
+   may report "ready" when its object renderer sub-task hasn't compiled its shaders.
+   FIX: Replaced duplicate with `_renderLightingVolumeTask.isReady()`.
+
+5. [BUG] ssao2Task.ts - Missing normalTexture dependency
+   Line 55: Only `depthTexture` is declared as a dependency, but `normalTexture`
+   is also bound and read. Frame graph may not correctly order passes.
+   FIX: Added `normalTexture` to dependencies.
+
+6. [BUG] ssao2BlurTask.ts - Missing depthTexture dependency
+   The `record()` method binds `depthTexture` but never declares it as a dependency.
+   FIX: Added `pass.addDependencies(this.depthTexture)`.
+
+7. [BUG] ssrTask.ts - Missing backDepthTexture dependency
+   Line 66: `backDepthTexture` is conditionally bound but not declared as a dependency.
+   FIX: Added `pass.addDependencies(this.backDepthTexture)` (addDependencies handles undefined).
+
+8. [BUG] ssrRenderingPipelineTask.ts - Missing dependencies in SSR combiner pass
+   Line 248: Combiner pass binds `reflectivityTexture` and conditionally
+   `normalTexture`/`depthTexture`, but only declares `blurYTextureHandle` as dependency.
+   FIX: Added missing dependencies for reflectivityTexture and conditional textures.
+
+9. [BUG] nodeRenderGraph.ts - Array.concat() result discarded
+   Line 567: `locations.concat(this.editorData.locations)` does NOT mutate the
+   original array. The return value is discarded, so editor data locations from
+   merge are silently lost.
+   FIX: Changed to `locations.push(...this.editorData.locations)`.
+
+10. [BUG] frameGraph.ts - firstNotReadyTask never updated between retries
+    Lines 324-334: `firstNotReadyTask` captures the first-ever not-ready task and
+    never updates. If that task becomes ready but a different task stays not-ready,
+    the timeout error message reports the wrong task.
+    FIX: Reset `firstNotReadyTask` to null at the start of each retry.
+
+11. [BUG] computeShaderTask.ts - ComputeShader not disposed
+    Line 227: The `dispose()` method disposes uniform buffers but never disposes
+    the ComputeShader instance (`this._cs`). Leaks GPU pipeline state and shaders.
+    FIX: Added `this._cs?.dispose()` in dispose method.
+
+12. [BUG] geometryRendererTask.ts - needsPreviousWorldMatrices can be incorrectly reset
+    Line 326: Sets `scene.needsPreviousWorldMatrices = needPreviousWorldMatrices`
+    unconditionally. If multiple geometry renderer tasks exist and the second doesn't
+    request velocity, it overwrites `true` with `false` from the first task.
+    FIX: Changed to only set to `true`, never back to `false`.
+
+================================================================================
+IMPROVEMENTS FOUND AND FIXED
+================================================================================
+
+13. [IMPROVEMENT] frameGraph.ts - onBuildObservable not cleared in dispose()
+    Line 455: Observers attached to `onBuildObservable` remain referenced after
+    dispose, preventing garbage collection.
+    FIX: Added `this.onBuildObservable.clear()` in dispose().
+
+14. [IMPROVEMENT] nodeRenderGraph.ts - onBeforeBuildObservable not cleared in dispose()
+    Line 784: `onBeforeBuildObservable` not cleared while `onBuildErrorObservable` is.
+    FIX: Added `this.onBeforeBuildObservable.clear()` in dispose().
+
+15. [IMPROVEMENT] frameGraphTextureManager.ts - Typo in public property name
+    Line 76: `showDebugLogsForTextureAllcationOptimization` should be
+    `showDebugLogsForTextureAllocationOptimization` (missing 'o' in Allocation).
+    FIX: Corrected the property name spelling.
+
+================================================================================
+ISSUES NOTED BUT NOT FIXED (too risky or architectural)
+================================================================================
+
+- nodeRenderGraphConnectionPointCustomObject.ts line 37: `createCustomInputBlock`
+  omits required constructor args (frameGraph, scene). Fixing would require
+  changing the interface contract.
+
+- nodeRenderGraphBlockConnectionPoint.ts line 306: Throws string instead of Error.
+  Has existing eslint-disable comment, likely intentional for the codebase.
+
+- pass.ts line 42: `_executeFunc` could be undefined at runtime if called before
+  `setExecuteFunc`. Design relies on `_isValid()` being called first.
+
+- objectListPass.ts line 8: Unused `_engine` field. May be reserved for future use.
+
+- renderPass.ts line 147: `setOutputLayerAndFaceIndices` can crash if called before
+  `_initialize()`. Design relies on caller order.
+
+- baseLayerTask.ts: Missing pass dependencies for blur textures and depth textures
+  in selection outline. Complex fix requiring base class changes.
+
+- csmShadowGeneratorTask.ts: Potential division by zero with misconfigured camera.
+  Edge case unlikely in practice.

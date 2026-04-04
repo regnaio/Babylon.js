@@ -323,7 +323,16 @@ export class FrameGraphGeometryRendererTask extends FrameGraphObjectRendererTask
             }
         }
 
-        this._scene.needsPreviousWorldMatrices = needPreviousWorldMatrices;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Previously this set needsPreviousWorldMatrices unconditionally, which meant
+        	a second geometry renderer task that doesn't need velocity could overwrite
+        	`true` back to `false`, breaking the first task. Now we only set to `true`.
+        */
+        if (needPreviousWorldMatrices) {
+            this._scene.needsPreviousWorldMatrices = true;
+        }
 
         return pass;
     }

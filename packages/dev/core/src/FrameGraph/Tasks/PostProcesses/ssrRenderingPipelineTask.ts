@@ -245,7 +245,18 @@ export class FrameGraphSSRRenderingPipelineTask extends FrameGraphTask {
                 }
             });
 
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	The combiner pass binds reflectivityTexture and conditionally normalTexture/
+            	depthTexture, but only declared blurYTextureHandle as a dependency. Missing
+            	dependencies could cause incorrect pass ordering in the frame graph.
+            */
             combinerPass.addDependencies(blurYTextureHandle);
+            combinerPass.addDependencies(this.reflectivityTexture);
+            if (this.ssr.useFresnel) {
+                combinerPass.addDependencies([this.normalTexture, this.depthTexture]);
+            }
         }
 
         const passDisabled = this._frameGraph.addRenderPass(this.name + "_disabled", true);

@@ -63,7 +63,14 @@ export class FrameGraphSSRTask extends FrameGraphPostProcessTask {
             }
         );
 
-        pass.addDependencies([this.normalTexture, this.depthTexture, this.reflectivityTexture]);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	backDepthTexture is conditionally bound and read, but was not declared as a
+        	dependency. addDependencies safely handles undefined values, so this is safe
+        	even when backDepthTexture is not provided.
+        */
+        pass.addDependencies([this.normalTexture, this.depthTexture, this.reflectivityTexture, this.backDepthTexture]);
 
         this.postProcess.textureWidth = this._sourceWidth;
         this.postProcess.textureHeight = this._sourceHeight;

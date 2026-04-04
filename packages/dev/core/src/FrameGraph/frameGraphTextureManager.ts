@@ -73,7 +73,12 @@ export class FrameGraphTextureManager {
     /**
      * Gets or sets a boolean indicating if debug logs should be shown when applying texture allocation optimization (default: false)
      */
-    public showDebugLogsForTextureAllcationOptimization = false;
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	The property name had a typo: "Allcation" instead of "Allocation".
+    */
+    public showDebugLogsForTextureAllocationOptimization = false;
 
     private _backBufferTextureEntry: Nullable<TextureEntry> = null;
     private _backBufferDepthStencilTextureEntry: Nullable<TextureEntry> = null;
@@ -942,7 +947,7 @@ export class FrameGraphTextureManager {
     private _optimizeTextureAllocation(tasks: FrameGraphTask[]): void {
         this._computeTextureLifespan(tasks);
 
-        if (this.showDebugLogsForTextureAllcationOptimization) {
+        if (this.showDebugLogsForTextureAllocationOptimization) {
             Logger.Log(`================== Optimization of texture allocation ==================`);
         }
 
@@ -975,7 +980,7 @@ export class FrameGraphTextureManager {
 
                     if (!overlapped) {
                         // No overlap between texture lifespan and all lifespans in the array, this texture can reuse the same entry cache
-                        if (this.showDebugLogsForTextureAllcationOptimization) {
+                        if (this.showDebugLogsForTextureAllocationOptimization) {
                             Logger.Log(`Texture ${textureHandle} (${textureEntry.name}) reuses cache entry ${sourceHandle}`);
                         }
 
@@ -996,7 +1001,7 @@ export class FrameGraphTextureManager {
 
     // Loop through all task/pass dependencies and compute the lifespan of each texture (that is, the first task/pass that uses it and the last task/pass that uses it)
     private _computeTextureLifespan(tasks: FrameGraphTask[]): void {
-        if (this.showDebugLogsForTextureAllcationOptimization) {
+        if (this.showDebugLogsForTextureAllocationOptimization) {
             Logger.Log(`================== Dump of texture dependencies for all tasks/passes ==================`);
         }
 
@@ -1012,7 +1017,7 @@ export class FrameGraphTextureManager {
             }
 
             if (task.dependencies) {
-                if (this.showDebugLogsForTextureAllcationOptimization) {
+                if (this.showDebugLogsForTextureAllocationOptimization) {
                     Logger.Log(`task#${t} (${task.name}), global dependencies`);
                 }
 
@@ -1020,7 +1025,7 @@ export class FrameGraphTextureManager {
             }
         }
 
-        if (this.showDebugLogsForTextureAllcationOptimization) {
+        if (this.showDebugLogsForTextureAllocationOptimization) {
             Logger.Log(`================== Texture lifespans ==================`);
             const iterator = this._textures.keys();
             for (let key = iterator.next(); key.done !== true; key = iterator.next()) {
@@ -1045,7 +1050,7 @@ export class FrameGraphTextureManager {
 
             pass.collectDependencies(dependencies);
 
-            if (this.showDebugLogsForTextureAllcationOptimization) {
+            if (this.showDebugLogsForTextureAllocationOptimization) {
                 Logger.Log(`task#${taskIndex} (${task.name}), pass#${p} (${pass.name})`);
             }
 
@@ -1080,7 +1085,7 @@ export class FrameGraphTextureManager {
                 continue;
             }
 
-            if (this.showDebugLogsForTextureAllcationOptimization) {
+            if (this.showDebugLogsForTextureAllocationOptimization) {
                 Logger.Log(`    ${handle} (${textureEntry.name})`);
             }
 
