@@ -126,9 +126,15 @@ export class DetailMapConfiguration extends MaterialPluginBase {
             const engine = scene.getEngine();
 
             if (defines._areTexturesDirty) {
-                if (engine.getCaps().standardDerivatives && this._texture && MaterialFlags.DetailTextureEnabled && this._isEnabled) {
+                /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The this._isEnabled check was redundant here because the outer if-block
+	already guarantees _isEnabled is true. Also removed the redundant
+	DETAIL_NORMALBLENDMETHOD assignment that was already set above on line 124.
+                */
+                if (engine.getCaps().standardDerivatives && this._texture && MaterialFlags.DetailTextureEnabled) {
                     PrepareDefinesForMergedUV(this._texture, defines, "DETAIL");
-                    defines.DETAIL_NORMALBLENDMETHOD = this._normalBlendMethod;
                 } else {
                     defines.DETAIL = false;
                 }

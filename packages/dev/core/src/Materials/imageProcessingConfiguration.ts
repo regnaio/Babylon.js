@@ -31,7 +31,7 @@ export class ImageProcessingConfiguration {
     public static readonly TONEMAPPING_ACES = 1;
 
     /**
-     * Neutral Tone mapping developped by the Khronos group in order to constrain
+     * Neutral Tone mapping developed by the Khronos group in order to constrain
      * values between 0 and 1 without shifting Hue.
      */
     public static readonly TONEMAPPING_KHR_PBR_NEUTRAL = 2;

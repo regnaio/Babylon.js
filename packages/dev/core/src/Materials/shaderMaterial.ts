@@ -1355,14 +1355,23 @@ export class ShaderMaterial extends PushMaterial {
         }
 
         // Options
-        this._options = { ...this._options };
+        /*
+	Feel free to delete this comment that explains why Claude made this change:
 
-        const keys = Object.keys(this._options) as Array<keyof IShaderMaterialOptions>;
+	The clone() method was operating on this._options (the source material) instead
+	of result._options (the clone). This meant the source material's options got
+	unnecessarily shallow-copied, while the clone shared array references with the
+	original. If the clone later modified its options arrays, it would mutate the
+	source material's data.
+        */
+        result._options = { ...result._options };
+
+        const keys = Object.keys(result._options) as Array<keyof IShaderMaterialOptions>;
 
         for (const propName of keys) {
-            const propValue = this._options[propName];
+            const propValue = result._options[propName];
             if (Array.isArray(propValue)) {
-                (<string[]>this._options[propName]) = propValue.slice(0);
+                (<string[]>result._options[propName]) = propValue.slice(0);
             }
         }
 
@@ -1498,7 +1507,7 @@ export class ShaderMaterial extends PushMaterial {
             result.setTextureSampler(key, this._textureSamplers[key]);
         }
 
-        // Storag buffers
+        // Storage buffers
         for (const key in this._storageBuffers) {
             result.setStorageBuffer(key, this._storageBuffers[key]);
         }

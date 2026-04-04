@@ -346,8 +346,16 @@ export class MaterialFlags {
     /**
      * Are refraction intensity textures enabled in the application.
      */
+    /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The getter was returning this._ThicknessTextureEnabled instead of
+	this._RefractionIntensityTextureEnabled. This was a copy-paste bug that caused
+	reading RefractionIntensityTextureEnabled to return the wrong value, and setting
+	it to false appeared to have no effect when read back.
+    */
     public static get RefractionIntensityTextureEnabled(): boolean {
-        return this._ThicknessTextureEnabled;
+        return this._RefractionIntensityTextureEnabled;
     }
     public static set RefractionIntensityTextureEnabled(value: boolean) {
         if (this._RefractionIntensityTextureEnabled === value) {
@@ -391,8 +399,14 @@ export class MaterialFlags {
     }
 
     private static _IridescenceTextureEnabled = true;
+    /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The JSDoc said "translucency intensity textures" but this property controls
+	iridescence textures. This was a copy-paste error from the property above it.
+    */
     /**
-     * Are translucency intensity textures enabled in the application.
+     * Are iridescence textures enabled in the application.
      */
     public static get IridescenceTextureEnabled(): boolean {
         return this._IridescenceTextureEnabled;

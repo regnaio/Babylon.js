@@ -20,7 +20,7 @@ export function ImageProcessingMixin<Tbase extends ImageProcessingMixinConstruct
          */
         constructor(...args: any[]) {
             super(...args);
-            // Decorators don't work on this annonymous class
+            // Decorators don't work on this anonymous class
             // so I'm setting this up manually.
             serializeAsImageProcessingConfiguration()(this, "_imageProcessingConfiguration");
         }
