@@ -64,7 +64,14 @@ export class BoundingInfoHelper {
      * If called multiple times, the second, third, etc calls will perform a union of the bounding boxes calculated in the previous calls
      */
     public batchProcess(): void {
-        if (this._platform === null) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            _platform is declared without an initializer (undefined), and is never explicitly set
+            to null in this class. The strict equality check against null would never match,
+            so this is changed to a falsy check to correctly guard against both undefined and null.
+        */
+        if (!this._platform) {
             Logger.Warn("Helper is not initialized. Skipping batch.");
             return;
         }

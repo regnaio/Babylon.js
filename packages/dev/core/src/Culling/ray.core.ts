@@ -225,7 +225,7 @@ export class Ray {
     }
 
     /**
-     * If the ray hits a triange
+     * If the ray hits a triangle
      * @param vertex0 triangle vertex
      * @param vertex1 triangle vertex
      * @param vertex2 triangle vertex
@@ -806,7 +806,13 @@ export function CreatePickingRayInCameraSpaceToRef(scene: Scene, x: number, y: n
     const cameraViewport = camera.viewport;
     const renderHeight = engine.getRenderHeight();
     const { x: vx, y: vy, width, height } = cameraViewport.toGlobal(engine.getRenderWidth(), renderHeight);
-    const identity = Matrix.Identity();
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Matrix.Identity() allocates a new matrix on every call. Since this is only used as a
+        read-only parameter to result.update(), using IdentityReadOnly avoids the allocation.
+    */
+    const identity = Matrix.IdentityReadOnly;
 
     // Moving coordinates to local viewport world
     const levelInv = 1 / engine.getHardwareScalingLevel();

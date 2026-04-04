@@ -66,7 +66,7 @@ export class BoundingSphere {
     /**
      * Scale the current bounding sphere by applying a scale factor
      * @param factor defines the scale factor to apply
-     * @returns the current bounding box
+     * @returns the current bounding sphere
      */
     public scale(factor: number): BoundingSphere {
         const newRadius = this.radius * factor;
@@ -176,11 +176,21 @@ export class BoundingSphere {
      * @returns The sphere
      */
     public static CreateFromCenterAndRadius(center: DeepImmutable<Vector3>, radius: number, matrix?: DeepImmutable<Matrix>): BoundingSphere {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Previously, min was set to center + (0,0,radius) and max to center - (0,0,radius),
+            which meant minimum.z > maximum.z — an inverted bound. The center and radius
+            calculations were unaffected (Distance is symmetric), but the .minimum and .maximum
+            properties on the resulting sphere were semantically incorrect. Now min is
+            center - (0,0,radius) and max is center + (0,0,radius), so minimum < maximum
+            in all components.
+        */
         this._TmpVector3[0].copyFrom(center);
         this._TmpVector3[1].copyFromFloats(0, 0, radius);
         this._TmpVector3[2].copyFrom(center);
-        this._TmpVector3[0].addInPlace(this._TmpVector3[1]);
-        this._TmpVector3[2].subtractInPlace(this._TmpVector3[1]);
+        this._TmpVector3[0].subtractInPlace(this._TmpVector3[1]);
+        this._TmpVector3[2].addInPlace(this._TmpVector3[1]);
 
         const sphere = new BoundingSphere(this._TmpVector3[0], this._TmpVector3[2]);
 

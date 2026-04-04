@@ -10,6 +10,15 @@ import { type Collider } from "../Collisions/collider";
 
 const _Result0 = { min: 0, max: 0 };
 const _Result1 = { min: 0, max: 0 };
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    The precise OBB intersection test in BoundingInfo.intersects() previously called
+    Vector3.Cross() 9 times, each allocating a new Vector3. For scenes with many precise
+    collision checks, this creates significant GC pressure. This reusable vector is used
+    with Vector3.CrossToRef() instead.
+*/
+const _TmpCrossVector = Vector3.Zero();
 const ComputeBoxExtents = (axis: DeepImmutable<Vector3>, box: DeepImmutable<BoundingBox>, result: { min: number; max: number }) => {
     const p = Vector3.Dot(box.centerWorld, axis);
 
@@ -307,31 +316,31 @@ export class BoundingInfo implements ICullable {
         if (!AxisOverlap(box1.directions[2], box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[0], box1.directions[0]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[0], box1.directions[0], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[0], box1.directions[1]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[0], box1.directions[1], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[0], box1.directions[2]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[0], box1.directions[2], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[1], box1.directions[0]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[1], box1.directions[0], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[1], box1.directions[1]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[1], box1.directions[1], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[1], box1.directions[2]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[1], box1.directions[2], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[2], box1.directions[0]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[2], box1.directions[0], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[2], box1.directions[1]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[2], box1.directions[1], _TmpCrossVector), box0, box1)) {
             return false;
         }
-        if (!AxisOverlap(Vector3.Cross(box0.directions[2], box1.directions[2]), box0, box1)) {
+        if (!AxisOverlap(Vector3.CrossToRef(box0.directions[2], box1.directions[2], _TmpCrossVector), box0, box1)) {
             return false;
         }
 

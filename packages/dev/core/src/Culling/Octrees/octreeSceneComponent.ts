@@ -16,7 +16,7 @@ declare module "../../scene" {
     export interface Scene {
         /**
          * @internal
-         * Backing Filed
+         * Backing Field
          */
         _selectionOctree: Octree<AbstractMesh>;
 

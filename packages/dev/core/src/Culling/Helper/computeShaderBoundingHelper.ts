@@ -366,6 +366,17 @@ export class ComputeShaderBoundingHelper implements IBoundingInfoHelperPlatform 
         this._indexBuffers = {};
         this._disposeCache(this._weightBuffers);
         this._weightBuffers = {};
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            _indexExtraBuffers and _weightExtraBuffers are allocated in _extractDataAndLink when
+            a mesh has more than 4 bone influencers, but were never disposed, causing GPU storage
+            buffer leaks.
+        */
+        this._disposeCache(this._indexExtraBuffers);
+        this._indexExtraBuffers = {};
+        this._disposeCache(this._weightExtraBuffers);
+        this._weightExtraBuffers = {};
         this._disposeCache(this._morphTargetInfluenceBuffers);
         this._morphTargetInfluenceBuffers = {};
         this._disposeCache(this._morphTargetTextureIndexBuffers);
