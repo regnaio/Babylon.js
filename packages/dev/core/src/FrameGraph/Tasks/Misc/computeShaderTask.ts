@@ -225,9 +225,13 @@ export class FrameGraphComputeShaderTask extends FrameGraphTask {
     }
 
     public override dispose(): void {
-        // Note: ComputeShader does not currently have a dispose() method,
-        // so its internal resources (_effect, _context) are not cleaned up here.
-        // If ComputeShader gains a dispose() method in the future, it should be called here.
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	ComputeShader does not currently have a dispose() method, so its internal
+        	resources (_effect, _context) are not cleaned up here. If ComputeShader
+        	gains a dispose() method in the future, it should be called here.
+        */
         for (const key in this._ubo) {
             this._ubo[key].ubo.dispose();
         }
