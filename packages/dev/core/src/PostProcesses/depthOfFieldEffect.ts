@@ -113,7 +113,15 @@ export class DepthOfFieldEffect extends PostProcessRenderEffect {
             true
         );
 
-        this._thinDepthOfFieldEffect = new ThinDepthOfFieldEffect("Depth of Field", engine, blurLevel as unknown as ThinDepthOfFieldEffectBlurLevel, false, blockCompilation);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The depthNotNormalized parameter was hardcoded to false instead of being
+            forwarded from the constructor parameter. This meant the depth of field
+            effect would produce incorrect results when depth values are not normalized,
+            as the #define COC_DEPTH_NOT_NORMALIZED would never be set.
+        */
+        this._thinDepthOfFieldEffect = new ThinDepthOfFieldEffect("Depth of Field", engine, blurLevel as unknown as ThinDepthOfFieldEffectBlurLevel, depthNotNormalized, blockCompilation);
 
         // Use R-only formats if supported to store the circle of confusion values.
         // This should be more space and bandwidth efficient than using RGBA.

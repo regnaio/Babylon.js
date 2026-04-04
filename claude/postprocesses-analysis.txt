@@ -234,3 +234,20 @@ ADDITIONAL FIXES (COMMIT 5 - Core PostProcess bugs)
     Description: Moved _prepareBuffers() from inside per-post-process loops to
     before the loops in both directRender and _finalizeFrame, avoiding repeated
     function call overhead on every draw call.
+
+================================================================================
+ADDITIONAL FIXES (COMMIT 6 - Blur/Bloom/DOF bugs)
+================================================================================
+
+27. [BUG] depthOfFieldEffect.ts - depthNotNormalized hardcoded to false
+    File: depthOfFieldEffect.ts, line 116
+    Description: The depthNotNormalized constructor parameter was not forwarded to
+    ThinDepthOfFieldEffect - it was hardcoded as false. This meant the
+    #define COC_DEPTH_NOT_NORMALIZED was never set, producing incorrect depth of
+    field rendering when depth values are not normalized.
+
+28. [IMPROVEMENT] thinBlurPostProcess.ts - _glslFloat trailing decimal point
+    File: thinBlurPostProcess.ts, line 293-294
+    Description: The regex /0+$/ stripped ALL trailing zeros, producing values like
+    "1." for whole numbers. While technically valid GLSL, some shader compilers may
+    reject this. Changed to ensure at least one digit after the decimal point.

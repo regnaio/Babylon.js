@@ -290,7 +290,14 @@ export class ThinBlurPostProcess extends EffectWrapper {
      * @param decimalFigures Number of decimal places to print the number to (excluding trailing 0s).
      * @returns GLSL float string.
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        The previous regex /0+$/ stripped ALL trailing zeros, producing values like "1."
+        for whole numbers. While technically valid GLSL, some shader compilers may reject
+        this. Changed to ensure at least one digit after the decimal point (e.g. "1.0").
+    */
     protected _glslFloat(x: number, decimalFigures = 8) {
-        return x.toFixed(decimalFigures).replace(/0+$/, "");
+        return x.toFixed(decimalFigures).replace(/0+$/, "0");
     }
 }
