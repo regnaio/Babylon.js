@@ -386,9 +386,15 @@ export class BlockTools {
                 return triangleWaveBlock;
             }
             case "SetBlock": {
-                const cosBlock = new TrigonometryBlock("Set");
-                cosBlock.operation = TrigonometryBlockOperations.Set;
-                return cosBlock;
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The variable was named 'cosBlock' due to a copy-paste from the CosBlock case.
+                    Renamed to 'setBlock' to match the actual block type being created.
+                */
+                const setBlock = new TrigonometryBlock("Set");
+                setBlock.operation = TrigonometryBlockOperations.Set;
+                return setBlock;
             }
             case "WorldMatrixBlock": {
                 const worldMatrixBlock = new InputBlock("World");

@@ -92,7 +92,11 @@ export class DebugDisplayManager implements IDisplayManager {
 
     public updateFullVisualContent(data: INodeData, visualContent: VisualContentDescription): void {
         visualContent.visual.classList.add(styles["debugBlock"]);
-        visualContent.headerContainer.classList.add(styles.hidden);
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Removed a duplicate line that added the same 'hidden' class to headerContainer twice.
+        */
         visualContent.headerContainer.classList.add(styles.hidden);
         visualContent.connections.classList.add(styles.translatedConnections);
         visualContent.content.classList.add(styles["texture-area"]);

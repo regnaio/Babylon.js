@@ -1,0 +1,133 @@
+Node Editor Code Analysis Summary
+===================================
+Analyzed: packages/tools/nodeEditor/src/ (65 TS/TSX files)
+Date: 2025-04-04
+
+===============================================================================
+BUGS FIXED
+===============================================================================
+
+1. CRITICAL: Comma Operator Bug in Bounds Check
+   File: components/preview/previewAreaComponent.tsx:99
+
+   The condition used a comma operator instead of && for the bounds check:
+     if ((x > 0 && y > 0 && x < size.width && y < size.height, rect.top))
+
+   The comma operator evaluates all sub-expressions but only returns the last
+   one (rect.top). This means the x/y bounds checks were completely ignored,
+   potentially causing out-of-bounds pixel data access.
+
+   Fix: Replaced comma with && so all bounds checks are properly evaluated.
+
+2. CRITICAL: Alpha Channel Display Bug
+   File: sharedComponents/textureLineComponent.tsx:133-138
+
+   When displaying the alpha channel as grayscale, the code read from the
+   blue channel (data[i + 2]) instead of the alpha channel (data[i + 3]),
+   and then wrote 0 to data[i + 2] which overwrote the value just written
+   on the previous line. Two bugs:
+     - Line 134: data[i + 2] should be data[i + 3] (alpha, not blue)
+     - Line 138: data[i + 2] = 0 should be data[i + 3] = 255 (set alpha
+       opaque, not overwrite blue with 0)
+
+   Fix: Read from correct alpha channel index and set alpha to fully opaque.
+
+3. MEDIUM: Copy-Paste Variable Name Error
+   File: blockTools.ts:388-391
+
+   The "SetBlock" case used a variable named `cosBlock` (copied from the
+   Cos case) instead of `setBlock`. While functionally harmless, it's
+   misleading during debugging.
+
+   Fix: Renamed variable to `setBlock`.
+
+4. MEDIUM: Duplicate Line
+   File: graphSystem/display/debugDisplayManager.ts:95-96
+
+   The line `visualContent.headerContainer.classList.add(styles.hidden)`
+   appeared twice in succession. The duplicate serves no purpose.
+
+   Fix: Removed the duplicate line.
+
+5. LOW: Variable Name Typo
+   File: components/propertyTab/propertyTabComponent.tsx:337
+
+   Local variable `snippedId` was missing a 't' - should be `snippetId`.
+   Used consistently within the function so no functional impact, but
+   inconsistent with the `snippetId` naming used elsewhere in the codebase.
+
+   Fix: Renamed to `snippetId`.
+
+===============================================================================
+ISSUES NOTED BUT NOT FIXED (would require broader architectural changes)
+===============================================================================
+
+1. Non-null assertions (!) used extensively without null guards
+   Files: graphEditor.tsx (lines 131, 187, 438, 480),
+          connectionPointPortData.ts (line 116),
+          remapDisplayManager.ts (line 27)
+   These are unsafe but fixing them would require understanding the full
+   lifecycle guarantees of each component.
+
+2. Unsafe `as any` casts
+   Files: graphEditor.tsx (lines 134, 161, 166),
+          blockNodeData.ts (lines 126, 130),
+          previewManager.ts (line 296),
+          imageSourcePropertyTabComponent.tsx (line 82),
+          texturePropertyTabComponent.tsx (line 86)
+   These bypass TypeScript's type system but are used as workarounds for
+   interface limitations. Fixing requires interface changes.
+
+3. Loose equality (== instead of ===)
+   Files: checkBoxLineComponent.tsx (lines 30, 44),
+          previewManager.ts (lines 281-282)
+   The == true comparisons could have subtle type coercion issues but
+   changing them could alter behavior.
+
+4. Floating promises (async calls without await)
+   Files: imageSourceDisplayManager.ts (line 44),
+          textureDisplayManager.ts (line 73),
+          debugDisplayManager.ts (line 45)
+   These have eslint-disable comments suggesting they're intentional.
+
+5. Empty constructors that just call super()
+   Files: colorMergerPropertyComponent.tsx, vectorMergerPropertyComponent.tsx,
+          genericNodePropertyComponent.tsx, framePropertyComponent.tsx,
+          frameNodePortPropertyComponent.tsx, gradientNodePropertyComponent.tsx,
+          nodePortPropertyComponent.tsx
+   These are unnecessary but harmless.
+
+6. Unused parameters in display manager updatePreviewContent methods
+   Files: clampDisplayManager.ts, conditionalDisplayManager.ts,
+          depthSourceDisplayManager.ts, loopDisplayManager.ts,
+          teleportInDisplayManager.ts, teleportOutDisplayManager.ts
+   These implement an interface, so parameters must match the signature.
+
+7. _graphCanvas used in constructor event listeners before componentDidMount
+   File: graphEditor.tsx:182-202
+   Potential race condition if events fire before mount, but in practice
+   React guarantees mount before user interaction events.
+
+===============================================================================
+DEPENDENCY GRAPH OVERVIEW
+===============================================================================
+
+index.ts -> nodeEditor.ts -> globalState.ts, graphEditor.tsx, serializationTools.ts
+legacy/legacy.ts -> index.ts (re-exports to globalThis.BABYLON)
+
+graphEditor.tsx is the main hub, importing:
+  - blockTools.ts (block creation)
+  - serializationTools.ts (save/load)
+  - All component/* files
+  - All graphSystem/* files (via register* functions)
+
+graphSystem/register*.ts files register:
+  - Display managers (how blocks look)
+  - Property editors (how blocks are configured)
+  - Type mappings, debug support, export data
+
+Components follow a clear hierarchy:
+  - preview/* handles 3D preview rendering
+  - propertyTab/* handles block property editing
+  - nodeList/* handles the block palette
+  - log/* handles the log console

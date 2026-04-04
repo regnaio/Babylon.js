@@ -96,7 +96,14 @@ export class PreviewAreaComponent extends React.Component<IPreviewAreaComponentP
         const x = (((e.clientX - rect.left) / rect.width) * size.width) | 0;
         const y = (size.height - 1 - ((e.clientY - rect.top) / rect.height) * size.height) | 0;
 
-        if ((x > 0 && y > 0 && x < size.width && y < size.height, rect.top)) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The original condition used a comma operator instead of &&, which meant only
+            rect.top was evaluated as the condition. The x/y bounds checks were silently
+            ignored, potentially allowing out-of-bounds pixel data access.
+        */
+        if (x > 0 && y > 0 && x < size.width && y < size.height) {
             const pixelLocation = (y * size.width + x) * 4;
 
             this._consoleRef.current!.innerText = `R:${data[pixelLocation].toFixed(2)}, G:${data[pixelLocation + 1].toFixed(2)}, B:${data[pixelLocation + 2].toFixed(2)}, A:${data[pixelLocation + 3].toFixed(2)}`;

@@ -334,15 +334,21 @@ export class PropertyTabComponent extends React.Component<IPropertyTabComponentP
         const material = this.props.globalState.nodeMaterial;
         const scene = material.getScene();
 
-        const snippedId = this.props.globalState.hostDocument.defaultView!.prompt("Please enter the snippet ID to use");
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
 
-        if (!snippedId) {
+            Fixed typo in variable name: 'snippedId' was missing a 't' and should be
+            'snippetId' to be consistent with the naming used throughout the codebase.
+        */
+        const snippetId = this.props.globalState.hostDocument.defaultView!.prompt("Please enter the snippet ID to use");
+
+        if (!snippetId) {
             return;
         }
 
         this.props.globalState.stateManager.onSelectionChangedObservable.notifyObservers(null);
 
-        NodeMaterial.ParseFromSnippetAsync(snippedId, scene, "", material)
+        NodeMaterial.ParseFromSnippetAsync(snippetId, scene, "", material)
             // eslint-disable-next-line github/no-then
             .then(() => {
                 material.build();

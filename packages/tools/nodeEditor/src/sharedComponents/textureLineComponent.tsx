@@ -131,11 +131,20 @@ export class TextureLineComponent extends React.Component<ITextureLineComponentP
                                 }
 
                                 if (options.displayAlpha) {
-                                    const alpha = data[i + 2];
+                                    /*
+                                        Feel free to delete this comment that explains why Claude made this change:
+
+                                        The original code read from index i+2 (the blue channel) instead of i+3
+                                        (the alpha channel) when displaying alpha. It also wrote 0 to index i+2
+                                        on the line immediately after writing alpha to i+2, overwriting it. Fixed
+                                        to read from the correct alpha channel (i+3) and set alpha to 255 (fully
+                                        opaque) so the grayscale alpha visualization renders correctly.
+                                    */
+                                    const alpha = data[i + 3];
                                     data[i] = alpha;
                                     data[i + 1] = alpha;
                                     data[i + 2] = alpha;
-                                    data[i + 2] = 0;
+                                    data[i + 3] = 255;
                                 }
                             }
                         }
