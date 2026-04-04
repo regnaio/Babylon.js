@@ -2,7 +2,12 @@ import { type Scene, type FrameGraph } from "core/index";
 import { RegisterClass } from "../../../../Misc/typeStore";
 import { FrameGraphPassCubeTask, FrameGraphPassTask } from "core/FrameGraph/Tasks/PostProcesses/passTask";
 import { ThinPassCubePostProcess, ThinPassPostProcess } from "core/PostProcesses/thinPassPostProcess";
-import { NodeRenderGraphBaseWithPropertiesPostProcessBlock } from "././baseWithPropertiesPostProcessBlock";
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The import path had a doubled "./" separator ("././") which is redundant.
+*/
+import { NodeRenderGraphBaseWithPropertiesPostProcessBlock } from "./baseWithPropertiesPostProcessBlock";
 
 /**
  * Block that implements the pass post process

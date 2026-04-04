@@ -148,7 +148,15 @@ export class NodeRenderGraphTeleportInBlock extends NodeRenderGraphBlock {
     public override dispose() {
         super.dispose();
 
-        for (const endpoint of this._endpoints) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	detachFromEndpoint() calls splice() on this._endpoints, which mutates the
+        	array while the for...of loop was iterating over it. This caused some
+        	endpoints to be skipped, leaving their _typeConnectionSource and _entryPoint
+        	in an inconsistent state. Iterating over a copy of the array fixes this.
+        */
+        for (const endpoint of [...this._endpoints]) {
             this.detachFromEndpoint(endpoint);
         }
 

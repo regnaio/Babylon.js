@@ -53,7 +53,14 @@ export class NodeRenderGraphFilterPostProcessBlock extends NodeRenderGraphBaseWi
 
     protected override _dumpPropertiesCode() {
         const codes: string[] = [];
-        codes.push(`${this._codeVariableName}.kernelMatrix = ${this.kernelMatrix};`);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	this.kernelMatrix is a Matrix object. Calling toString() on it does not
+        	produce valid JavaScript code (it would output "[object Object]"). Changed
+        	to serialize via asArray() and reconstruct with BABYLON.Matrix.FromArray().
+        */
+        codes.push(`${this._codeVariableName}.kernelMatrix = BABYLON.Matrix.FromArray(${JSON.stringify(this.kernelMatrix.asArray())});`);
         return super._dumpPropertiesCode() + codes.join("\n");
     }
 

@@ -121,6 +121,35 @@ IMPROVEMENTS FOUND AND FIXED
     (e.g., from a newer version or corrupted data), this would crash.
     FIX: Added bounds guard to break out of loop when index exceeds outputs length.
 
+20. [BUG] teleportInBlock.ts - Array modified while iterating in dispose()
+    Lines 148-156: detachFromEndpoint() calls splice() on this._endpoints while
+    for...of was iterating, causing endpoints to be skipped and left inconsistent.
+    FIX: Iterate over a copy of the array ([...this._endpoints]).
+
+21. [BUG] inputBlock.ts - getInternalTextureFromValue() crashes on null _storedValue
+    Line 162: Accessing (null as InternalTexture)._swapAndDie throws TypeError.
+    FIX: Added null guard before the property access.
+
+22. [BUG] filterPostProcessBlock.ts - _dumpPropertiesCode generates invalid code
+    Line 56: Matrix.toString() produces "[object Object]" not valid JS code.
+    FIX: Changed to serialize via asArray() and reconstruct with Matrix.FromArray().
+
+23. [BUG] volumetricLightingBlock.ts - Missing BABYLON. prefix on Color3
+    Line 202: Generated code has "new Color3(...)" instead of "new BABYLON.Color3(...)".
+    FIX: Added BABYLON. prefix to match convention used by other blocks.
+
+24. [BUG] imageProcessingPostProcessBlock.ts - Hardcoded alpha=1 in vignette color
+    Line 215: Alpha channel hardcoded to 1 instead of actual vignetteColor.a value.
+    FIX: Changed to use ${this.vignetteColor.a}.
+
+25. [IMPROVEMENT] imageProcessingPostProcessBlock.ts - Typo "Enabed" in UI label
+    Line 176: editableInPropertyPage label said "Enabed" instead of "Enabled".
+    FIX: Corrected spelling.
+
+26. [IMPROVEMENT] passPostProcessBlock.ts - Doubled "./" in import path
+    Line 5: Import path "././baseWithPropertiesPostProcessBlock" has redundant "./"
+    FIX: Changed to "./baseWithPropertiesPostProcessBlock".
+
 ================================================================================
 ISSUES NOTED BUT NOT FIXED (too risky or architectural)
 ================================================================================

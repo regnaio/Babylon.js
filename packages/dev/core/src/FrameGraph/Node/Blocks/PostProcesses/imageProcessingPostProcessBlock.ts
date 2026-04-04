@@ -173,7 +173,7 @@ export class NodeRenderGraphImageProcessingPostProcessBlock extends NodeRenderGr
     }
 
     /** Whether the dithering effect is enabled. */
-    @editableInPropertyPage("Enabed", PropertyTypeForEdition.Boolean, "DITHERING")
+    @editableInPropertyPage("Enabled", PropertyTypeForEdition.Boolean, "DITHERING")
     public get ditheringEnabled(): boolean {
         return this._frameGraphTask.postProcess.ditheringEnabled;
     }
@@ -212,7 +212,13 @@ export class NodeRenderGraphImageProcessingPostProcessBlock extends NodeRenderGr
         codes.push(`${this._codeVariableName}.vignetteCameraFov = ${this.vignetteCameraFov};`);
         codes.push(`${this._codeVariableName}.vignetteCenterX = ${this.vignetteCenterX};`);
         codes.push(`${this._codeVariableName}.vignetteCenterY = ${this.vignetteCenterY};`);
-        codes.push(`${this._codeVariableName}.vignetteColor = new BABYLON.Color4(${this.vignetteColor.r}, ${this.vignetteColor.g}, ${this.vignetteColor.b}, 1);`);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The alpha channel was hardcoded to 1 instead of using the actual alpha value
+        	from vignetteColor. Any non-1 alpha would be silently lost during code generation.
+        */
+        codes.push(`${this._codeVariableName}.vignetteColor = new BABYLON.Color4(${this.vignetteColor.r}, ${this.vignetteColor.g}, ${this.vignetteColor.b}, ${this.vignetteColor.a});`);
         codes.push(`${this._codeVariableName}.vignetteBlendMode = ${this.vignetteBlendMode};`);
         codes.push(`${this._codeVariableName}.ditheringEnabled = ${this.ditheringEnabled};`);
         codes.push(`${this._codeVariableName}.ditheringIntensity = ${this.ditheringIntensity};`);

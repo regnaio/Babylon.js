@@ -199,7 +199,13 @@ export class NodeRenderGraphVolumetricLightingBlock extends NodeRenderGraphBlock
         const codes: string[] = [];
         codes.push(`${this._codeVariableName}.phaseG = ${this.phaseG};`);
         codes.push(`${this._codeVariableName}.extinction = new BABYLON.Vector3(${this.extinction.x}, ${this.extinction.y}, ${this.extinction.z});`);
-        codes.push(`${this._codeVariableName}.lightPower = new Color3(${this.lightPower.r}, ${this.lightPower.g}, ${this.lightPower.b});`);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Missing "BABYLON." prefix on Color3 - inconsistent with the convention used
+        	by all other blocks (e.g., clearBlock uses "new BABYLON.Color4(...)").
+        */
+        codes.push(`${this._codeVariableName}.lightPower = new BABYLON.Color3(${this.lightPower.r}, ${this.lightPower.g}, ${this.lightPower.b});`);
         return super._dumpPropertiesCode() + codes.join("\n");
     }
 

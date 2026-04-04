@@ -159,7 +159,14 @@ export class NodeRenderGraphInputBlock extends NodeRenderGraphBlock {
      * @returns The internal texture stored in value if value is an internal texture, otherwise null
      */
     public getInternalTextureFromValue(): Nullable<InternalTexture> {
-        if ((this._storedValue as InternalTexture)._swapAndDie) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	_storedValue can be null (its initial value and value after dispose()).
+        	Without a null guard, accessing (null as InternalTexture)._swapAndDie
+        	would throw a TypeError at runtime.
+        */
+        if (this._storedValue && (this._storedValue as InternalTexture)._swapAndDie) {
             return this._storedValue as InternalTexture;
         }
         return null;
