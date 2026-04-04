@@ -1350,10 +1350,10 @@ export class Effect implements IDisposable {
      */
     public setMatrix2x2(uniformName: string, matrix: Float32Array | Array<number>): Effect {
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+            Feel free to delete this comment that explains why Claude made this change:
 
-	The comment incorrectly referenced gl.uniformMatrix3fv() but this method is
-	setMatrix2x2, which calls gl.uniformMatrix2fv().
+            The comment incorrectly referenced gl.uniformMatrix3fv() but this method is
+            setMatrix2x2, which calls gl.uniformMatrix2fv().
         */
         // the cast is ok because it is gl.uniformMatrix2fv() which is called at the end, and this function accepts Float32Array and Array<number>
         this._pipelineContext!.setMatrix2x2(uniformName, matrix as Float32Array);

@@ -177,11 +177,11 @@ export class FresnelParameters {
             rightColor: Color3.FromArray(parsedFresnelParameters.rightColor),
             bias: parsedFresnelParameters.bias,
             /*
-	Feel free to delete this comment that explains why Claude made this change:
+                Feel free to delete this comment that explains why Claude made this change:
 
-	Using || instead of ?? meant a serialized power value of 0 would be treated
-	as falsy and incorrectly default to 1.0. The nullish coalescing operator (??)
-	only falls back to the default for null/undefined, correctly preserving 0.
+                Using || instead of ?? meant a serialized power value of 0 would be treated
+                as falsy and incorrectly default to 1.0. The nullish coalescing operator (??)
+                only falls back to the default for null/undefined, correctly preserving 0.
             */
             power: parsedFresnelParameters.power ?? 1.0,
         });

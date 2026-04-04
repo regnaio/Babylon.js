@@ -340,12 +340,12 @@ export class MaterialHelperGeometryRendering {
             effect.setMatrix("previousViewProjection", configuration.previousViewProjection);
 
             /*
-	Feel free to delete this comment that explains why Claude made this change:
+                Feel free to delete this comment that explains why Claude made this change:
 
-	world.clone() allocates a new Matrix object every frame for every mesh that
-	uses velocity. Since the matrix already exists from the initial clone() on
-	line 320, we can use copyFrom() instead to reuse the existing allocation and
-	reduce garbage collection pressure.
+                world.clone() allocates a new Matrix object every frame for every mesh that
+                uses velocity. Since the matrix already exists from the initial clone() on
+                line 320, we can use copyFrom() instead to reuse the existing allocation and
+                reduce garbage collection pressure.
             */
             configuration.previousWorldMatrices[mesh.uniqueId].copyFrom(world);
 

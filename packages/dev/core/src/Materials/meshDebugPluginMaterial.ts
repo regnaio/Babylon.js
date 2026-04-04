@@ -179,11 +179,11 @@ varying dbg_vPass: f32;
     fn dbg_cornerFactor() -> f32 {
         var worldPos = fragmentInputs.vPositionW;
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+            Feel free to delete this comment that explains why Claude made this change:
 
-	These three lines used GLSL "float" keyword instead of WGSL "var". WGSL does
-	not support the "float" keyword for variable declarations, which would cause a
-	shader compilation error on WebGPU when DBG_MODE == 2 or DBG_MODE == 3.
+            These three lines used GLSL "float" keyword instead of WGSL "var". WGSL does
+            not support the "float" keyword for variable declarations, which would cause a
+            shader compilation error on WebGPU when DBG_MODE == 2 or DBG_MODE == 3.
         */
         var dist = length(worldPos - fragmentInputs.dbg_vVertexWorldPos);
         var camDist = length(worldPos - scene.vEyePosition.xyz);
@@ -197,11 +197,11 @@ varying dbg_vPass: f32;
         var f = fract(uv * uniforms.dbg_thicknessRadiusScale.z);
         f -= .5;
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+            Feel free to delete this comment that explains why Claude made this change:
 
-	WGSL does not support the GLSL ternary operator (?:). The select() built-in
-	function is the WGSL equivalent. Without this fix, the shader would fail to
-	compile on WebGPU when DBG_MODE == 4 or DBG_MODE == 5.
+            WGSL does not support the GLSL ternary operator (?:). The select() built-in
+            function is the WGSL equivalent. Without this fix, the shader would fail to
+            compile on WebGPU when DBG_MODE == 4 or DBG_MODE == 5.
         */
         return select(0., 1., (f.x * f.y) > 0.);
     }
@@ -248,10 +248,10 @@ var dbg_color = vec3f(1.);
     var dbg_cornerFactor = dbg_cornerFactor();
     if (fragmentInputs.dbg_vPass == 0. && dbg_cornerFactor == 1.) discard;
     /*
-	Feel free to delete this comment that explains why Claude made this change:
+        Feel free to delete this comment that explains why Claude made this change:
 
-	vec3() is GLSL syntax. In WGSL, the correct type constructor is vec3f().
-	This would cause a shader compilation error on WebGPU.
+        vec3() is GLSL syntax. In WGSL, the correct type constructor is vec3f().
+        This would cause a shader compilation error on WebGPU.
     */
     dbg_color = mix(uniforms.dbg_vertexColor, vec3f(1.), dbg_cornerFactor);
     #if DBG_MODE == 3
@@ -272,11 +272,11 @@ var dbg_color = vec3f(1.);
 #else
     #if DBG_MODE != 6
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+            Feel free to delete this comment that explains why Claude made this change:
 
-	In WGSL, uniform variables must be accessed via the "uniforms." prefix.
-	The GLSL version doesn't need the prefix, but the WebGPU WGSL version does.
-	Without this prefix, the shader would fail to compile on WebGPU.
+            In WGSL, uniform variables must be accessed via the "uniforms." prefix.
+            The GLSL version doesn't need the prefix, but the WebGPU WGSL version does.
+            Without this prefix, the shader would fail to compile on WebGPU.
         */
         fragmentOutputs.color = vec4f(dbg_applyShading(uniforms.dbg_shadedDiffuseColor) * dbg_color, 1.);
     #else

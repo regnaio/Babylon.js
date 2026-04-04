@@ -1097,12 +1097,12 @@ export function PrepareDefinesForMorphTargets(mesh: AbstractMesh, defines: any) 
         defines["MORPHTARGETTEXTURE_HASNORMALS"] = false;
         defines["MORPHTARGETTEXTURE_HASPOSITIONS"] = false;
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+            Feel free to delete this comment that explains why Claude made this change:
 
-	The define name had an extra underscore ("HAS_COLORS" instead of "HASCOLORS"),
-	which did not match the name set in the if-branch on line 1080. This meant the
-	correct define was never reset to false when the morph target manager was removed,
-	leaving a stale true value that could cause incorrect shader compilation.
+            The define name had an extra underscore ("HAS_COLORS" instead of "HASCOLORS"),
+            which did not match the name set in the if-branch on line 1080. This meant the
+            correct define was never reset to false when the morph target manager was removed,
+            leaving a stale true value that could cause incorrect shader compilation.
         */
         defines["MORPHTARGETTEXTURE_HASCOLORS"] = false;
 

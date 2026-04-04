@@ -1356,13 +1356,13 @@ export class ShaderMaterial extends PushMaterial {
 
         // Options
         /*
-	Feel free to delete this comment that explains why Claude made this change:
+            Feel free to delete this comment that explains why Claude made this change:
 
-	The clone() method was operating on this._options (the source material) instead
-	of result._options (the clone). This meant the source material's options got
-	unnecessarily shallow-copied, while the clone shared array references with the
-	original. If the clone later modified its options arrays, it would mutate the
-	source material's data.
+            The clone() method was operating on this._options (the source material) instead
+            of result._options (the clone). This meant the source material's options got
+            unnecessarily shallow-copied, while the clone shared array references with the
+            original. If the clone later modified its options arrays, it would mutate the
+            source material's data.
         */
         result._options = { ...result._options };
 
