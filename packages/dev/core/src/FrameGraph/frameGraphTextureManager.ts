@@ -488,9 +488,17 @@ export class FrameGraphTextureManager {
             const textureIndex = entry.textureIndex || 0;
             const dimensions = options.sizeIsPercentage ? this.getAbsoluteDimensions(options.size, outputWidth, outputHeight) : getDimensionsFromTextureSize(options.size);
 
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	options.options.formats is optional in FrameGraphTextureOptions, but was
+            	accessed with a non-null assertion (!). If a texture was created without
+            	specifying formats, this would throw. Changed to use optional chaining
+            	with a fallback to TEXTUREFORMAT_RGBA, matching how types is handled above.
+            */
             const blockInfo = FrameGraphTextureManager._GetTextureBlockInformation(
                 options.options.types?.[textureIndex] ?? Constants.TEXTURETYPE_UNSIGNED_BYTE,
-                options.options.formats![textureIndex]
+                options.options.formats?.[textureIndex] ?? Constants.TEXTUREFORMAT_RGBA
             );
 
             const textureByteSize = Math.ceil(dimensions.width / blockInfo.width) * Math.ceil(dimensions.height / blockInfo.height) * blockInfo.length;
@@ -930,7 +938,20 @@ export class FrameGraphTextureManager {
     private _createTextureDescriptionHash(options: FrameGraphTextureCreationOptions): string {
         const hash: string[] = [];
 
-        hash.push(textureSizeIsObject(options.size) ? `${options.size.width}_${options.size.height}` : `${options.size}`);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The hash previously only included width and height from the size object, but
+        	TextureSize can also have depth and layers properties (for 3D/array textures).
+        	Two textures with the same width/height but different depth/layers values would
+        	produce the same hash, causing incorrect texture aliasing during optimization.
+        */
+        if (textureSizeIsObject(options.size)) {
+            const s = options.size;
+            hash.push(`${s.width}_${s.height}_${s.depth ?? 0}_${s.layers ?? 0}`);
+        } else {
+            hash.push(`${options.size}`);
+        }
         hash.push(options.sizeIsPercentage ? "%" : "A");
         hash.push(options.options.createMipMaps ? "M" : "N");
         hash.push(options.options.samples ? `${options.options.samples}` : "S1");

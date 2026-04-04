@@ -97,6 +97,17 @@ IMPROVEMENTS FOUND AND FIXED
     `showDebugLogsForTextureAllocationOptimization` (missing 'o' in Allocation).
     FIX: Corrected the property name spelling.
 
+16. [BUG] frameGraphTextureManager.ts - Non-null assertion on optional formats
+    Line 493: `options.options.formats![textureIndex]` uses non-null assertion but
+    formats is optional. Would crash for textures created without explicit formats.
+    FIX: Changed to `options.options.formats?.[textureIndex] ?? Constants.TEXTUREFORMAT_RGBA`.
+
+17. [BUG] frameGraphTextureManager.ts - Texture hash ignores depth/layers
+    Line 933: Hash only included width/height but TextureSize can have depth and
+    layers. 3D/array textures with different depth/layers but same width/height
+    would get the same hash, causing incorrect aliasing during optimization.
+    FIX: Added depth and layers to the hash computation.
+
 ================================================================================
 ISSUES NOTED BUT NOT FIXED (too risky or architectural)
 ================================================================================
