@@ -30,7 +30,12 @@ export class VRMultiviewToSingleviewPostProcess extends PostProcess {
         super(name, "vrMultiviewToSingleview", ["imageIndex"], ["multiviewSampler"], scaleFactor, camera, Texture.BILINEAR_SAMPLINGMODE);
 
         const cam = camera ?? this.getCamera();
-        this.onSizeChangedObservable.add(() => {});
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Removed empty no-op callback `this.onSizeChangedObservable.add(() => {})` that
+            was dead code - it registered an observer that did nothing when the size changed.
+        */
         this.onApplyObservable.add((effect: Effect) => {
             if (cam._scene.activeCamera && cam._scene.activeCamera.isLeftCamera) {
                 effect.setInt("imageIndex", 0);

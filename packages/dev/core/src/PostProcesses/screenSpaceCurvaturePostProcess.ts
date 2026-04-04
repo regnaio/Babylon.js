@@ -131,6 +131,13 @@ export class ScreenSpaceCurvaturePostProcess extends PostProcess {
     /**
      * @internal
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        The arguments `reusable` and `textureType` were passed in the wrong order.
+        The constructor signature is (..., reusable?, textureType?, blockCompilation?)
+        but _Parse was passing (..., textureType, reusable), swapping the two values.
+    */
     public static override _Parse(parsedPostProcess: any, targetCamera: Camera, scene: Scene, rootUrl: string) {
         return SerializationHelper.Parse(
             () => {
@@ -141,8 +148,8 @@ export class ScreenSpaceCurvaturePostProcess extends PostProcess {
                     targetCamera,
                     parsedPostProcess.renderTargetSamplingMode,
                     scene.getEngine(),
-                    parsedPostProcess.textureType,
-                    parsedPostProcess.reusable
+                    parsedPostProcess.reusable,
+                    parsedPostProcess.textureType
                 );
             },
             parsedPostProcess,

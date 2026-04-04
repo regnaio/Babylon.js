@@ -491,7 +491,12 @@ export class PostProcess {
     /**
      * A function that is added to the onAfterRenderObservable
      */
-    public set onAfterRender(callback: (efect: Effect) => void) {
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Fixed typo in callback parameter name: "efect" -> "effect".
+    */
+    public set onAfterRender(callback: (effect: Effect) => void) {
         if (this._onAfterRenderObserver) {
             this.onAfterRenderObservable.remove(this._onAfterRenderObserver);
         }
@@ -938,7 +943,7 @@ export class PostProcess {
     }
 
     /**
-     * Activates the post process by intializing the textures to be used when executed. Notifies onActivateObservable.
+     * Activates the post process by initializing the textures to be used when executed. Notifies onActivateObservable.
      * When this post process is used in a pipeline, this is call will bind the input texture of this post process to the output of the previous.
      * @param cameraOrScene The camera that will be used in the post process. This camera will be used when calling onActivateObservable. You can also pass the scene if no camera is available.
      * @param sourceTexture The source texture to be inspected to get the width and height if not specified in the post process constructor. (default: null)
@@ -1079,7 +1084,7 @@ export class PostProcess {
 
         this._engine.setAlphaMode(this.alphaMode);
 
-        // Bind the output texture of the preivous post process as the input to this post process.
+        // Bind the output texture of the previous post process as the input to this post process.
         let source: RenderTargetWrapper;
         if (this._shareOutputWithPostProcess) {
             source = this._shareOutputWithPostProcess.inputTexture;

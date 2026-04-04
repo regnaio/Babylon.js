@@ -1,0 +1,96 @@
+PostProcesses Directory Analysis Summary
+=========================================
+
+Analyzed all 77 TypeScript files in packages/dev/core/src/PostProcesses/ including
+the RenderPipeline subdirectory and all Pipelines. For each file, traced its imports
+and the files that import it to understand interactions.
+
+Files Analyzed:
+- postProcess.ts (core base class, ~1292 lines)
+- postProcessManager.ts (manages post-process chains)
+- All individual post-process implementations (blur, bloom, DOF, FXAA, grain, etc.)
+- All "thin" variants (thinBlurPostProcess, thinBloomEffect, etc.)
+- RenderPipeline infrastructure (postProcessRenderEffect, postProcessRenderPipeline, etc.)
+- Pipeline implementations (default, standard, SSAO, SSAO2, SSR, TAA, lens)
+- VR-related post processes
+- Stereoscopic post processes
+
+================================================================================
+BUGS FOUND AND FIXED
+================================================================================
+
+1. [BUG] screenSpaceCurvaturePostProcess.ts - _Parse swapped arguments
+   File: screenSpaceCurvaturePostProcess.ts, lines 134-152
+   Description: In the static _Parse method, the arguments `textureType` and
+   `reusable` were passed to the constructor in the wrong order. The constructor
+   signature is (..., reusable?, textureType?, blockCompilation?) but _Parse was
+   passing (..., textureType, reusable), effectively swapping their values.
+   This means deserialized ScreenSpaceCurvaturePostProcess instances would have
+   incorrect texture type and reusability settings.
+
+2. [BUG] screenSpaceReflectionPostProcess.ts - _Parse swapped arguments
+   File: screenSpaceReflectionPostProcess.ts, lines 288-306
+   Description: Same issue as #1. The _Parse method passes textureType where
+   reusable should be and vice versa. Constructor signature is
+   (..., reusable?, textureType?, blockCompilation?, forceGeometryBuffer?) but
+   _Parse passes (..., textureType, reusable).
+
+3. [BUG] sharpenPostProcess.ts - _Parse swapped arguments
+   File: sharpenPostProcess.ts, lines 102-118
+   Description: Same issue as #1 and #2. The _Parse method passes textureType
+   where reusable should be and reusable where textureType should be.
+
+4. [BUG] postProcessRenderPipeline.ts - Array splice index shift bug
+   File: postProcessRenderPipeline.ts, lines 175-177
+   Description: When removing duplicate cameras from the `cams` array, the code
+   collects indices to delete and then splices them out in forward order. However,
+   each splice shifts subsequent array indices down by one, causing later splices
+   to remove the wrong elements. For example, if indices [2, 5] need removal:
+   after splicing index 2, the element previously at index 5 is now at index 4,
+   so `splice(5, 1)` removes the wrong element.
+   Fix: Iterate in reverse order when splicing.
+
+5. [BUG] postProcess.ts - Typo in onAfterRender callback parameter
+   File: postProcess.ts, line 494
+   Description: The callback parameter for onAfterRender setter is named `efect`
+   instead of `effect`. While this doesn't cause a runtime error since it's just
+   a parameter name, it appears in the public API documentation/type information.
+
+================================================================================
+IMPROVEMENTS FOUND AND FIXED
+================================================================================
+
+6. [IMPROVEMENT] vrMultiviewToSingleviewPostProcess.ts - Dead code removal
+   File: vrMultiviewToSingleviewPostProcess.ts, line 33
+   Description: An empty callback `this.onSizeChangedObservable.add(() => {})` is
+   registered that does nothing. This is dead code and was removed.
+
+7. [IMPROVEMENT] postProcess.ts - Comment typo fixes
+   File: postProcess.ts, line 941 and 1082
+   Description: Fixed typos "intializing" -> "initializing" and "preivous" ->
+   "previous" in code comments.
+
+================================================================================
+OTHER OBSERVATIONS (NOT FIXED - by design or low risk)
+================================================================================
+
+- depthOfFieldBlurPostProcess.ts:66 - The samplingMode parameter is silently
+  overridden with TEXTURE_BILINEAR_SAMPLINGMODE via an assignment inside the
+  options object. Has eslint-disable comment indicating it's intentional.
+
+- stereoscopicInterlacePostProcess.ts - Both classes compute
+  `new Vector2(1 / this.width, 1 / this.height)` in constructor when width/height
+  are still -1, resulting in Vector2(-1, -1). This is harmless because the
+  onSizeChangedObservable callback corrects it when actual dimensions are set.
+
+- postProcessManager.ts:97 - `postProcesses !== null && postProcesses !== undefined`
+  always evaluates to true at that point (since null/undefined was already checked),
+  meaning forceDepthStencil is always true in _prepareFrame. This appears intentional
+  as a safety measure for the initial render pass.
+
+- The "thin" variants (thinBlurPostProcess, thinBloomEffect, etc.) serve as the
+  underlying implementation that the regular post processes delegate to. This pattern
+  is consistent and well-structured throughout the codebase.
+
+- The RenderPipeline infrastructure is well-organized with clear separation between
+  effects, pipelines, and the pipeline manager.

@@ -172,7 +172,17 @@ export class PostProcessRenderPipeline {
             }
         }
 
-        for (i = 0; i < indicesToDelete.length; i++) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            When splicing indices from an array in forward order, each splice shifts
+            subsequent indices down by one, causing later splices to remove wrong elements.
+            For example, removing indices [2, 5]: after splicing index 2, the element at
+            index 5 is now at index 4, so splice(5,1) removes the wrong element.
+            Iterating in reverse avoids this because removing a later index doesn't affect
+            the positions of earlier indices.
+        */
+        for (i = indicesToDelete.length - 1; i >= 0; i--) {
             cams.splice(indicesToDelete[i], 1);
         }
 
