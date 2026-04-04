@@ -29,20 +29,23 @@ export class ThinPassPostProcess extends EffectWrapper {
      * @param options Options to configure the effect
      */
     constructor(name: string, engine: Nullable<AbstractEngine> = null, options?: EffectWrapperCreationOptions) {
-        const localOptions: EffectWrapperCreationOptions = {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The spread order was reversed compared to ThinPassCubePostProcess and all other
+            thin post processes. Having ...options LAST meant user-provided options could
+            silently override hardcoded properties like fragmentShader and useAsPostProcess.
+            Also removed dead code: the null check for localOptions.engine after the spread
+            was unreachable since engine was already assigned before the spread.
+        */
+        super({
+            ...options,
             name,
             engine: engine || EngineStore.LastCreatedEngine!,
             useShaderStore: true,
             useAsPostProcess: true,
             fragmentShader: ThinPassPostProcess.FragmentUrl,
-            ...options,
-        };
-
-        if (!localOptions.engine) {
-            localOptions.engine = EngineStore.LastCreatedEngine!;
-        }
-
-        super(localOptions);
+        });
     }
 }
 

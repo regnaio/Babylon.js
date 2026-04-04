@@ -192,9 +192,19 @@ export class ThinTAAPostProcess extends EffectWrapper {
         this._hs = new Halton2DSequence(this.samples);
     }
 
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        _reset() is called from the disabled and reprojectHistory setters, which can
+        fire before texture dimensions are set (both default to 0). Passing 0/0 to
+        Halton2DSequence.setDimensions produces degenerate jitter offsets. Added a
+        guard to only set dimensions when they are valid.
+    */
     /** @internal */
     public _reset(): void {
-        this._hs.setDimensions(this._textureWidth / 2, this._textureHeight / 2);
+        if (this._textureWidth > 0 && this._textureHeight > 0) {
+            this._hs.setDimensions(this._textureWidth / 2, this._textureHeight / 2);
+        }
         this._hs.next();
         this._firstUpdate = true;
     }

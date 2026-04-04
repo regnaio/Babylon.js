@@ -251,3 +251,22 @@ ADDITIONAL FIXES (COMMIT 6 - Blur/Bloom/DOF bugs)
     Description: The regex /0+$/ stripped ALL trailing zeros, producing values like
     "1." for whole numbers. While technically valid GLSL, some shader compilers may
     reject this. Changed to ensure at least one digit after the decimal point.
+
+================================================================================
+ADDITIONAL FIXES (COMMIT 7 - Thin PostProcess bugs)
+================================================================================
+
+29. [BUG] thinPassPostProcess.ts - Constructor spread order reversed
+    File: thinPassPostProcess.ts, lines 32-45
+    Description: ...options was spread LAST, meaning user-provided options could
+    override hardcoded properties like fragmentShader and useAsPostProcess. All
+    other thin post processes (ThinPassCube, ThinCustom, ThinImageProcessing)
+    spread options FIRST and hardcoded values AFTER. Also removed dead code:
+    the null check for engine after the spread was unreachable.
+
+30. [BUG] thinTAAPostProcess.ts - _reset() passes zero dimensions to Halton sequence
+    File: thinTAAPostProcess.ts, line 197
+    Description: _reset() is called from disabled and reprojectHistory setters,
+    which can fire before texture dimensions are set (both default to 0). Passing
+    0/0 to Halton2DSequence.setDimensions produces degenerate jitter offsets.
+    Added guard to only set dimensions when they are valid.
