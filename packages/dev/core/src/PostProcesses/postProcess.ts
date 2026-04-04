@@ -963,10 +963,17 @@ export class PostProcess {
         let desiredWidth = (<PostProcessOptions>this._options).width || requiredWidth;
         let desiredHeight = (<PostProcessOptions>this._options).height || requiredHeight;
 
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            TEXTURE_LINEAR_NEAREST (mode 12) also has no mipmaps but was missing from this
+            check, causing unnecessary mipmap generation when that sampling mode was used.
+        */
         const needMipMaps =
             this.renderTargetSamplingMode !== Constants.TEXTURE_NEAREST_LINEAR &&
             this.renderTargetSamplingMode !== Constants.TEXTURE_NEAREST_NEAREST &&
-            this.renderTargetSamplingMode !== Constants.TEXTURE_LINEAR_LINEAR;
+            this.renderTargetSamplingMode !== Constants.TEXTURE_LINEAR_LINEAR &&
+            this.renderTargetSamplingMode !== Constants.TEXTURE_LINEAR_NEAREST;
 
         let target: Nullable<RenderTargetWrapper> = null;
 
@@ -1035,8 +1042,16 @@ export class PostProcess {
     /**
      * If the post process is supported.
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        The non-null assertion (!) on drawWrapper.effect would crash when the effect
+        hasn't been compiled yet (e.g. blockCompilation=true). Changed to safely handle
+        null effect, matching how ImageProcessingPostProcess already handles this.
+    */
     public get isSupported(): boolean {
-        return this._effectWrapper.drawWrapper.effect!.isSupported;
+        const effect = this._effectWrapper.drawWrapper.effect;
+        return !effect || effect.isSupported;
     }
 
     /**
@@ -1180,7 +1195,14 @@ export class PostProcess {
 
         index = camera._postProcesses.indexOf(this);
         if (index === 0 && camera._postProcesses.length > 0) {
-            const firstPostProcess = this._camera._getFirstPostProcess();
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                Used this._camera instead of the local camera variable. If a different camera
+                is passed to dispose() than the one stored in this._camera, this would query
+                the wrong camera for its first post process.
+            */
+            const firstPostProcess = camera._getFirstPostProcess();
             if (firstPostProcess) {
                 firstPostProcess.markTextureDirty();
             }

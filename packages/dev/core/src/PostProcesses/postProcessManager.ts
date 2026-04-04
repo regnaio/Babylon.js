@@ -120,6 +120,15 @@ export class PostProcessManager {
     ): void {
         const engine = this._scene.getEngine();
 
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            _prepareBuffers() was called inside the per-post-process loop on every
+            iteration. While it has an early return if buffers exist, moving it before
+            the loop avoids the repeated function call overhead on every draw call.
+        */
+        this._prepareBuffers();
+
         for (let index = 0; index < numPostsProcesses; index++) {
             if (index < postProcesses.length - 1) {
                 postProcesses[index + 1].activate(this._scene.activeCamera || this._scene, targetTexture?.texture);
@@ -139,7 +148,6 @@ export class PostProcessManager {
                 pp.onBeforeRenderObservable.notifyObservers(effect);
 
                 // VBOs
-                this._prepareBuffers();
                 engine.bindBuffers(this._vertexBuffers, this._indexBuffer, effect);
 
                 // Draw order
@@ -188,6 +196,8 @@ export class PostProcessManager {
         }
         const engine = this._scene.getEngine();
 
+        this._prepareBuffers();
+
         for (let index = 0, len = postProcesses.length; index < len; index++) {
             const pp = postProcesses[index];
 
@@ -214,7 +224,6 @@ export class PostProcessManager {
                 pp.onBeforeRenderObservable.notifyObservers(effect);
 
                 // VBOs
-                this._prepareBuffers();
                 engine.bindBuffers(this._vertexBuffers, this._indexBuffer, effect);
 
                 // Draw order
@@ -244,5 +253,13 @@ export class PostProcessManager {
             this._scene.getEngine()._releaseBuffer(this._indexBuffer);
             this._indexBuffer = null;
         }
+
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The onBeforeRenderObservable was never cleared on dispose, which could cause
+            memory leaks if observers hold references to external objects.
+        */
+        this.onBeforeRenderObservable.clear();
     }
 }

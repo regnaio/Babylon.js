@@ -202,3 +202,35 @@ ADDITIONAL FIXES (COMMIT 4 - RenderPipeline bugs)
     File: postProcessRenderEffect.ts, line 242-243
     Description: Same issue in _disable - if camera was never attached, pps is
     undefined and for-of throws. Added null guard.
+
+================================================================================
+ADDITIONAL FIXES (COMMIT 5 - Core PostProcess bugs)
+================================================================================
+
+22. [BUG] postProcess.ts - Wrong camera reference in dispose()
+    File: postProcess.ts, line 1183
+    Description: Used this._camera._getFirstPostProcess() instead of the local
+    camera variable. If a different camera is passed to dispose(), this queries
+    the wrong camera for its first post process.
+
+23. [BUG] postProcess.ts - isSupported crashes when effect not compiled
+    File: postProcess.ts, line 1039
+    Description: Non-null assertion on drawWrapper.effect crashes when effect
+    hasn't been compiled (e.g. blockCompilation=true). Changed to safely handle
+    null, matching ImageProcessingPostProcess's approach.
+
+24. [BUG] postProcess.ts - needMipMaps missing TEXTURE_LINEAR_NEAREST
+    File: postProcess.ts, lines 966-969
+    Description: TEXTURE_LINEAR_NEAREST (mode 12) has no mipmaps but wasn't
+    excluded from the needMipMaps check, causing unnecessary mipmap generation.
+
+25. [IMPROVEMENT] postProcessManager.ts - dispose doesn't clear observable
+    File: postProcessManager.ts, line 236
+    Description: onBeforeRenderObservable was never cleared on dispose, causing
+    potential memory leaks.
+
+26. [OPTIMIZATION] postProcessManager.ts - _prepareBuffers called inside loop
+    File: postProcessManager.ts, lines 142 and 225
+    Description: Moved _prepareBuffers() from inside per-post-process loops to
+    before the loops in both directRender and _finalizeFrame, avoiding repeated
+    function call overhead on every draw call.
