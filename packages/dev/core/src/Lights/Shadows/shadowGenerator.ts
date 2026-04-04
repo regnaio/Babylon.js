@@ -2196,8 +2196,16 @@ export class ShadowGenerator implements IShadowGenerator {
         serializationObject.filteringQuality = this.filteringQuality;
         serializationObject.useExponentialShadowMap = this.useExponentialShadowMap;
         serializationObject.useBlurExponentialShadowMap = this.useBlurExponentialShadowMap;
-        serializationObject.useCloseExponentialShadowMap = this.useBlurExponentialShadowMap;
-        serializationObject.useBlurCloseExponentialShadowMap = this.useBlurExponentialShadowMap;
+        /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	These two lines were copy-paste bugs: both referenced this.useBlurExponentialShadowMap
+	instead of their own respective properties. This caused incorrect shadow filter types
+	to be serialized and restored, meaning a scene saved with CloseESM or BlurCloseESM
+	filters would deserialize with the wrong filter applied.
+*/
+        serializationObject.useCloseExponentialShadowMap = this.useCloseExponentialShadowMap;
+        serializationObject.useBlurCloseExponentialShadowMap = this.useBlurCloseExponentialShadowMap;
         serializationObject.usePoissonSampling = this.usePoissonSampling;
         serializationObject.depthScale = this.depthScale;
         serializationObject.blurBoxOffset = this.blurBoxOffset;

@@ -62,8 +62,13 @@ function CreateSceneLTCTextures(scene: Scene): void {
         });
 }
 
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	Fixed typo: "servers" -> "serves".
+*/
 /**
- * Abstract Area Light class that servers as parent for all Area Lights implementations.
+ * Abstract Area Light class that serves as parent for all Area Lights implementations.
  * The light is emitted from the area in the -Z direction.
  */
 export abstract class AreaLight extends Light {

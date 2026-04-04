@@ -1,8 +1,8 @@
 import { serializeAsColor3, serializeAsVector3 } from "../Misc/decorators";
 import { type Nullable } from "../types";
 import { type Scene } from "../scene";
-import { Matrix, Vector3 } from "../Maths/math.vector";
-import { Color3 } from "../Maths/math.color";
+import { Matrix, TmpVectors, Vector3 } from "../Maths/math.vector";
+import { Color3, TmpColors } from "../Maths/math.color";
 import { Node } from "../node";
 import { type Effect } from "../Materials/effect";
 import { Light } from "./light";
@@ -89,15 +89,25 @@ export class HemisphericLight extends Light {
      * @param lightIndex The index of the light in the effect to update
      * @returns The hemispheric light
      */
+    /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	Both transferToEffect and transferToNodeMaterialEffect were calling
+	Vector3.Normalize() which allocates a new Vector3 each call, and
+	transferToEffect was calling this.groundColor.scale() which allocates a new
+	Color3 each call. These methods are called every render frame for every
+	mesh affected by this light. Using NormalizeToRef and scaleToRef with
+	TmpVectors/TmpColors avoids these per-frame allocations.
+*/
     public transferToEffect(_effect: Effect, lightIndex: string): HemisphericLight {
-        const normalizeDirection = Vector3.Normalize(this.direction);
+        const normalizeDirection = Vector3.NormalizeToRef(this.direction, TmpVectors.Vector3[0]);
         this._uniformBuffer.updateFloat4("vLightData", normalizeDirection.x, normalizeDirection.y, normalizeDirection.z, 0.0, lightIndex);
-        this._uniformBuffer.updateColor3("vLightGround", this.groundColor.scale(this.intensity), lightIndex);
+        this._uniformBuffer.updateColor3("vLightGround", this.groundColor.scaleToRef(this.intensity, TmpColors.Color3[0]), lightIndex);
         return this;
     }
 
     public transferToNodeMaterialEffect(effect: Effect, lightDataUniformName: string) {
-        const normalizeDirection = Vector3.Normalize(this.direction);
+        const normalizeDirection = Vector3.NormalizeToRef(this.direction, TmpVectors.Vector3[0]);
         effect.setFloat3(lightDataUniformName, normalizeDirection.x, normalizeDirection.y, normalizeDirection.z);
         return this;
     }

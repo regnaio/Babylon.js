@@ -1,4 +1,9 @@
-/** Defines the cross module constantsused by lights to avoid circular dependencies */
+/*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	Fixed typo: "constantsused" -> "constants used" (missing space).
+*/
+/** Defines the cross module constants used by lights to avoid circular dependencies */
 export class LightConstants {
     /**
      * Falloff Default: light is falling off following the material specification:

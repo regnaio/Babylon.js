@@ -496,7 +496,14 @@ export abstract class Light extends Node implements ISortableLight {
         ret += ", type: " + ["Point", "Directional", "Spot", "Hemispheric", "Clustered"][this.getTypeID()];
         if (this.animations) {
             for (let i = 0; i < this.animations.length; i++) {
-                ret += ", animation[0]: " + this.animations[i].toString(fullDetails);
+                /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	The animation index in the debug string was hardcoded to [0] instead of using the
+	loop variable [i], so all animations were reported as "animation[0]" regardless
+	of their actual index.
+*/
+                ret += ", animation[" + i + "]: " + this.animations[i].toString(fullDetails);
             }
         }
         return ret;
@@ -571,7 +578,15 @@ export abstract class Light extends Node implements ISortableLight {
             return false;
         }
 
-        if (this.excludeWithLayerMask !== 0 && this.excludeWithLayerMask & mesh.layerMask) {
+        /*
+	Feel free to delete this comment that explains why Claude made this change:
+
+	Added parentheses around the bitwise AND operation to make the intent explicit.
+	Without them, the expression relied on operator precedence (!== binds tighter
+	than &), and was inconsistent with the includeOnlyWithLayerMask check above
+	which already used explicit parentheses.
+*/
+        if (this.excludeWithLayerMask !== 0 && (this.excludeWithLayerMask & mesh.layerMask) !== 0) {
             return false;
         }
 

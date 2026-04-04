@@ -1,0 +1,131 @@
+================================================================================
+BABYLON.JS LIGHTS MODULE ANALYSIS
+packages/dev/core/src/Lights/
+================================================================================
+
+DIRECTORY STRUCTURE:
+  Lights/
+    light.ts                  - Base Light class (abstract)
+    lightConstants.ts         - Cross-module constants (avoids circular deps)
+    lightingVolume.ts         - Lighting volume from directional light shadow maps
+    shadowLight.ts            - IShadowLight interface + ShadowLight base class
+    directionalLight.ts       - DirectionalLight (type 1)
+    hemisphericLight.ts       - HemisphericLight (type 3)
+    pointLight.ts             - PointLight (type 0)
+    spotLight.ts              - SpotLight (type 2)
+    areaLight.ts              - Abstract AreaLight base class
+    rectAreaLight.ts          - RectAreaLight (type 4)
+    index.ts                  - Barrel re-export
+    Shadows/
+      shadowGenerator.ts      - Core shadow generator
+      cascadedShadowGenerator.ts - Cascaded shadow maps
+      shadowGeneratorSceneComponent.ts - Scene component for shadow gen
+      index.ts                - Barrel re-export + shader imports
+    Clustered/
+      clusteredLightContainer.ts       - Clustered light system
+      clusteredLightingSceneComponent.ts - Scene component for clustering
+      index.ts                         - Barrel re-export + shader imports
+    IES/
+      iesLoader.ts            - IES photometric data loader
+    LTC/
+      ltcTextureTool.ts       - LTC texture loading for area lights
+
+================================================================================
+DEPENDENCY GRAPH (key relationships):
+================================================================================
+
+lightConstants.ts
+  <- light.ts, clusteredLightContainer.ts, clusteredLightingSceneComponent.ts
+
+light.ts
+  <- shadowLight.ts, hemisphericLight.ts, areaLight.ts, directionalLight.ts,
+     pointLight.ts, spotLight.ts, clusteredLightContainer.ts, shadowGenerator.ts
+
+shadowLight.ts
+  <- directionalLight.ts, pointLight.ts, spotLight.ts, shadowGenerator.ts,
+     cascadedShadowGenerator.ts
+
+directionalLight.ts
+  <- lightingVolume.ts, cascadedShadowGenerator.ts
+
+hemisphericLight.ts
+  (leaf - only consumed externally by materials/node materials)
+
+pointLight.ts
+  <- clusteredLightContainer.ts (type only)
+
+spotLight.ts
+  <- clusteredLightContainer.ts (type only)
+
+areaLight.ts
+  <- rectAreaLight.ts
+
+shadowGenerator.ts
+  <- cascadedShadowGenerator.ts, shadowGeneratorSceneComponent.ts,
+     lightingVolume.ts (type only)
+
+================================================================================
+ISSUES FOUND
+================================================================================
+
+BUG 1 (CRITICAL): shadowGenerator.ts serialize() - Wrong property references
+  File: Shadows/shadowGenerator.ts, lines 2199-2200
+  The serialize() method writes:
+    serializationObject.useCloseExponentialShadowMap = this.useBlurExponentialShadowMap;
+    serializationObject.useBlurCloseExponentialShadowMap = this.useBlurExponentialShadowMap;
+  Both should reference their own property:
+    serializationObject.useCloseExponentialShadowMap = this.useCloseExponentialShadowMap;
+    serializationObject.useBlurCloseExponentialShadowMap = this.useBlurCloseExponentialShadowMap;
+  Impact: Serializing a ShadowGenerator that uses CloseESM or BlurCloseESM
+  will serialize the wrong filter type. On deserialization, the wrong filter
+  would be restored.
+
+BUG 2 (MINOR): light.ts toString() - Wrong animation index in string
+  File: light.ts, line 499
+  The loop iterates with `i` but always prints "animation[0]" instead of
+  "animation[i]". This is a copy-paste bug in a debug string.
+
+BUG 3 (MINOR): light.ts canAffectMesh() - Missing parentheses in bitwise check
+  File: light.ts, line 574
+  The condition `this.excludeWithLayerMask !== 0 && this.excludeWithLayerMask & mesh.layerMask`
+  relies on operator precedence where `&` has lower precedence than `!==`.
+  While the result is technically correct because `!==` evaluates first,
+  the missing parentheses around the bitwise `&` result make intent unclear
+  and is inconsistent with the includeOnlyWithLayerMask check on line 570
+  which correctly uses `(this.includeOnlyWithLayerMask & mesh.layerMask) === 0`.
+
+BUG 4 (MINOR): lightConstants.ts - Typo in JSDoc comment
+  File: lightConstants.ts, line 1
+  "constantsused" should be "constants used" (missing space).
+
+BUG 5 (COSMETIC): hemisphericLight.ts transferToEffect - Allocates new Vector3 per call
+  File: hemisphericLight.ts, line 93
+  `Vector3.Normalize(this.direction)` allocates a new Vector3 each call.
+  Should use `Vector3.NormalizeToRef` with a temp vector. Same issue on
+  line 100 in transferToNodeMaterialEffect. This is called every render
+  frame for every mesh affected by this light.
+
+BUG 6 (COSMETIC): hemisphericLight.ts transferToEffect - groundColor not scaled correctly
+  File: hemisphericLight.ts, line 95
+  `this.groundColor.scale(this.intensity)` allocates a new Color3 and uses
+  raw intensity instead of getScaledIntensity(). The diffuse/specular colors
+  in the base class _bindLight use getScaledIntensity() which factors in
+  photometric scale. The groundColor should be consistent, but this appears
+  intentional for hemispheric lights since they always have photometricScale=1.
+  However, the allocation of a new Color3 each frame is wasteful.
+
+BUG 7 (COSMETIC): areaLight.ts - Typo in class JSDoc
+  File: areaLight.ts, line 67
+  "servers" should be "serves".
+
+================================================================================
+SUMMARY OF FIXES APPLIED
+================================================================================
+
+1. Fixed shadowGenerator serialize() copy-paste bug (BUG 1 - CRITICAL)
+2. Fixed light.ts toString() animation index bug (BUG 2)
+3. Added parentheses to canAffectMesh bitwise operation (BUG 3)
+4. Fixed "constantsused" typo in lightConstants.ts (BUG 4)
+5. Eliminated per-frame Vector3 allocation in HemisphericLight (BUG 5)
+6. Eliminated per-frame Color3 allocation in HemisphericLight (BUG 6)
+7. Fixed "servers" typo in areaLight.ts (BUG 7)
