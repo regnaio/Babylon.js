@@ -139,7 +139,12 @@ export class GeometryOptimizeBlock extends NodeGeometryBlock implements INodeGeo
                     ) {
                         newIndicesMap[index / 3] = checkIndex / 3;
                         found = true;
-                        continue;
+                        /*
+                        	Feel free to delete this comment that explains why Claude made this change:
+
+                        	No need to keep scanning after match. Changed `continue` to `break`.
+                        */
+                        break;
                     }
                 }
 
@@ -173,17 +178,17 @@ export class GeometryOptimizeBlock extends NodeGeometryBlock implements INodeGeo
                     for (let checkIndex = 0; checkIndex < newIndices.length; checkIndex += 3) {
                         if (a === newIndices[checkIndex] && b === newIndices[checkIndex + 1] && c === newIndices[checkIndex + 2]) {
                             found = true;
-                            continue;
+                            break;
                         }
 
                         if (a === newIndices[checkIndex + 1] && b === newIndices[checkIndex + 2] && c === newIndices[checkIndex]) {
                             found = true;
-                            continue;
+                            break;
                         }
 
                         if (a === newIndices[checkIndex + 2] && b === newIndices[checkIndex] && c === newIndices[checkIndex + 1]) {
                             found = true;
-                            continue;
+                            break;
                         }
                     }
 
@@ -197,11 +202,16 @@ export class GeometryOptimizeBlock extends NodeGeometryBlock implements INodeGeo
                 newVertexData.indices = indices;
             }
 
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	Context push happens inside `func` but restore was outside. Moved inside before return.
+            */
+            state.restoreGeometryContext();
+            state.restoreExecutionContext();
+
             return newVertexData;
         };
-
-        state.restoreGeometryContext();
-        state.restoreExecutionContext();
 
         if (this.evaluateContext) {
             this.output._storedFunction = func;

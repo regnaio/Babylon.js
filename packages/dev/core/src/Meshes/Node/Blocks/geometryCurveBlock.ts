@@ -155,21 +155,31 @@ export class GeometryCurveBlock extends NodeGeometryBlock {
 
         let func: (v: float) => any;
 
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Replaced imprecise `Math.PI` with `Math.PI` throughout all easing functions.
+        */
         switch (this.type) {
             case GeometryCurveBlockTypes.EaseInSine:
-                func = (v: float) => 1.0 - Math.cos((v * 3.1415) / 2.0);
+                func = (v: float) => 1.0 - Math.cos((v * Math.PI) / 2.0);
                 break;
             case GeometryCurveBlockTypes.EaseOutSine:
-                func = (v: float) => Math.sin((v * 3.1415) / 2.0);
+                func = (v: float) => Math.sin((v * Math.PI) / 2.0);
                 break;
             case GeometryCurveBlockTypes.EaseInOutSine:
-                func = (v: float) => -(Math.cos(v * 3.1415) - 1.0) / 2.0;
+                func = (v: float) => -(Math.cos(v * Math.PI) - 1.0) / 2.0;
                 break;
             case GeometryCurveBlockTypes.EaseInQuad:
                 func = (v: float) => v * v;
                 break;
             case GeometryCurveBlockTypes.EaseOutQuad:
-                func = (v: float) => (1.0 - v) * (1.0 - v);
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	EaseOutQuad `(1-v)^2` goes 1->0 (reversed). Standard is `1-(1-v)^2` for 0->1.
+                */
+                func = (v: float) => 1.0 - (1.0 - v) * (1.0 - v);
                 break;
             case GeometryCurveBlockTypes.EaseInOutQuad: {
                 func = (v: float) => (v < 0.5 ? 2.0 * v * v : 1.0 - Math.pow(-2.0 * v + 2.0, 2.0) / 2.0);
@@ -237,22 +247,32 @@ export class GeometryCurveBlock extends NodeGeometryBlock {
                 break;
             }
             case GeometryCurveBlockTypes.EaseOutBack: {
-                func = (v: float) => 2.70158 * Math.pow(v - 1.0, 3.0) + 1.70158 * Math.pow(v - 1.0, 2.0);
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	Standard EaseOutBack is `1 + c3*(v-1)^3 + c1*(v-1)^2`. Was missing the `+ 1`.
+                */
+                func = (v: float) => 1.0 + 2.70158 * Math.pow(v - 1.0, 3.0) + 1.70158 * Math.pow(v - 1.0, 2.0);
                 break;
             }
             case GeometryCurveBlockTypes.EaseInOutBack: {
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	Second half used `+ 3.5949095` but standard formula uses `+ 2.5949095` (c2, not c2+1).
+                */
                 func = (v: float) =>
                     v < 0.5
                         ? (Math.pow(2.0 * v, 2.0) * (3.5949095 * 2.0 * v - 2.5949095)) / 2.0
-                        : (Math.pow(2.0 * v - 2.0, 2.0) * (3.5949095 * (v * 2.0 - 2.0) + 3.5949095) + 2.0) / 2.0;
+                        : (Math.pow(2.0 * v - 2.0, 2.0) * (3.5949095 * (v * 2.0 - 2.0) + 2.5949095) + 2.0) / 2.0;
                 break;
             }
             case GeometryCurveBlockTypes.EaseInElastic: {
-                func = (v: float) => (v === 0.0 ? 0.0 : v === 1.0 ? 1.0 : -Math.pow(2.0, 10.0 * v - 10.0) * Math.sin((v * 10.0 - 10.75) * ((2.0 * 3.1415) / 3.0)));
+                func = (v: float) => (v === 0.0 ? 0.0 : v === 1.0 ? 1.0 : -Math.pow(2.0, 10.0 * v - 10.0) * Math.sin((v * 10.0 - 10.75) * ((2.0 * Math.PI) / 3.0)));
                 break;
             }
             case GeometryCurveBlockTypes.EaseOutElastic: {
-                func = (v: float) => (v === 0.0 ? 0.0 : v === 1.0 ? 1.0 : Math.pow(2.0, -10.0 * v) * Math.sin((v * 10.0 - 0.75) * ((2.0 * 3.1415) / 3.0)) + 1.0);
+                func = (v: float) => (v === 0.0 ? 0.0 : v === 1.0 ? 1.0 : Math.pow(2.0, -10.0 * v) * Math.sin((v * 10.0 - 0.75) * ((2.0 * Math.PI) / 3.0)) + 1.0);
                 break;
             }
             case GeometryCurveBlockTypes.EaseInOutElastic: {
@@ -262,8 +282,8 @@ export class GeometryCurveBlock extends NodeGeometryBlock {
                         : v == 1.0
                           ? 1.0
                           : v < 0.5
-                            ? -(Math.pow(2.0, 20.0 * v - 10.0) * Math.sin((20.0 * v - 11.125) * ((2.0 * 3.1415) / 4.5))) / 2.0
-                            : (Math.pow(2.0, -20.0 * v + 10.0) * Math.sin((20.0 * v - 11.125) * ((2.0 * 3.1415) / 4.5))) / 2.0 + 1.0;
+                            ? -(Math.pow(2.0, 20.0 * v - 10.0) * Math.sin((20.0 * v - 11.125) * ((2.0 * Math.PI) / 4.5))) / 2.0
+                            : (Math.pow(2.0, -20.0 * v + 10.0) * Math.sin((20.0 * v - 11.125) * ((2.0 * Math.PI) / 4.5))) / 2.0 + 1.0;
                 break;
             }
         }

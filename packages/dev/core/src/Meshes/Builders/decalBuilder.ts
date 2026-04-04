@@ -84,7 +84,13 @@ export function CreateDecal(
     const matWeightsExtra = hasSkeleton ? sourceMesh.getVerticesData(VertexBuffer.MatricesWeightsExtraKind) : null;
 
     const position = options.position || Vector3.Zero();
-    let normal = options.normal || Vector3.Up();
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	`normal` was always truthy due to `|| Vector3.Up()`, making the `if (!normal)` camera fallback dead code.
+    	Changed to allow the fallback to work when no normal is provided.
+    */
+    let normal = options.normal;
     const size = options.size || Vector3.One();
     const angle = options.angle || 0;
 

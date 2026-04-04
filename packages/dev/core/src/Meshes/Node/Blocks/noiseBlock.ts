@@ -78,7 +78,12 @@ export class NoiseBlock extends NodeGeometryBlock {
         const u = h < 8 ? x : y;
         const vt = h === 12 || h == 14 ? x : z;
         const v = h < 4 ? y : vt;
-        return this._negateIf(u, h & u) + this._negateIf(v, h & 2);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	`h & u` where `u` is a float always gives wrong results. Standard Perlin gradient uses `h & 1`.
+        */
+        return this._negateIf(u, h & 1) + this._negateIf(v, h & 2);
     }
 
     private _fade(t: number) {

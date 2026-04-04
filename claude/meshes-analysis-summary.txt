@@ -1,0 +1,67 @@
+Babylon.js core/src/Meshes/ Code Analysis Summary
+===================================================
+Analyzed: 167 TypeScript files across all subdirectories
+Branch: claude-core-src-meshes
+
+BUGS FIXED (37 issues across 32 files)
+======================================
+
+Core Mesh Files:
+- abstractMesh.ts:2291 - `||` should be `&&` (tautology, always true)
+- mesh.vertexData.functions.ts:52 - `return` should be `continue` (DFS aborts prematurely)
+- geometry.ts:554 - `for...in` on array iterates indices not values
+- geometry.ts:1088 - Same `for...in` on array bug in copy()
+- geometry.ts:990 - Array mutated during forward iteration in dispose
+- mesh.vertexData.ts:693 - Colors stride hardcoded to 4, fails for stride-3
+
+Builders:
+- groundBuilder.ts:417 - Operator precedence: `x || 1 | 0`
+- tubeBuilder.ts:58 - Operator precedence: `x || 64 | 0`
+- decalBuilder.ts:87-98 - Dead code camera normal fallback
+- capsuleBuilder.ts:42 - NaN from acos out of range
+- tiledPlaneBuilder.ts:372 - tileHeight instead of tileWidth for UV
+- tiledPlaneBuilder.ts:218 - `% 1` always true (should be `% 2`)
+- sphereBuilder.ts:41 - slice > 1 not clamped
+- icoSphereBuilder.ts:33 - sideOrientation=0 treated as falsy
+
+Node Geometry:
+- nodeGeometry.ts:330 - updateMesh returns mesh instead of true
+- nodeGeometry.ts:452 - concat() result discarded
+- nodeGeometryBlock.ts:431 - return instead of continue
+- instantiateOnVolumeBlock.ts:160 - gridSize returns wrong input index
+- setUVsBlock.ts:181 - Invalid JS in _dumpPropertiesCode
+- geometryTextureFetchBlock.ts:225 - Wrong deserialization condition
+- booleanGeometryBlock.ts:134 - Wrong vertex count for vertexData1
+- noiseBlock.ts:81 - `h & u` should be `h & 1` (Perlin noise)
+- geometryOptimizeBlock.ts:203 - Context restore outside stored function
+- latticeBlock.ts:222 - Resolution gated behind evaluateContext
+- geometryCurveBlock.ts - `3.1415` instead of Math.PI (6 occurrences)
+- geometryCurveBlock.ts:172 - EaseOutQuad formula reversed
+- geometryCurveBlock.ts:240 - EaseOutBack missing `+ 1`
+- geometryCurveBlock.ts:247 - EaseInOutBack wrong constant
+- geometryCollectionBlock.ts:159 - Biased random (Math.round vs Math.floor)
+- setColorsBlock.ts:41 - Duplicate excluded type
+
+Compression/GaussianSplatting/GreasedLine:
+- dracoCompressionWorker.ts - Missing .catch() on decoder promise
+- dracoDecoder.ts:211 - gltfNormalizedOverride not applied in sync path
+- meshoptCompression.ts:93 - WorkerTimeout not cleared on dispose
+- gaussianSplattingMeshBase.ts:999 - Unchecked regex match crashes
+- greasedLineRibbonMesh.ts:521 - Array.fill([]) shares references
+- greasedLineRibbonMesh.ts:489 - pathOptions vs pathsOptions mismatch
+
+Utility Files:
+- csg.ts:846,855 - `||` should be `&&` in UV/color difference checks
+- groundMesh.ts:104 - Inconsistent boundary checks
+- meshSimplification.ts:907 - `new Vector3(2,2,2)` replaced with .scale(0.5)
+- goldbergMesh.ts:30-36 - Swapped JSDoc for faceXaxis/faceYaxis
+- geometryOptimizeBlock.ts:142,182 - continue changed to break after match
+
+OPTIMIZATIONS (3):
+- geometryOptimizeBlock.ts - `continue` to `break` after match found
+- meshSimplification.ts - `.scale(0.5)` instead of `.divide(new Vector3(2,2,2))`
+- mesh.vertexData.functions.ts - Variable shadowing renamed
+
+IMPROVEMENTS (2):
+- setColorsBlock.ts - Duplicate excluded type removed
+- goldbergMesh.ts - Swapped JSDoc comments fixed

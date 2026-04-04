@@ -215,7 +215,12 @@ export function CreateTiledPlaneVertexData(options: {
             c = 1;
             d = offsetY / tileHeight;
             uvPart = [a, b, c, b, c, d, a, d];
-            if ((flipTile === Mesh.ROTATE_ROW && tilesY % 2 === 1) || (flipTile === Mesh.ROTATE_TILE && tilesY % 1 === 0)) {
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	`tilesY % 1 === 0` is always true for integers. Changed to `% 2` to match other cases.
+            */
+            if ((flipTile === Mesh.ROTATE_ROW && tilesY % 2 === 1) || (flipTile === Mesh.ROTATE_TILE && tilesY % 2 === 0)) {
                 uvPart = [1 - a, 1 - b, 1 - c, 1 - b, 1 - c, 1 - d, 1 - a, 1 - d];
             }
             if ((flipTile === Mesh.FLIP_ROW && tilesY % 2 === 1) || (flipTile === Mesh.FLIP_TILE && tilesY % 2 === 0)) {
@@ -369,7 +374,12 @@ export function CreateTiledPlaneVertexData(options: {
             const uvBaseRC = [];
             a = 0;
             b = 0;
-            c = offsetX / tileHeight;
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	UV coordinate should use tileWidth, not tileHeight, for right-column partial tiles.
+            */
+            c = offsetX / tileWidth;
             d = 1;
             uvBaseRC[0] = [a, b, c, b, c, d, a, d];
             uvBaseRC[1] = [a, b, c, b, c, d, a, d];

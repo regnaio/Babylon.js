@@ -843,7 +843,12 @@ export class CSG {
 
                     let areUvsDifferent = false;
 
-                    if (uvs && !(uvs[vertexIdx * 2] === uv.x || uvs[vertexIdx * 2 + 1] === uv.y)) {
+                    /*
+                    	Feel free to delete this comment that explains why Claude made this change:
+
+                    	`!(a === x || b === y)` means "neither matches". Should be `&&` for "any differs".
+                    */
+                    if (uvs && !(uvs[vertexIdx * 2] === uv.x && uvs[vertexIdx * 2 + 1] === uv.y)) {
                         areUvsDifferent = true;
                     }
 
@@ -851,10 +856,15 @@ export class CSG {
 
                     if (
                         vertColors &&
+                        /*
+                        	Feel free to delete this comment that explains why Claude made this change:
+
+                        	Same `||` vs `&&` issue as UV check. Any single component difference should trigger split.
+                        */
                         !(
-                            vertColors[vertexIdx * 4] === vertColor.r ||
-                            vertColors[vertexIdx * 4 + 1] === vertColor.g ||
-                            vertColors[vertexIdx * 4 + 2] === vertColor.b ||
+                            vertColors[vertexIdx * 4] === vertColor.r &&
+                            vertColors[vertexIdx * 4 + 1] === vertColor.g &&
+                            vertColors[vertexIdx * 4 + 2] === vertColor.b &&
                             vertColors[vertexIdx * 4 + 3] === vertColor.a
                         )
                     ) {

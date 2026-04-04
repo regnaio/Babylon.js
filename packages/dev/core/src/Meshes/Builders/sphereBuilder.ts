@@ -38,7 +38,12 @@ export function CreateSphereVertexData(options: {
     const diameterY: number = options.diameterY || options.diameter || 1;
     const diameterZ: number = options.diameterZ || options.diameter || 1;
     const arc: number = options.arc && (options.arc <= 0 || options.arc > 1) ? 1.0 : options.arc || 1.0;
-    const slice: number = options.slice && options.slice <= 0 ? 1.0 : options.slice || 1.0;
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	Unlike `arc`, `slice` didn't clamp values > 1. Added `> 1` check to match.
+    */
+    const slice: number = options.slice && (options.slice <= 0 || options.slice > 1) ? 1.0 : options.slice || 1.0;
     const sideOrientation = options.sideOrientation === 0 ? 0 : options.sideOrientation || VertexData.DEFAULTSIDE;
     const dedupTopBottomIndices = !!options.dedupTopBottomIndices;
 

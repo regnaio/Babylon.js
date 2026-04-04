@@ -904,7 +904,12 @@ export class QuadraticErrorSimplification implements ISimplifier {
             pointResult.z = (-1 / qDet) * q.det(0, 1, 3, 1, 4, 6, 2, 5, 8);
             error = this._vertexError(q, pointResult);
         } else {
-            const p3 = vertex1.position.add(vertex2.position).divide(new Vector3(2, 2, 2));
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	`new Vector3(2,2,2)` allocated every call in hot loop. `.scale(0.5)` avoids the allocation.
+            */
+            const p3 = vertex1.position.add(vertex2.position).scale(0.5);
             //var norm3 = (vertex1.normal.add(vertex2.normal)).divide(new Vector3(2, 2, 2)).normalize();
             const error1 = this._vertexError(q, vertex1.position);
             const error2 = this._vertexError(q, vertex2.position);

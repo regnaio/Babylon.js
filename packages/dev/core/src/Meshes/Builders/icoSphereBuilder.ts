@@ -30,7 +30,12 @@ export function CreateIcoSphereVertexData(options: {
     frontUVs?: Vector4;
     backUVs?: Vector4;
 }): VertexData {
-    const sideOrientation = options.sideOrientation || VertexData.DEFAULTSIDE;
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	Using `||` treats explicit `sideOrientation: 0` as falsy. Added `=== 0` check to match other builders.
+    */
+    const sideOrientation = options.sideOrientation === 0 ? 0 : options.sideOrientation || VertexData.DEFAULTSIDE;
     const radius = options.radius || 1;
     const flat = options.flat === undefined ? true : options.flat;
     const subdivisions = (options.subdivisions || 4) | 0;

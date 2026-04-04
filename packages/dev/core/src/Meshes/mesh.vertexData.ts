@@ -690,8 +690,14 @@ export class VertexData implements IVertexDataLike {
                 vertexData.tangents = this.tangents.slice(materialInfo.verticesStart * 4, (materialInfo.verticesCount + materialInfo.verticesStart) * 4);
             }
 
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	Colors can have stride 3 (RGB) or 4 (RGBA). Detect dynamically instead of hardcoding 4.
+            */
             if (this.colors) {
-                vertexData.colors = this.colors.slice(materialInfo.verticesStart * 4, (materialInfo.verticesCount + materialInfo.verticesStart) * 4);
+                const colorStride = this.positions && this.colors.length === this.positions.length ? 3 : 4;
+                vertexData.colors = this.colors.slice(materialInfo.verticesStart * colorStride, (materialInfo.verticesCount + materialInfo.verticesStart) * colorStride);
             }
 
             if (this.uvs) {

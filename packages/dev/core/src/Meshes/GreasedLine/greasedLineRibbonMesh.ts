@@ -486,7 +486,12 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
     public static override Parse(parsedMesh: any, scene: Scene): Mesh {
         const lineOptions = <GreasedLineMeshOptions>parsedMesh.lineOptions;
         const name = <string>parsedMesh.name;
-        const pathOptions = parsedMesh.pathOptions;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	`serialize` writes `pathsOptions` (plural) but `Parse` read `pathOptions` (singular). Fixed.
+        */
+        const pathOptions = parsedMesh.pathsOptions;
         const result = new GreasedLineRibbonMesh(name, scene, lineOptions, pathOptions);
         return result;
     }
@@ -518,8 +523,14 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
         }
 
         const positionsLength = pathArray[0].length;
-        this._uSegmentLengths = new Array(positionsLength).fill([]);
-        this._uTotalLengths = new Array(positionsLength).fill([]);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	`Array.fill([])` fills every element with a reference to the SAME array object.
+        	All elements shared one array, corrupting UV/width calculations. Created distinct arrays.
+        */
+        this._uSegmentLengths = new Array(positionsLength).fill(null).map(() => [] as number[]);
+        this._uTotalLengths = new Array<number>(positionsLength).fill(0);
         const uLength = new Vector3();
         for (let i = 0; i < positionsLength; i++) {
             length = 0;

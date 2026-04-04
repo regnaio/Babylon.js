@@ -996,7 +996,16 @@ export class GaussianSplattingMeshBase extends Mesh {
             // standard splat
             return null;
         }
-        const vertexCount = parseInt(/element vertex (\d+)\n/.exec(header)![1]);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Non-null assertion `!` on regex result crashes on PLY files without `element vertex`. Added null check.
+        */
+        const vertexMatch = /element vertex (\d+)\n/.exec(header);
+        if (!vertexMatch) {
+            return null;
+        }
+        const vertexCount = parseInt(vertexMatch[1]);
         const chunkElement = /element chunk (\d+)\n/.exec(header);
         let chunkCount = 0;
         if (chunkElement) {

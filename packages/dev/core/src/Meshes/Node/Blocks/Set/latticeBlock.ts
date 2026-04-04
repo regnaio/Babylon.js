@@ -218,10 +218,21 @@ export class LatticeBlock extends NodeGeometryBlock implements INodeGeometryExec
     public override _deserialize(serializationObject: any) {
         super._deserialize(serializationObject);
 
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Resolution properties were gated behind evaluateContext check. Deserialize each independently.
+        */
         if (serializationObject.evaluateContext !== undefined) {
             this.evaluateContext = serializationObject.evaluateContext;
+        }
+        if (serializationObject.resolutionX !== undefined) {
             this.resolutionX = serializationObject.resolutionX;
+        }
+        if (serializationObject.resolutionY !== undefined) {
             this.resolutionY = serializationObject.resolutionY;
+        }
+        if (serializationObject.resolutionZ !== undefined) {
             this.resolutionZ = serializationObject.resolutionZ;
         }
     }

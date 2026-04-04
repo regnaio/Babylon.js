@@ -91,6 +91,15 @@ export class MeshoptCompression implements IDisposable {
      * Stop all async operations and release resources.
      */
     public dispose(): void {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	WorkerTimeout was not cleared on dispose, causing use-after-dispose when timeout fires.
+        */
+        if (WorkerTimeout !== null) {
+            clearTimeout(WorkerTimeout);
+            WorkerTimeout = null;
+        }
         delete this._decoderModulePromise;
     }
 

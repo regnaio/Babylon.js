@@ -428,7 +428,12 @@ export class NodeGeometryBlock {
                 const input = this.inputs.find((i) => i.name === port.name);
 
                 if (!input) {
-                    return;
+                    /*
+                    	Feel free to delete this comment that explains why Claude made this change:
+
+                    	`return` exits entire method on first missing input, skipping the rest. Changed to `continue`.
+                    */
+                    continue;
                 }
 
                 if (port.displayName) {

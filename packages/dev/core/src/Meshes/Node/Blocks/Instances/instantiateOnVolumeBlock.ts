@@ -157,7 +157,12 @@ export class InstantiateOnVolumeBlock extends NodeGeometryBlock implements INode
      * Gets the grid size input component
      */
     public get gridSize(): NodeGeometryConnectionPoint {
-        return this._inputs[6];
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Both `scaling` and `gridSize` returned `this._inputs[6]`. `gridSize` is the 8th input (index 7).
+        */
+        return this._inputs[7];
     }
 
     /**

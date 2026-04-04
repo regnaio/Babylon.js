@@ -156,7 +156,12 @@ export class GeometryCollectionBlock extends NodeGeometryBlock {
             if (!availables.length) {
                 return null;
             }
-            return availables[Math.round(Math.random() * (availables.length - 1))];
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	`Math.round` gives non-uniform distribution. `Math.floor` with `length` is uniform.
+            */
+            return availables[Math.floor(Math.random() * availables.length)];
         };
 
         if (this.evaluateContext) {

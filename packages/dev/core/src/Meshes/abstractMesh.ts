@@ -2288,7 +2288,12 @@ export abstract class AbstractMesh extends TransformNode implements IDisposable,
         }
 
         // SubMeshes
-        if (this.getClassName() !== "InstancedMesh" || this.getClassName() !== "InstancedLinesMesh") {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The condition `a !== X || a !== Y` is always true (tautology). Changed `||` to `&&`.
+        */
+        if (this.getClassName() !== "InstancedMesh" && this.getClassName() !== "InstancedLinesMesh") {
             this.releaseSubMeshes(true);
         }
 

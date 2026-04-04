@@ -222,7 +222,12 @@ export class GeometryTextureFetchBlock extends NodeGeometryBlock {
         super._deserialize(serializationObject);
 
         this.clampCoordinates = serializationObject.clampCoordinates;
-        if (serializationObject.clampCoordinates === undefined) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Condition checked `clampCoordinates` to decide whether to deserialize `interpolation`. Fixed.
+        */
+        if (serializationObject.interpolation !== undefined) {
             this.interpolation = serializationObject.interpolation;
         }
     }

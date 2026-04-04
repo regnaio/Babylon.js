@@ -27,11 +27,11 @@ export type GoldbergData = {
      */
     faceZaxis: Vector3[];
     /**
-     * The list of Goldberg faces Y axis
+     * The list of Goldberg faces X axis
      */
     faceXaxis: Vector3[];
     /**
-     * The list of Goldberg faces X axis
+     * The list of Goldberg faces Y axis
      */
     faceYaxis: Vector3[];
     /**

@@ -208,7 +208,12 @@ export class DracoDecoder extends DracoCodec {
                             size,
                             byteOffset,
                             byteStride,
-                            normalized,
+                            /*
+                            	Feel free to delete this comment that explains why Claude made this change:
+
+                            	gltfNormalizedOverride was not applied in the sync (non-worker) decode path.
+                            */
+                            normalized: applyGltfNormalizedOverride(kind, normalized),
                         });
                     }
                 );

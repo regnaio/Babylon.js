@@ -37,7 +37,11 @@ export class SetColorsBlock extends NodeGeometryBlock implements INodeGeometryEx
         this._inputs[1].excludedConnectionPointTypes.push(NodeGeometryBlockConnectionPointTypes.Int);
         this._inputs[1].excludedConnectionPointTypes.push(NodeGeometryBlockConnectionPointTypes.Float);
         this._inputs[1].excludedConnectionPointTypes.push(NodeGeometryBlockConnectionPointTypes.Vector2);
-        this._inputs[1].excludedConnectionPointTypes.push(NodeGeometryBlockConnectionPointTypes.Texture);
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Texture type was pushed to excluded list twice. Removed duplicate.
+        */
         this._inputs[1].excludedConnectionPointTypes.push(NodeGeometryBlockConnectionPointTypes.Texture);
     }
 

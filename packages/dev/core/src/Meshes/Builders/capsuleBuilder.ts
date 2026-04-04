@@ -39,7 +39,12 @@ export function CreateCapsuleVertexData(
     const capsTopSegments = Math.max(options.topCapSubdivisions ? options.topCapSubdivisions : capDetail, 1);
     const capsBottomSegments = Math.max(options.bottomCapSubdivisions ? options.bottomCapSubdivisions : capDetail, 1);
 
-    const alpha = Math.acos((radiusBottom - radiusTop) / height);
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	When `|radiusBottom - radiusTop| > height`, acos argument exceeds [-1,1], producing NaN. Clamped.
+    */
+    const alpha = Math.acos(Math.max(-1, Math.min(1, (radiusBottom - radiusTop) / height)));
 
     let indices = [];
     const vertices = [];

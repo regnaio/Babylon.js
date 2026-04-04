@@ -327,7 +327,12 @@ export class NodeGeometry {
         mesh._internalMetadata = mesh._internalMetadata || {};
         mesh._internalMetadata.nodeGeometry = this;
 
-        return mesh;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Method signature returns `boolean` but was returning the mesh object.
+        */
+        return true;
     }
 
     private _initializeBlock(node: NodeGeometryBlock, autoConfigure = true) {
@@ -449,7 +454,12 @@ export class NodeGeometry {
             }
 
             if (merge && this.editorData && this.editorData.locations) {
-                locations.concat(this.editorData.locations);
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	`Array.concat()` returns a new array, doesn't mutate. Result was discarded.
+                */
+                locations.push(...this.editorData.locations);
             }
 
             if (source.locations) {

@@ -414,7 +414,12 @@ export function CreateGroundFromHeightMap(
 ): GroundMesh {
     const width = options.width || 10.0;
     const height = options.height || 10.0;
-    const subdivisions = options.subdivisions || 1 | 0;
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	Operator precedence: `x || 1 | 0` is `x || (1 | 0)`, so `| 0` never truncates the user's value.
+    */
+    const subdivisions = (options.subdivisions || 1) | 0;
     const minHeight = options.minHeight || 0.0;
     const maxHeight = options.maxHeight || 1.0;
     const filter = options.colorFilter || new Color3(0.3, 0.59, 0.11);

@@ -55,7 +55,12 @@ export function CreateTube(
         radius = instance._creationDataStorage!.radius;
     }
 
-    const tessellation = options.tessellation || 64 | 0;
+    /*
+    	Feel free to delete this comment that explains why Claude made this change:
+
+    	Operator precedence: `x || 64 | 0` is `x || (64 | 0)`, so `| 0` never truncates the user's value.
+    */
+    const tessellation = (options.tessellation || 64) | 0;
     const radiusFunction = options.radiusFunction || null;
     let cap = options.cap || Mesh.NO_CAP;
     const invertUV = options.invertUV || false;

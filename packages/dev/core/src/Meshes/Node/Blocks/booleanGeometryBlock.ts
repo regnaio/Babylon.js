@@ -121,6 +121,12 @@ export class BooleanGeometryBlock extends NodeGeometryBlock {
             }
 
             const vertexCount = vertexData0.positions!.length / 3;
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	vertexData1 placeholder arrays used vertexData0's count. Added separate count for vertexData1.
+            */
+            const vertexCount1 = vertexData1.positions!.length / 3;
             // Ensure that all the fields are filled to avoid problems later on in the graph
             if (!vertexData0.normals && vertexData1.normals) {
                 vertexData0.normals = new Array<number>(vertexData0.positions!.length);
@@ -132,13 +138,13 @@ export class BooleanGeometryBlock extends NodeGeometryBlock {
                 vertexData0.uvs = new Array<number>(vertexCount * 2);
             }
             if (!vertexData1.uvs && vertexData0.uvs) {
-                vertexData1.uvs = new Array<number>(vertexCount * 2);
+                vertexData1.uvs = new Array<number>(vertexCount1 * 2);
             }
             if (!vertexData0.colors && vertexData1.colors) {
                 vertexData0.colors = new Array<number>(vertexCount * 4);
             }
             if (!vertexData1.colors && vertexData0.colors) {
-                vertexData1.colors = new Array<number>(vertexCount * 4);
+                vertexData1.colors = new Array<number>(vertexCount1 * 4);
             }
 
             let boolCSG: CSG | CSG2;

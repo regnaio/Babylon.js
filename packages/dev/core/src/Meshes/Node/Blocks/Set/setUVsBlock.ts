@@ -178,7 +178,12 @@ export class SetUVsBlock extends NodeGeometryBlock implements INodeGeometryExecu
     }
 
     protected override _dumpPropertiesCode() {
-        let codeString = super._dumpPropertiesCode() + `${this._codeVariableName}.textureCoordinateIndex};\n`;
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Generated invalid JS like `blockName.textureCoordinateIndex};`. Fixed to proper assignment.
+        */
+        let codeString = super._dumpPropertiesCode() + `${this._codeVariableName}.textureCoordinateIndex = ${this.textureCoordinateIndex};\n`;
         codeString += `${this._codeVariableName}.evaluateContext = ${this.evaluateContext ? "true" : "false"};\n`;
         return codeString;
     }

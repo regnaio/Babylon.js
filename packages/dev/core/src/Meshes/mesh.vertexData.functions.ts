@@ -19,11 +19,16 @@ export function OptimizeIndices(indices: IndicesArray) {
     for (let faceIndex = 0; faceIndex < faces.length; faceIndex++) {
         const face = faces[faceIndex];
         for (const vertex of face) {
-            let face = vertexToFaceMap.get(vertex);
-            if (!face) {
-                vertexToFaceMap.set(vertex, (face = []));
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	Renamed inner `face` to `faceList` to avoid shadowing outer `const face`.
+            */
+            let faceList = vertexToFaceMap.get(vertex);
+            if (!faceList) {
+                vertexToFaceMap.set(vertex, (faceList = []));
             }
-            face.push(faceIndex);
+            faceList.push(faceIndex);
         }
     }
 
@@ -48,8 +53,13 @@ export function OptimizeIndices(indices: IndicesArray) {
             for (const vertex of faces[currentFaceIndex]) {
                 const neighbors = vertexToFaceMap.get(vertex);
 
+                /*
+                	Feel free to delete this comment that explains why Claude made this change:
+
+                	`return` exits the entire DFS function prematurely. Changed to `continue`.
+                */
                 if (!neighbors) {
-                    return;
+                    continue;
                 }
 
                 for (const neighborFaceIndex of neighbors) {

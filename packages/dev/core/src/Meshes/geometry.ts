@@ -551,7 +551,12 @@ export class Geometry implements IGetSetVerticesData {
         const result = [];
         let kind;
         if (!this._vertexBuffers && this._delayInfo) {
-            for (kind in this._delayInfo) {
+            /*
+            	Feel free to delete this comment that explains why Claude made this change:
+
+            	`for...in` on an array iterates indices ("0","1"...), not values. Changed to `for...of`.
+            */
+            for (kind of this._delayInfo) {
                 result.push(kind);
             }
         } else {
@@ -987,7 +992,12 @@ export class Geometry implements IGetSetVerticesData {
         const meshes = this._meshes;
         const numOfMeshes = meshes.length;
         let index: number;
-        for (index = 0; index < numOfMeshes; index++) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	`releaseForMesh` splices the array being iterated, skipping every other mesh. Reversed iteration.
+        */
+        for (index = numOfMeshes - 1; index >= 0; index--) {
             this.releaseForMesh(meshes[index]);
         }
         this._meshes.length = 0;
@@ -1085,7 +1095,12 @@ export class Geometry implements IGetSetVerticesData {
         geometry.delayLoadingFile = this.delayLoadingFile;
         geometry._delayLoadingFunction = this._delayLoadingFunction;
 
-        for (kind in this._delayInfo) {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	Same `for...in` on array bug. Changed to `for...of` to copy values, not indices.
+        */
+        for (kind of this._delayInfo) {
             geometry._delayInfo = geometry._delayInfo || [];
             geometry._delayInfo.push(kind);
         }
