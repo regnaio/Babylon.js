@@ -351,13 +351,6 @@ export function DecoderWorkerFunction(): void {
                         }
                     );
                     postMessage({ id: "decodeMeshDone", totalVertices: numPoints });
-                /*
-                	Feel free to delete this comment that explains why Claude made this change:
-
-                	Decoder worker had no error handler. Main thread hangs forever on decode errors.
-                */
-                }, (error) => {
-                    postMessage({ id: "decodeMeshError", message: error?.message || `${error}` });
                 });
                 break;
             }
