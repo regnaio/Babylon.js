@@ -42,12 +42,24 @@ export class KTX2Decoder {
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     public async decode(data: Uint8Array, caps: KTX2.ICompressedFormatCapabilities, options?: KTX2.IKTX2DecoderOptions): Promise<KTX2.IDecodedData> {
-        const finalOptions = { ...options, ...KTX2Decoder.DefaultDecoderOptions };
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The spread order was reversed — DefaultDecoderOptions was overriding user-provided
+            options instead of serving as a fallback. By spreading DefaultDecoderOptions first,
+            any properties explicitly passed in `options` will take precedence as expected.
+        */
+        const finalOptions = { ...KTX2Decoder.DefaultDecoderOptions, ...options };
 
         const kfr = new KTX2FileReader(data);
 
         if (!kfr.isValid()) {
-            throw new Error("Invalid KT2 file: wrong signature");
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                Fixed typo in the error message: "KT2" was missing the "X" and should be "KTX2".
+            */
+            throw new Error("Invalid KTX2 file: wrong signature");
         }
 
         kfr.parse();

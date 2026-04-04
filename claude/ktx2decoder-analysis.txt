@@ -1,0 +1,208 @@
+============================================================
+ktx2Decoder Package - Full Code Analysis
+============================================================
+Analyzed by Claude | Branch: claude-tools-ktx2decoder
+
+Package location: packages/tools/ktx2Decoder/src/
+Total files analyzed: 20 TypeScript files
+
+============================================================
+FILE-BY-FILE ANALYSIS
+============================================================
+
+------------------------------------------------------------
+1. index.ts (entry point)
+------------------------------------------------------------
+   Exports: All public modules (ktx2Decoder, ktx2FileReader, transcoder,
+            transcoderManager, wasmMemoryManager, zstddec, Misc/*, Transcoders/*)
+   Imported by: legacy/legacy.ts
+   Status: Clean, no issues.
+
+------------------------------------------------------------
+2. ktx2Decoder.ts (main decoder class)
+------------------------------------------------------------
+   Imports: ktx2decoderTypes (KTX2), ktx2FileReader, transcoderManager,
+            all LiteTranscoder variants, MSCTranscoder, zstddec, transcodeDecisionTree
+   Imported by: index.ts, legacy/legacy.ts
+
+   BUG FOUND - Line 45 (options merge order):
+     `const finalOptions = { ...options, ...KTX2Decoder.DefaultDecoderOptions };`
+     The spread order is reversed. DefaultDecoderOptions properties always override
+     user-provided options, which is backwards. "Default" options should be the
+     fallback, not the override. User-passed `options` should take precedence.
+     Fix: `{ ...KTX2Decoder.DefaultDecoderOptions, ...options }`
+
+   BUG FOUND - Line 50 (typo in error message):
+     `throw new Error("Invalid KT2 file: wrong signature");`
+     Should be "KTX2" not "KT2".
+
+------------------------------------------------------------
+3. ktx2FileReader.ts (KTX2 file parser)
+------------------------------------------------------------
+   Imports: ktx2decoderTypes (KTX2), Misc/dataReader
+   Imported by: ktx2Decoder.ts, all LiteTranscoder variants, mscTranscoder.ts
+   Status: Clean, well-structured parser. Correctly handles header, DFD blocks,
+           level info, and supercompression global data.
+
+------------------------------------------------------------
+4. transcodeDecisionTree.ts (format selection logic)
+------------------------------------------------------------
+   Imports: ktx2decoderTypes (KTX2)
+   Imported by: ktx2Decoder.ts
+   Status: Clean. Decision tree is well-structured covering ETC1S and UASTC
+           source formats with appropriate fallback chains.
+
+------------------------------------------------------------
+5. transcoder.ts (base transcoder class)
+------------------------------------------------------------
+   Imports: ktx2decoderTypes (KTX2), wasmMemoryManager (type only),
+            ktx2FileReader (type only)
+   Imported by: transcoderManager.ts, liteTranscoder.ts, mscTranscoder.ts,
+                zstddec.ts
+   Status: Clean. Base class with CDN URL handling and versioning logic.
+
+------------------------------------------------------------
+6. transcoderManager.ts (transcoder registry/factory)
+------------------------------------------------------------
+   Imports: ktx2decoderTypes (KTX2), transcoder (type only), wasmMemoryManager
+   Imported by: ktx2Decoder.ts
+   Status: Clean. Manages transcoder registration and instance caching.
+
+------------------------------------------------------------
+7. wasmMemoryManager.ts (WebAssembly memory management)
+------------------------------------------------------------
+   Imports: None (standalone)
+   Imported by: transcoderManager.ts, liteTranscoder.ts, mscTranscoder.ts
+
+   OPTIMIZATION - LoadWASM method (lines 14-32):
+     Wraps fetch() in a `new Promise()` constructor (Promise constructor
+     antipattern). Since fetch() already returns a Promise, the outer
+     `new Promise` wrapper is unnecessary and adds complexity.
+     Fix: Return the fetch chain directly.
+
+   OPTIMIZATION - getMemoryView method (lines 69-85):
+     The if/else branches both contain identical code for setting
+     _memoryView, _memoryViewByteLength, and _memoryViewOffset.
+     The only difference is the if-branch grows memory first.
+     Fix: Move duplicated code after the conditional.
+
+------------------------------------------------------------
+8. zstddec.ts (Zstandard decompression)
+------------------------------------------------------------
+   Imports: transcoder (for GetWasmUrl)
+   Imported by: ktx2Decoder.ts
+
+   BUG FOUND - Line 59 (Node.js fallback uses undefined `fetch`):
+     The else branch (lines 55-60) executes when `typeof fetch === "undefined"`,
+     meaning fetch is NOT available. Yet it calls:
+       `WebAssembly.instantiateStreaming(fetch(ZSTDDecoder.WasmModuleURL), ...)`
+     This will throw a ReferenceError at runtime in environments without fetch.
+
+   TYPE IMPROVEMENT - Line 9 (DecoderExports interface):
+     `memory: Uint8Array` should be `memory: WebAssembly.Memory`.
+     WASM modules export `WebAssembly.Memory` objects, not `Uint8Array`.
+     The code works because both types have a `.buffer` property, but the type
+     is inaccurate and could confuse readers.
+
+------------------------------------------------------------
+9. Misc/dataReader.ts (binary data reader utility)
+------------------------------------------------------------
+   Imports: None (standalone)
+   Imported by: ktx2FileReader.ts
+   Status: Clean, well-documented utility. readUint64 uses two 32-bit reads
+           combined, which is correct for little-endian KTX2 format.
+
+------------------------------------------------------------
+10. Misc/index.ts (barrel export)
+------------------------------------------------------------
+    Exports: dataReader
+    Status: Clean.
+
+------------------------------------------------------------
+11. Transcoders/liteTranscoder.ts (base WASM lite transcoder)
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, transcoder, wasmMemoryManager, ktx2FileReader
+    Imported by: All LiteTranscoder_UASTC_* variants
+    Status: Clean. Handles WASM module loading and memory preparation.
+
+------------------------------------------------------------
+12. Transcoders/liteTranscoder_UASTC_ASTC.ts
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, liteTranscoder
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Transcodes UASTC -> ASTC in-place.
+
+------------------------------------------------------------
+13. Transcoders/liteTranscoder_UASTC_BC7.ts
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, liteTranscoder
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Transcodes UASTC -> BC7 in-place.
+
+------------------------------------------------------------
+14. Transcoders/liteTranscoder_UASTC_R8_UNORM.ts
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, liteTranscoder, ktx2FileReader
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Transcodes UASTC -> R8 (1 component, not in-place).
+
+------------------------------------------------------------
+15. Transcoders/liteTranscoder_UASTC_RG8_UNORM.ts
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, liteTranscoder, ktx2FileReader
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Transcodes UASTC -> RG8 (2 components, not in-place).
+
+------------------------------------------------------------
+16. Transcoders/liteTranscoder_UASTC_RGBA_SRGB.ts
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, liteTranscoder, ktx2FileReader
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Transcodes UASTC -> RGBA32 (sRGB, 4 components, not in-place).
+
+------------------------------------------------------------
+17. Transcoders/liteTranscoder_UASTC_RGBA_UNORM.ts
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, liteTranscoder, ktx2FileReader
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Transcodes UASTC -> RGBA32 (linear, 4 components, not in-place).
+
+------------------------------------------------------------
+18. Transcoders/mscTranscoder.ts (MSC Basis transcoder)
+------------------------------------------------------------
+    Imports: ktx2decoderTypes, transcoder, ktx2FileReader, wasmMemoryManager
+    Imported by: ktx2Decoder.ts
+    Status: Clean. Catch-all transcoder for formats not handled by lite transcoders.
+
+------------------------------------------------------------
+19. Transcoders/index.ts (barrel export)
+------------------------------------------------------------
+    Exports: All transcoder variants
+    Status: Clean.
+
+------------------------------------------------------------
+20. legacy/legacy.ts (legacy global binding)
+------------------------------------------------------------
+    Imports: index.ts (KTX2Decoder)
+    Status: Clean. Binds KTX2Decoder to global scope.
+
+============================================================
+SUMMARY OF FINDINGS
+============================================================
+
+BUGS (3):
+  1. ktx2Decoder.ts:45 - Options merge order reversed; DefaultDecoderOptions
+     always overrides user options instead of being a fallback.
+  2. ktx2Decoder.ts:50 - Typo: "KT2" should be "KTX2" in error message.
+  3. zstddec.ts:59 - Node.js fallback branch calls `fetch()` which is
+     undefined in that code path (the branch only runs when fetch is absent).
+
+OPTIMIZATIONS (2):
+  4. wasmMemoryManager.ts:14-32 - Promise constructor antipattern in LoadWASM.
+  5. wasmMemoryManager.ts:69-85 - Duplicated code in getMemoryView if/else.
+
+TYPE IMPROVEMENTS (1):
+  6. zstddec.ts:9 - DecoderExports.memory typed as Uint8Array but is
+     actually WebAssembly.Memory.
+
+============================================================

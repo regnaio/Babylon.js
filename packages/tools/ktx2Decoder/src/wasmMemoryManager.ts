@@ -10,25 +10,20 @@ export class WASMMemoryManager {
 
     private static _RequestId = 0;
 
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Removed the unnecessary `new Promise` wrapper around fetch (Promise constructor
+        antipattern). Since fetch() already returns a Promise, wrapping it in another
+        Promise added complexity with no benefit and could swallow errors.
+    */
     public static async LoadWASM(path: string): Promise<ArrayBuffer> {
         if (this.LoadBinariesFromCurrentThread) {
-            return await new Promise((resolve, reject) => {
-                fetch(path)
-                    // eslint-disable-next-line github/no-then
-                    .then(async (response) => {
-                        if (response.ok) {
-                            return await response.arrayBuffer();
-                        }
-                        throw new Error(`Could not fetch the wasm component from "${path}": ${response.status} - ${response.statusText}`);
-                    })
-                    // eslint-disable-next-line github/no-then
-                    .then((wasmBinary) => resolve(wasmBinary))
-                    // eslint-disable-next-line github/no-then
-                    .catch((reason) => {
-                        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-                        reject(reason);
-                    });
-            });
+            const response = await fetch(path);
+            if (response.ok) {
+                return await response.arrayBuffer();
+            }
+            throw new Error(`Could not fetch the wasm component from "${path}": ${response.status} - ${response.statusText}`);
         }
 
         const id = this._RequestId++;
@@ -66,20 +61,25 @@ export class WASMMemoryManager {
         return this._memory;
     }
 
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        The if/else branches previously contained identical code for setting _memoryView,
+        _memoryViewByteLength, and _memoryViewOffset. The only difference was the if-branch
+        growing memory first. Moved the duplicated assignments after the conditional to
+        reduce repetition.
+    */
     public getMemoryView(numPages: number, offset: number = 0, byteLength?: number): Uint8Array {
         byteLength = byteLength ?? numPages << 16;
 
         if (this._numPages < numPages) {
             this._memory.grow(numPages - this._numPages);
             this._numPages = numPages;
-            this._memoryView = new Uint8Array(this._memory.buffer, offset, byteLength);
-            this._memoryViewByteLength = byteLength;
-            this._memoryViewOffset = offset;
-        } else {
-            this._memoryView = new Uint8Array(this._memory.buffer, offset, byteLength);
-            this._memoryViewByteLength = byteLength;
-            this._memoryViewOffset = offset;
         }
+
+        this._memoryView = new Uint8Array(this._memory.buffer, offset, byteLength);
+        this._memoryViewByteLength = byteLength;
+        this._memoryViewOffset = offset;
 
         return this._memoryView;
     }

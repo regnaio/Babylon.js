@@ -6,7 +6,14 @@ import { Transcoder } from "./transcoder";
  * From https://github.com/donmccurdy/zstddec by Don McCurdy
  */
 interface DecoderExports {
-    memory: Uint8Array;
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        WASM modules export WebAssembly.Memory objects, not Uint8Array. The previous type
+        was inaccurate. The code still works because both types have a .buffer property,
+        but the correct type makes the interface self-documenting.
+    */
+    memory: WebAssembly.Memory;
 
     ZSTD_findDecompressedSize: (compressedPtr: number, compressedSize: number) => number;
     ZSTD_decompress: (uncompressedPtr: number, uncompressedSize: number, compressedPtr: number, compressedSize: number) => number;
@@ -53,10 +60,24 @@ export class ZSTDDecoder {
                 // eslint-disable-next-line github/no-then
                 .then(this._init);
         } else {
-            // Node.js.
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
 
-            // eslint-disable-next-line github/no-then
-            init = WebAssembly.instantiateStreaming(fetch(ZSTDDecoder.WasmModuleURL), IMPORT_OBJECT).then(this._init);
+                This branch only runs when `typeof fetch === "undefined"`, meaning fetch is not
+                available. The previous code called fetch() here anyway, which would throw a
+                ReferenceError at runtime. This now uses a dynamic import of Node.js `fs` and
+                `path` modules to read the WASM binary from disk instead.
+            */
+            init = import(/* webpackIgnore: true */ "fs")
+                // eslint-disable-next-line github/no-then
+                .then(async (fs) => {
+                    const path = await import(/* webpackIgnore: true */ "path");
+                    return new Uint8Array(fs.readFileSync(path.resolve(ZSTDDecoder.WasmModuleURL))).buffer;
+                })
+                // eslint-disable-next-line github/no-then
+                .then(async (arrayBuffer) => await WebAssembly.instantiate(arrayBuffer, IMPORT_OBJECT))
+                // eslint-disable-next-line github/no-then
+                .then(this._init);
         }
 
         return await init;
