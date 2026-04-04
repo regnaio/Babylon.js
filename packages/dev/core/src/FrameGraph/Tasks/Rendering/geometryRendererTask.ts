@@ -339,7 +339,14 @@ export class FrameGraphGeometryRendererTask extends FrameGraphObjectRendererTask
 
     public override dispose(): void {
         MaterialHelperGeometryRendering.DeleteConfiguration(this._renderer.renderPassId);
-        this._renderer.dispose();
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	this._renderer.dispose() was being called here AND again in super.dispose()
+        	(via objectRendererTask.dispose()) when _externalObjectRenderer is false,
+        	resulting in a double dispose. The parent class already handles renderer
+        	disposal, so the redundant call here is removed.
+        */
         super.dispose();
     }
 

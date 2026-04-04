@@ -73,6 +73,12 @@ BUGS FOUND AND FIXED
     request velocity, it overwrites `true` with `false` from the first task.
     FIX: Changed to only set to `true`, never back to `false`.
 
+13. [BUG] geometryRendererTask.ts - Double dispose of renderer
+    Line 340-343: `this._renderer.dispose()` is called in both the child class
+    (FrameGraphGeometryRendererTask.dispose) and the parent class
+    (FrameGraphObjectRendererTask.dispose), resulting in double disposal.
+    FIX: Removed redundant dispose call in child class; parent handles it.
+
 ================================================================================
 IMPROVEMENTS FOUND AND FIXED
 ================================================================================
