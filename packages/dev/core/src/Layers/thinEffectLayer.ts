@@ -503,10 +503,16 @@ export class ThinEffectLayer {
             const previousAlphaMode = engine.getAlphaMode();
 
             for (index = 0; index < transparentSubMeshes.length; index++) {
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    Removed the inner 'const engine' declaration that shadowed the outer 'engine'
+                    variable. Both referenced the same engine instance but through different paths.
+                    Reusing the outer variable avoids confusion and prevents potential future bugs.
+                */
                 const subMesh = transparentSubMeshes.data[index];
                 const material = subMesh.getMaterial();
                 if (material && material.needDepthPrePass) {
-                    const engine = material.getScene().getEngine();
                     engine.setColorWrite(false);
                     this._renderSubMesh(subMesh);
                     engine.setColorWrite(true);
@@ -738,7 +744,15 @@ export class ThinEffectLayer {
 
         const effectIsReady = drawWrapper.effect!.isReady();
 
-        return effectIsReady && (this._dontCheckIfReady || (!this._dontCheckIfReady && this.isLayerReady()));
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Simplified redundant boolean logic. The original expression
+            'this._dontCheckIfReady || (!this._dontCheckIfReady && this.isLayerReady())'
+            is equivalent to 'this._dontCheckIfReady || this.isLayerReady()' because
+            short-circuit evaluation already handles the case when _dontCheckIfReady is true.
+        */
+        return effectIsReady && (this._dontCheckIfReady || this.isLayerReady());
     }
 
     /** @internal */
@@ -752,8 +766,15 @@ export class ThinEffectLayer {
         } else {
             await Promise.all([import("../Shaders/glowMapGeneration.vertex"), import("../Shaders/glowMapGeneration.fragment")]);
         }
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this._additionalImportShadersAsync?.();
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Added 'await' so that additional shader imports complete before the shader
+            is used. The original code created a floating promise (suppressed with
+            eslint-disable), which could cause race conditions where shaders are used
+            before their imports finish.
+        */
+        await this._additionalImportShadersAsync?.();
     }
 
     /** @internal */

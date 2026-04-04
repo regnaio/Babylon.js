@@ -331,7 +331,15 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
 
         const effectIsReady = drawWrapper.effect!.isReady();
 
-        return effectIsReady && (this._dontCheckIfReady || (!this._dontCheckIfReady && this.isLayerReady()));
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Simplified redundant boolean logic. The original expression
+            'this._dontCheckIfReady || (!this._dontCheckIfReady && this.isLayerReady())'
+            is equivalent to 'this._dontCheckIfReady || this.isLayerReady()' because
+            short-circuit evaluation already handles the case when _dontCheckIfReady is true.
+        */
+        return effectIsReady && (this._dontCheckIfReady || this.isLayerReady());
     }
 
     protected override async _importShadersAsync(): Promise<void> {

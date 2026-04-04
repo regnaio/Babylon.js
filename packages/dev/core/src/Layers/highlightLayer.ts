@@ -411,8 +411,14 @@ export class HighlightLayer extends EffectLayer {
             this.onAfterBlurObservable.notifyObservers(this);
         });
 
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Changed .map() to .forEach() because this iteration is purely for side effects
+            (setting autoClear). .map() allocates and discards a new array unnecessarily.
+        */
         // Prevent autoClear.
-        this._postProcesses.map((pp) => {
+        this._postProcesses.forEach((pp) => {
             pp.autoClear = false;
         });
 

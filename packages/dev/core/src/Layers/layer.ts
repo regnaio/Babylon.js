@@ -382,9 +382,18 @@ export class Layer {
         // Clean RTT list
         this.renderTargetTextures = [];
 
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Guard against splice(-1, 1) which would remove the last element of the array
+            if this layer was already removed. indexOf returns -1 when not found, and
+            splice(-1, 1) silently removes the wrong element.
+        */
         // Remove from scene
         const index = this._scene.layers.indexOf(this);
-        this._scene.layers.splice(index, 1);
+        if (index !== -1) {
+            this._scene.layers.splice(index, 1);
+        }
 
         // Callback
         this.onDisposeObservable.notifyObservers(this);
