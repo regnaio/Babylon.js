@@ -117,7 +117,17 @@ export class PostProcessRenderEffect {
                 this._indicesForCamera[cameraName] = [];
             }
 
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                If _getPostProcesses() returns null, _postProcesses[cameraKey] remains
+                undefined. The for-of loop on undefined throws a TypeError. Added a
+                guard to skip cameras where post processes could not be created.
+            */
             const pps = this._postProcesses[cameraKey];
+            if (!pps) {
+                continue;
+            }
             for (const postProcess of pps) {
                 const index = camera.attachPostProcess(postProcess);
 
@@ -239,7 +249,17 @@ export class PostProcessRenderEffect {
         for (let i = 0; i < cams.length; i++) {
             const camera = cams[i];
             const cameraName = camera.name;
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                If the camera was never attached, _postProcesses[key] could be undefined.
+                The for-of loop on undefined throws a TypeError. Added a guard to prevent
+                this crash.
+            */
             const pps = this._postProcesses[this._singleInstance ? 0 : cameraName];
+            if (!pps) {
+                continue;
+            }
             for (const postProcess of pps) {
                 camera.detachPostProcess(postProcess);
             }

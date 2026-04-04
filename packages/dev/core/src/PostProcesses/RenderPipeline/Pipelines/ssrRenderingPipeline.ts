@@ -666,9 +666,18 @@ export class SSRRenderingPipeline extends PostProcessRenderPipeline {
      * Removes a camera from the pipeline
      * @param camera the camera to remove
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        indexOf returns -1 when the camera is not found, and splice(-1, 1) removes
+        the last element of the array, silently corrupting the camera list. Added
+        an index check to prevent this.
+    */
     public removeCamera(camera: Camera): void {
         const index = this._camerasToBeAttached.indexOf(camera);
-        this._camerasToBeAttached.splice(index, 1);
+        if (index !== -1) {
+            this._camerasToBeAttached.splice(index, 1);
+        }
         this._buildPipeline();
     }
 
@@ -1033,8 +1042,16 @@ export class SSRRenderingPipeline extends PostProcessRenderPipeline {
      * @param rootUrl The URL of the serialized pipeline.
      * @returns An instantiated pipeline from the serialized object.
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        source._ratio does not exist on SSRRenderingPipeline and was being incorrectly
+        passed as the cameras parameter (3rd arg). The constructor signature is
+        (name, scene, cameras?, forceGeometryBuffer?, textureType?) so passing undefined
+        for cameras lets it default correctly.
+    */
     public static Parse(source: any, scene: Scene, rootUrl: string): SSRRenderingPipeline {
-        return SerializationHelper.Parse(() => new SSRRenderingPipeline(source._name, scene, source._ratio), source, scene, rootUrl);
+        return SerializationHelper.Parse(() => new SSRRenderingPipeline(source._name, scene), source, scene, rootUrl);
     }
 }
 

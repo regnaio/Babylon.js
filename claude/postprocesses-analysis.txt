@@ -160,3 +160,45 @@ ADDITIONAL FIXES (COMMIT 3)
     File: screenSpaceReflectionPostProcess.ts, line 18
     Description: Changed from non-portable "core/Misc/logger" import path to relative
     "../Misc/logger" for consistency with all other imports in the file.
+
+================================================================================
+ADDITIONAL FIXES (COMMIT 4 - RenderPipeline bugs)
+================================================================================
+
+15. [BUG] defaultRenderingPipeline.ts - Parse uses source._name._hdr (always undefined)
+    File: defaultRenderingPipeline.ts, line 868
+    Description: The Parse method passed source._name._hdr as the hdr parameter.
+    Since _name is a string, _hdr is always undefined (falsy), meaning HDR was
+    always disabled when deserializing a DefaultRenderingPipeline. Fixed to source._hdr.
+
+16. [BUG] taaRenderingPipeline.ts - Parse passes non-existent source._ratio as cameras
+    File: taaRenderingPipeline.ts, line 434
+    Description: Parse called new TAARenderingPipeline(name, scene, source._ratio) but
+    _ratio doesn't exist on TAARenderingPipeline and the 3rd argument is cameras[].
+    Fixed to pass undefined for cameras and source._textureType for textureType.
+
+17. [BUG] ssrRenderingPipeline.ts - Parse passes non-existent source._ratio as cameras
+    File: ssrRenderingPipeline.ts, line 1037
+    Description: Same issue as #16. Parse passed source._ratio (non-existent) as the
+    cameras parameter. Fixed to omit the invalid argument.
+
+18. [BUG] defaultRenderingPipeline/taaRenderingPipeline/ssrRenderingPipeline - removeCamera
+    splice(-1) bug
+    Files: defaultRenderingPipeline.ts:821, taaRenderingPipeline.ts:241,
+           ssrRenderingPipeline.ts:671
+    Description: removeCamera calls indexOf which returns -1 if camera not found,
+    then splice(-1, 1) removes the LAST element silently. Added index check in all 3.
+
+19. [BUG] postProcessRenderPipeline.ts - _detachCameras splice(-1) bug
+    File: postProcessRenderPipeline.ts, line 217
+    Description: Same splice(-1) issue in the base pipeline class _detachCameras.
+
+20. [BUG] postProcessRenderEffect.ts - _attachCameras crash on null post processes
+    File: postProcessRenderEffect.ts, line 120-121
+    Description: If _getPostProcesses() returns null, _postProcesses[cameraKey] stays
+    undefined. The for-of loop on undefined throws TypeError. Added null guard.
+
+21. [BUG] postProcessRenderEffect.ts - _disable crash on undefined post processes
+    File: postProcessRenderEffect.ts, line 242-243
+    Description: Same issue in _disable - if camera was never attached, pps is
+    undefined and for-of throws. Added null guard.

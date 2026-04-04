@@ -818,9 +818,18 @@ export class DefaultRenderingPipeline extends PostProcessRenderPipeline implemen
      * Removes a camera from the pipeline
      * @param camera the camera to remove
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        indexOf returns -1 when the camera is not found, and splice(-1, 1) removes
+        the last element of the array, silently corrupting the camera list. Added
+        an index check to prevent this.
+    */
     public removeCamera(camera: Camera): void {
         const index = this._camerasToBeAttached.indexOf(camera);
-        this._camerasToBeAttached.splice(index, 1);
+        if (index !== -1) {
+            this._camerasToBeAttached.splice(index, 1);
+        }
         this._buildPipeline();
     }
 
@@ -864,8 +873,15 @@ export class DefaultRenderingPipeline extends PostProcessRenderPipeline implemen
      * @param rootUrl The URL of the serialized pipeline.
      * @returns An instantiated pipeline from the serialized object.
      */
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        source._name is a string, so source._name._hdr was always undefined (falsy),
+        meaning HDR was always disabled when deserializing. Changed to source._hdr
+        to correctly read the serialized HDR setting.
+    */
     public static Parse(source: any, scene: Scene, rootUrl: string): DefaultRenderingPipeline {
-        return SerializationHelper.Parse(() => new DefaultRenderingPipeline(source._name, source._name._hdr, scene), source, scene, rootUrl);
+        return SerializationHelper.Parse(() => new DefaultRenderingPipeline(source._name, source._hdr, scene), source, scene, rootUrl);
     }
 }
 

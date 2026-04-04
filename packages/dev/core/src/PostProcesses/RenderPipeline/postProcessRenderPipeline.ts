@@ -213,8 +213,18 @@ export class PostProcessRenderPipeline {
             }
         }
 
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            indexOf returns -1 when the camera is not found, and splice(-1, 1) removes
+            the last element of the array. Added an index check to prevent silently
+            removing the wrong camera.
+        */
         for (let i = 0; i < cams.length; i++) {
-            this._cameras.splice(this._cameras.indexOf(cams[i]), 1);
+            const idx = this._cameras.indexOf(cams[i]);
+            if (idx !== -1) {
+                this._cameras.splice(idx, 1);
+            }
         }
     }
 
