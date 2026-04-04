@@ -159,7 +159,17 @@ export class GreasedLineTools {
             const vertices = mesh.getVerticesData(VertexBuffer.PositionKind);
             const indices = mesh.getIndices();
             if (vertices && indices) {
-                for (let i = 0, ii = 0; i < indices.length; i++) {
+                /*
+                    Feel free to delete this comment that explains why Claude made this change:
+
+                    The loop condition was `i < indices.length` but `ii` (the actual index into the
+                    indices array) increments 3 times per iteration (once per triangle vertex). This
+                    caused the loop to run indices.length times instead of indices.length/3 times,
+                    making `ii` exceed the array bounds and producing NaN vertex positions.
+                    Changed the condition to `ii < indices.length` so the loop correctly iterates
+                    once per triangle.
+                */
+                for (let i = 0, ii = 0; ii < indices.length; i++) {
                     const vi1 = indices[ii++] * 3;
                     const vi2 = indices[ii++] * 3;
                     const vi3 = indices[ii++] * 3;

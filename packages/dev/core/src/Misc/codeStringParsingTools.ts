@@ -91,7 +91,13 @@ export function IsIdentifierChar(c: string): boolean {
         (v >= 48 && v <= 57) || // 0-9
         (v >= 65 && v <= 90) || // A-Z
         (v >= 97 && v <= 122) || // a-z
-        v == 95
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Changed loose equality (==) to strict equality (===) for consistency with the
+            other comparisons in this function and to prevent potential type coercion issues.
+        */
+        v === 95
     ); // _
 }
 

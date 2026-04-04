@@ -44,7 +44,15 @@ export class StringDictionary<T> {
         }
 
         val = factory(key);
-        if (val) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The previous check `if (val)` prevented valid falsy values (0, false, empty
+            string, null) from being added to the dictionary. The class documentation
+            states values can be "anything including 'null' but except 'undefined'", so
+            the check should only exclude undefined.
+        */
+        if (val !== undefined) {
             this.add(key, val);
         }
 

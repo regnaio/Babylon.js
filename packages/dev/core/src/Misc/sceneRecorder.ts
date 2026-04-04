@@ -152,7 +152,13 @@ export class SceneRecorder implements IDisposable {
 
             if (Array.isArray(originalValue)) {
                 diffFound = JSON.stringify(originalValue) !== JSON.stringify(currentValue);
-            } else if (!isNaN(originalValue) || Object.prototype.toString.call(originalValue) == "[object String]") {
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                Changed loose equality (==) to strict equality (===) for consistency with the
+                rest of the codebase and to prevent potential type coercion issues.
+            */
+            } else if (!isNaN(originalValue) || Object.prototype.toString.call(originalValue) === "[object String]") {
                 diffFound = originalValue !== currentValue;
             } else if (typeof originalValue === "object" && typeof currentValue === "object") {
                 const newObject = {};

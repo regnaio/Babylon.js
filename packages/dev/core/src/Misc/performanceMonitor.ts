@@ -59,6 +59,16 @@ export class PerformanceMonitor {
      * Returns the average framerate in frames per second over the sliding window (or the subset of frames sampled so far)
      */
     public get averageFPS(): number {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            Added a zero check for consistency with the instantaneousFPS getter (line 68-76)
+            which already guards against division by zero. Without this check, averageFPS
+            returns Infinity when no samples have been recorded yet.
+        */
+        if (this._rollingFrameTime.average === 0) {
+            return 0;
+        }
         return 1000.0 / this._rollingFrameTime.average;
     }
 

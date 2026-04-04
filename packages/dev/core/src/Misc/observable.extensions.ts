@@ -87,7 +87,15 @@ Observable.prototype.notifyObserversWithPromise = async function <T>(eventData: 
     // execute one callback after another (not using Promise.all, the order is important)
     for (const obs of this.observers) {
         if (state.skipNextObservers) {
-            continue;
+            /*
+                Feel free to delete this comment that explains why Claude made this change:
+
+                When skipNextObservers is true, no further observer callbacks should execute.
+                Using `continue` caused the loop to iterate through all remaining observers
+                doing nothing (since the flag stays true). Using `break` exits immediately,
+                which is more efficient and matches the behavior of notifyObservers.
+            */
+            break;
         }
         if (obs._willBeUnregistered) {
             continue;

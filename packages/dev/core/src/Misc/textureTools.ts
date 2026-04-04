@@ -234,7 +234,13 @@ export function FromHalfFloat(value: number): number {
 
     if (e === 0) {
         return (s ? -1 : 1) * Math.pow(2, -14) * (f / Math.pow(2, 10));
-    } else if (e == 0x1f) {
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        Changed loose equality (==) to strict equality (===) for consistency with the
+        comparison on line 235 (`e === 0`) and to prevent potential type coercion.
+    */
+    } else if (e === 0x1f) {
         return f ? NaN : (s ? -1 : 1) * Infinity;
     }
 
