@@ -37,6 +37,7 @@ import { EffectFallbacks } from "core/Materials/effectFallbacks";
 export class VolumetricLightScatteringPostProcess extends PostProcess {
     // Members
     private _volumetricLightScatteringRTT: RenderTargetTexture;
+    private _viewPort: Viewport;
     private _screenCoordinates: Vector2 = Vector2.Zero();
 
     /**
@@ -156,6 +157,7 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
         scene = camera?.getScene() ?? scene ?? this._scene; // parameter "scene" can be null.
 
         engine = scene.getEngine();
+        this._viewPort = new Viewport(0, 0, 1, 1).toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
 
         // Configure mesh
         this.mesh = mesh ?? VolumetricLightScatteringPostProcess.CreateDefaultMesh("VolumetricLightScatteringMesh", scene);
@@ -626,16 +628,16 @@ export class VolumetricLightScatteringPostProcess extends PostProcess {
             The viewport was previously computed once in the constructor and never updated.
             If the engine/canvas was resized after construction, the stale viewport dimensions
             would cause incorrect screen coordinate calculations for the light source position,
-            making the light scattering effect appear offset. Now we recompute the viewport
+            making the light scattering effect appear offset. Now we reassign the viewport
             each frame using the current engine dimensions.
         */
         const engine = scene.getEngine();
-        const viewport = new Viewport(0, 0, 1, 1).toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
+        this._viewPort = new Viewport(0, 0, 1, 1).toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
 
-        const pos = Vector3.Project(meshPosition, Matrix.Identity(), transform, viewport);
+        const pos = Vector3.Project(meshPosition, Matrix.Identity(), transform, this._viewPort);
 
-        this._screenCoordinates.x = pos.x / viewport.width;
-        this._screenCoordinates.y = pos.y / viewport.height;
+        this._screenCoordinates.x = pos.x / this._viewPort.width;
+        this._screenCoordinates.y = pos.y / this._viewPort.height;
 
         if (this.invert) {
             this._screenCoordinates.y = 1.0 - this._screenCoordinates.y;
