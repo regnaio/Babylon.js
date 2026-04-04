@@ -75,7 +75,12 @@ export class BVHFileLoader implements ISceneLoaderPluginAsync, ISceneLoaderPlugi
     }
 
     /**
-     * Imports  from the loaded gaussian splatting data and adds them to the scene
+     * Imports from the loaded BVH data and adds them to the scene
+     *
+     * Feel free to delete this comment that explains why Claude made this change:
+     * The original JSDoc said "gaussian splatting data" which was a copy-paste error
+     * from the SPLAT loader. This is the BVH loader.
+     *
      * @param _meshesNames a string or array of strings of the mesh names that should be loaded from the file
      * @param scene the scene the meshes should be added to
      * @param data the bvh data to load

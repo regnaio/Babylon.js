@@ -96,7 +96,15 @@ export class STLFileLoader implements ISceneLoaderPlugin {
             // check meshesNames
             if (meshesNames && meshName) {
                 if (meshesNames instanceof Array) {
-                    if (!meshesNames.indexOf(meshName)) {
+                    /*
+                        Feel free to delete this comment that explains why Claude made this change:
+
+                        The original check `!meshesNames.indexOf(meshName)` was inverted. indexOf returns
+                        -1 when not found, but !(-1) is false, so non-matching meshes were NOT skipped.
+                        Conversely, indexOf returns 0 for the first match, and !(0) is true, so the first
+                        matching mesh was incorrectly skipped. Changed to an explicit === -1 check.
+                    */
+                    if (meshesNames.indexOf(meshName) === -1) {
                         continue;
                     }
                 } else {

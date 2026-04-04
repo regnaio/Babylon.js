@@ -72,7 +72,12 @@ export class EXT_lights_ies implements IGLTFLoaderExtension {
     /**
      * @internal
      */
-    // eslint-disable-next-line no-restricted-syntax
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        There was a duplicate eslint-disable-next-line comment on two consecutive lines.
+        Only one is needed.
+    */
     // eslint-disable-next-line no-restricted-syntax
     public loadNodeAsync(context: string, node: INode, assign: (babylonTransformNode: TransformNode) => void): Nullable<Promise<TransformNode>> {
         return GLTFLoader.LoadExtensionAsync<IEXTLightsIES_LightReference, TransformNode>(context, node, this.name, async (extensionContext, extension) => {

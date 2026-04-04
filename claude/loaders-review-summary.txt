@@ -1,0 +1,113 @@
+================================================================================
+Babylon.js Loaders Package — Comprehensive Code Review Summary
+================================================================================
+
+Scope: Every TypeScript file in packages/dev/loaders/src/ (103+ files)
+Method: Sequential file-by-file review with import/export relationship tracing
+Date: 2026-04-03
+
+================================================================================
+PACKAGE STRUCTURE OVERVIEW
+================================================================================
+
+The loaders package contains 5 main loader implementations:
+
+  1. BVH  (Motion Capture)     — 5 files
+  2. STL  (Stereolithography)  — 3 files
+  3. OBJ  (Wavefront OBJ)      — 6 files
+  4. SPLAT (Gaussian Splatting) — 7 files
+  5. glTF (glTF 1.0 & 2.0)     — 70+ files (including 40+ extensions)
+
+Plus root-level files (index.ts, dynamic.ts) and legacy compatibility wrappers.
+
+Key architectural patterns:
+  - Each loader has a metadata file with name/extension info
+  - Dynamic registration via lazy-loading factories (dynamic.ts)
+  - glTF 2.0 uses an extension registry with factory pattern
+  - Material loading uses adapter pattern (PBR vs OpenPBR)
+  - No circular dependencies detected across the entire package
+
+================================================================================
+CONFIRMED BUGS FOUND
+================================================================================
+
+1. CRITICAL — spz.ts line 30: Variable used before declaration
+   -------------------------------------------------------------------------
+   In the SPZ parser, when magic/version validation fails, the rejection path
+   references `buffer` which is not declared until line 35. This causes a
+   ReferenceError at runtime for any invalid SPZ file.
+
+   Before: resolve({ mode: Mode.Reject, data: buffer, hasVertexColors: false });
+   After:  resolve({ mode: Mode.Reject, data: new ArrayBuffer(0), hasVertexColors: false });
+
+2. BUG — stlFileLoader.ts line 99: Inverted indexOf check
+   -------------------------------------------------------------------------
+   The mesh name filtering logic uses `!meshesNames.indexOf(meshName)` which
+   is wrong because:
+     - indexOf returns -1 (not found) → !(-1) = false → mesh NOT skipped
+     - indexOf returns 0 (first match) → !(0) = true → mesh IS skipped
+   This means meshes NOT in the filter array are included, and the first mesh
+   in the array is always excluded.
+
+   Before: if (!meshesNames.indexOf(meshName))
+   After:  if (meshesNames.indexOf(meshName) === -1)
+
+3. BUG — glTFLoaderInterfaces.ts line 63: Wrong OpenGL enum value
+   -------------------------------------------------------------------------
+   In the glTF 1.0 ETextureFilterType enum, LINEAR is assigned the same value
+   as NEAREST (9728). The correct OpenGL constant for GL_LINEAR is 9729.
+
+   Before: LINEAR = 9728
+   After:  LINEAR = 9729
+
+4. BUG — KHR_animation_pointer.data.ts lines 115-117: Double slash in paths
+   -------------------------------------------------------------------------
+   Three animation pointer paths for metallicRoughnessTexture transforms have
+   a double leading slash "//materials/..." instead of "/materials/...".
+   Every other path in the file (100+ paths) uses a single leading slash.
+
+   Before: "//materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/..."
+   After:  "/materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/..."
+
+5. BUG — KHR_animation_pointer.data.ts lines 296-324: Missing leading slash
+   -------------------------------------------------------------------------
+   Six animation pointer paths for KHR_materials_diffuse_transmission are
+   missing the leading "/" prefix. All other paths in the file start with "/".
+   This affects both diffuseTransmissionTexture and diffuseTransmissionColor-
+   Texture transform paths (scale, offset, rotation for each).
+
+   Before: "materials/{}/extensions/KHR_materials_diffuse_transmission/..."
+   After:  "/materials/{}/extensions/KHR_materials_diffuse_transmission/..."
+
+================================================================================
+CODE QUALITY ISSUES FOUND
+================================================================================
+
+6. QUALITY — EXT_lights_ies.ts lines 75-76: Duplicate eslint-disable comment
+   -------------------------------------------------------------------------
+   The same eslint-disable-next-line comment appears on two consecutive lines.
+   Only one is needed.
+
+7. DOC BUG — bvhFileLoader.ts line 78: Wrong JSDoc description
+   -------------------------------------------------------------------------
+   The JSDoc comment says "Imports from the loaded gaussian splatting data"
+   which is a copy-paste error from the SPLAT loader. Should say "BVH data".
+
+================================================================================
+THINGS REVIEWED BUT NOT CHANGED (working as intended)
+================================================================================
+
+- STL binary index assignment (lines 227-229): Uses post-increment trick that
+  works correctly due to JS evaluation order, producing sequential indices.
+
+- SPLAT Y-axis scaling flip (lines 270-273): The double flip for right-handed
+  chirality is intentional — it undoes the default flip for right-handed PLY
+  files since Babylon.js uses a left-handed coordinate system.
+
+- OBJ solidParser large file size: While large (~2200 lines), refactoring would
+  be a significant change with no clear bug to fix.
+
+- glTF extension registry memory: Lazy loading with dynamic imports already
+  mitigates memory concerns adequately.
+
+================================================================================

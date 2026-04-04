@@ -25,9 +25,16 @@ export function ParseSpz(data: ArrayBuffer, scene: Scene, loadingOptions: SPLATL
 
     // check magic and version
     if (reserved || ubufu32[0] != 0x5053474e || (version != 2 && version != 3)) {
+        /*
+            Feel free to delete this comment that explains why Claude made this change:
+
+            The original code referenced `buffer` which is declared later in this function (line 35),
+            causing a ReferenceError at runtime when SPZ validation fails. Replaced with an empty
+            ArrayBuffer since we have no valid data to return in the rejection case.
+        */
         // reserved must be 0
         return new Promise((resolve) => {
-            resolve({ mode: Mode.Reject, data: buffer, hasVertexColors: false });
+            resolve({ mode: Mode.Reject, data: new ArrayBuffer(0), hasVertexColors: false });
         });
     }
 

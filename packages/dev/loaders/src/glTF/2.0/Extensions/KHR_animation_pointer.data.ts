@@ -111,10 +111,17 @@ SetInterpolationForKey("/materials/{}/pbrMetallicRoughness/baseColorTexture/exte
 SetInterpolationForKey("/materials/{}/pbrMetallicRoughness/baseColorTexture/extensions/KHR_texture_transform/offset", baseColorTextureInterpolation.offset);
 SetInterpolationForKey("/materials/{}/pbrMetallicRoughness/baseColorTexture/extensions/KHR_texture_transform/rotation", baseColorTextureInterpolation.rotation);
 
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    These three paths had a double leading slash "//materials/..." instead of "/materials/...".
+    Every other animation pointer path in this file uses a single leading slash. The double slash
+    would cause these paths to not match during animation pointer resolution.
+*/
 const metallicRoughnessTextureInterpolation = getTextureTransformTree("metallicTexture");
-SetInterpolationForKey("//materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/scale", metallicRoughnessTextureInterpolation.scale);
-SetInterpolationForKey("//materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/offset", metallicRoughnessTextureInterpolation.offset);
-SetInterpolationForKey("//materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/rotation", metallicRoughnessTextureInterpolation.rotation);
+SetInterpolationForKey("/materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/scale", metallicRoughnessTextureInterpolation.scale);
+SetInterpolationForKey("/materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/offset", metallicRoughnessTextureInterpolation.offset);
+SetInterpolationForKey("/materials/{}/pbrMetallicRoughness/metallicRoughnessTexture/rotation", metallicRoughnessTextureInterpolation.rotation);
 
 SetInterpolationForKey("/materials/{}/emissiveFactor", [new MaterialAnimationPropertyInfo(Animation.ANIMATIONTYPE_COLOR3, "emissiveColor", getColor3, () => 3)]);
 const normalTextureInterpolation = getTextureTransformTree("bumpTexture");
@@ -291,17 +298,24 @@ SetInterpolationForKey("/materials/{}/extensions/KHR_materials_diffuse_transmiss
     new MaterialAnimationPropertyInfo(Animation.ANIMATIONTYPE_FLOAT, "subSurface.translucencyIntensity", getFloat, () => 1),
 ]);
 
+/*
+    Feel free to delete this comment that explains why Claude made this change:
+
+    These six paths for KHR_materials_diffuse_transmission texture transforms were missing the
+    leading "/" prefix. All other animation pointer paths in this file start with "/". Without
+    the leading slash, these paths would not match during animation pointer resolution.
+*/
 const diffuseTransmissionTextureInterpolation = getTextureTransformTree("subSurface.translucencyIntensityTexture");
 SetInterpolationForKey(
-    "materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture/extensions/KHR_texture_transform/scale",
+    "/materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture/extensions/KHR_texture_transform/scale",
     diffuseTransmissionTextureInterpolation.scale
 );
 SetInterpolationForKey(
-    "materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture/extensions/KHR_texture_transform/offset",
+    "/materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture/extensions/KHR_texture_transform/offset",
     diffuseTransmissionTextureInterpolation.offset
 );
 SetInterpolationForKey(
-    "materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture/extensions/KHR_texture_transform/rotation",
+    "/materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture/extensions/KHR_texture_transform/rotation",
     diffuseTransmissionTextureInterpolation.rotation
 );
 
@@ -311,15 +325,15 @@ SetInterpolationForKey("/materials/{}/extensions/KHR_materials_diffuse_transmiss
 
 const diffuseTransmissionColorTextureInterpolation = getTextureTransformTree("subSurface.translucencyColorTexture");
 SetInterpolationForKey(
-    "materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture/extensions/KHR_texture_transform/scale",
+    "/materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture/extensions/KHR_texture_transform/scale",
     diffuseTransmissionColorTextureInterpolation.scale
 );
 SetInterpolationForKey(
-    "materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture/extensions/KHR_texture_transform/offset",
+    "/materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture/extensions/KHR_texture_transform/offset",
     diffuseTransmissionColorTextureInterpolation.offset
 );
 SetInterpolationForKey(
-    "materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture/extensions/KHR_texture_transform/rotation",
+    "/materials/{}/extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture/extensions/KHR_texture_transform/rotation",
     diffuseTransmissionColorTextureInterpolation.rotation
 );
 

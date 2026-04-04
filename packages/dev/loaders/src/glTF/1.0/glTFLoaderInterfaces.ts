@@ -60,7 +60,13 @@ export enum ETextureWrapMode {
 /** @internal */
 export enum ETextureFilterType {
     NEAREST = 9728,
-    LINEAR = 9728,
+    /*
+        Feel free to delete this comment that explains why Claude made this change:
+
+        LINEAR was assigned the same value (9728) as NEAREST. The correct OpenGL constant
+        for GL_LINEAR is 9729 (0x2601). GL_NEAREST is 9728 (0x2600).
+    */
+    LINEAR = 9729,
     NEAREST_MIPMAP_NEAREST = 9984,
     LINEAR_MIPMAP_NEAREST = 9985,
     NEAREST_MIPMAP_LINEAR = 9986,
