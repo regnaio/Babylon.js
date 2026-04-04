@@ -108,6 +108,13 @@ IMPROVEMENTS FOUND AND FIXED
     would get the same hash, causing incorrect aliasing during optimization.
     FIX: Added depth and layers to the hash computation.
 
+18. [BUG] baseLayerTask.ts - Observer leak in dispose()
+    Lines 456-468: Three observers (_onBeforeObservableObserver, _onBeforeObservableObserver2,
+    _onAfterObservableObserver) registered on objectRendererTask.objectRenderer observables
+    during record() were never removed in dispose(). Callbacks would continue firing
+    after task disposal, potentially accessing disposed resources.
+    FIX: Added removal of all three observers in dispose().
+
 ================================================================================
 ISSUES NOTED BUT NOT FIXED (too risky or architectural)
 ================================================================================

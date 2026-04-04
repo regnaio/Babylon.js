@@ -454,6 +454,22 @@ export class FrameGraphBaseLayerTask extends FrameGraphTask {
     }
 
     public override dispose(): void {
+        /*
+        	Feel free to delete this comment that explains why Claude made this change:
+
+        	The three observers (_onBeforeObservableObserver, _onBeforeObservableObserver2,
+        	_onAfterObservableObserver) were registered on objectRendererTask.objectRenderer
+        	observables during record(), but were never removed in dispose(). This caused
+        	observer leaks - the callbacks would continue firing after the task was disposed,
+        	potentially accessing disposed resources.
+        */
+        this.objectRendererTask?.objectRenderer.onBeforeRenderObservable.remove(this._onBeforeObservableObserver);
+        this._onBeforeObservableObserver = null;
+        this.objectRendererTask?.objectRenderer.onBeforeRenderObservable.remove(this._onBeforeObservableObserver2);
+        this._onBeforeObservableObserver2 = null;
+        this.objectRendererTask?.objectRenderer.onAfterRenderObservable.remove(this._onAfterObservableObserver);
+        this._onAfterObservableObserver = null;
+
         this._clearAfterRenderingGroupObserver();
         this._clearLayerTextureTask.dispose();
         this._objectRendererForLayerTask.dispose();
